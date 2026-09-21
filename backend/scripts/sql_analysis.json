@@ -1,0 +1,2375 @@
+{
+  "adverts": {
+    "name": "adverts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "active",
+        "type": "tinyint(3)",
+        "raw": "`active` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "location",
+        "type": "varchar(255)",
+        "raw": "`location` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "size",
+        "type": "varchar(255)",
+        "raw": "`size` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "rel",
+        "type": "varchar(20)",
+        "raw": "`rel` varchar(20) DEFAULT NULL,"
+      },
+      {
+        "name": "hlink",
+        "type": "varchar(255)",
+        "raw": "`hlink` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "code",
+        "type": "longtext",
+        "raw": "`code` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "blogs": {
+    "name": "blogs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "editor_id",
+        "type": "bigint(20)",
+        "raw": "`editor_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "approver_id",
+        "type": "bigint(20)",
+        "raw": "`approver_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "status",
+        "type": "varchar(255)",
+        "raw": "`status` varchar(255) NOT NULL DEFAULT 'draft',"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "title",
+        "type": "varchar(255)",
+        "raw": "`title` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "content",
+        "type": "longtext",
+        "raw": "`content` longtext NOT NULL,"
+      },
+      {
+        "name": "updates",
+        "type": "longtext",
+        "raw": "`updates` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 631
+  },
+  "blog_category": {
+    "name": "blog_category",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "blog_id",
+        "type": "bigint(20)",
+        "raw": "`blog_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "category_id",
+        "type": "bigint(20)",
+        "raw": "`category_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 2
+  },
+  "blog_subject": {
+    "name": "blog_subject",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "blog_id",
+        "type": "bigint(20)",
+        "raw": "`blog_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "subject_id",
+        "type": "bigint(20)",
+        "raw": "`subject_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "blog_tag": {
+    "name": "blog_tag",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "tag_id",
+        "type": "bigint(20)",
+        "raw": "`tag_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "blog_id",
+        "type": "bigint(20)",
+        "raw": "`blog_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 4
+  },
+  "categories": {
+    "name": "categories",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "parent_id",
+        "type": "bigint(20)",
+        "raw": "`parent_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "raw": "`description` text DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "category_job": {
+    "name": "category_job",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "job_id",
+        "type": "bigint(20)",
+        "raw": "`job_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "category_id",
+        "type": "bigint(20)",
+        "raw": "`category_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "cities": {
+    "name": "cities",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 0
+  },
+  "comments": {
+    "name": "comments",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "blog_id",
+        "type": "bigint(20)",
+        "raw": "`blog_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "parent_id",
+        "type": "bigint(20)",
+        "raw": "`parent_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "author",
+        "type": "varchar(255)",
+        "raw": "`author` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "email",
+        "type": "varchar(255)",
+        "raw": "`email` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "url",
+        "type": "varchar(255)",
+        "raw": "`url` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "ip",
+        "type": "varchar(100)",
+        "raw": "`ip` varchar(100) DEFAULT NULL,"
+      },
+      {
+        "name": "content",
+        "type": "text",
+        "raw": "`content` text NOT NULL,"
+      },
+      {
+        "name": "status",
+        "type": "varchar(20)",
+        "raw": "`status` varchar(20) NOT NULL,"
+      },
+      {
+        "name": "agent",
+        "type": "varchar(255)",
+        "raw": "`agent` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 13
+  },
+  "courses": {
+    "name": "courses",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "disabled",
+        "type": "tinyint(3)",
+        "raw": "`disabled` tinyint(3) UNSIGNED DEFAULT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "info",
+        "type": "text",
+        "raw": "`info` text DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "course_institute": {
+    "name": "course_institute",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "course_id",
+        "type": "bigint(20)",
+        "raw": "`course_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "institute_id",
+        "type": "bigint(20)",
+        "raw": "`institute_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 4
+  },
+  "departments": {
+    "name": "departments",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "cover_id",
+        "type": "bigint(20)",
+        "raw": "`cover_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "raw": "`description` text DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "districts": {
+    "name": "districts",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "examinations": {
+    "name": "examinations",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "raw": "`description` text DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "examination_question": {
+    "name": "examination_question",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "question_id",
+        "type": "bigint(20)",
+        "raw": "`question_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "examination_id",
+        "type": "bigint(20)",
+        "raw": "`examination_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 14
+  },
+  "facilities": {
+    "name": "facilities",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "info",
+        "type": "text",
+        "raw": "`info` text DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "facility_institute": {
+    "name": "facility_institute",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "facility_id",
+        "type": "bigint(20)",
+        "raw": "`facility_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "institute_id",
+        "type": "bigint(20)",
+        "raw": "`institute_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 3
+  },
+  "failed_jobs": {
+    "name": "failed_jobs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "uuid",
+        "type": "varchar(255)",
+        "raw": "`uuid` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "connection",
+        "type": "text",
+        "raw": "`connection` text NOT NULL,"
+      },
+      {
+        "name": "queue",
+        "type": "text",
+        "raw": "`queue` text NOT NULL,"
+      },
+      {
+        "name": "payload",
+        "type": "longtext",
+        "raw": "`payload` longtext NOT NULL,"
+      },
+      {
+        "name": "exception",
+        "type": "longtext",
+        "raw": "`exception` longtext NOT NULL,"
+      },
+      {
+        "name": "failed_at",
+        "type": "timestamp",
+        "raw": "`failed_at` timestamp NOT NULL DEFAULT current_timestamp()"
+      }
+    ],
+    "insertCount": 0
+  },
+  "institutes": {
+    "name": "institutes",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "district_id",
+        "type": "bigint(20)",
+        "raw": "`district_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "editor_id",
+        "type": "bigint(20)",
+        "raw": "`editor_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "approver_id",
+        "type": "bigint(20)",
+        "raw": "`approver_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "status",
+        "type": "varchar(255)",
+        "raw": "`status` varchar(255) NOT NULL DEFAULT 'draft',"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "email",
+        "type": "varchar(255)",
+        "raw": "`email` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "phone",
+        "type": "varchar(255)",
+        "raw": "`phone` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "video",
+        "type": "varchar(255)",
+        "raw": "`video` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "gmap",
+        "type": "text",
+        "raw": "`gmap` text DEFAULT NULL,"
+      },
+      {
+        "name": "website",
+        "type": "varchar(255)",
+        "raw": "`website` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "city",
+        "type": "varchar(255)",
+        "raw": "`city` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "logo",
+        "type": "varchar(255)",
+        "raw": "`logo` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "cover",
+        "type": "varchar(255)",
+        "raw": "`cover` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "address",
+        "type": "text",
+        "raw": "`address` text NOT NULL,"
+      },
+      {
+        "name": "about",
+        "type": "longtext",
+        "raw": "`about` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 41
+  },
+  "institute_media": {
+    "name": "institute_media",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "institute_id",
+        "type": "bigint(20)",
+        "raw": "`institute_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 2
+  },
+  "jobs": {
+    "name": "jobs",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "editor_id",
+        "type": "bigint(20)",
+        "raw": "`editor_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "approver_id",
+        "type": "bigint(20)",
+        "raw": "`approver_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "department_id",
+        "type": "bigint(20)",
+        "raw": "`department_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "status",
+        "type": "varchar(255)",
+        "raw": "`status` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "title",
+        "type": "varchar(255)",
+        "raw": "`title` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "text",
+        "raw": "`name` text DEFAULT NULL,"
+      },
+      {
+        "name": "posts",
+        "type": "varchar(255)",
+        "raw": "`posts` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "dept",
+        "type": "varchar(255)",
+        "raw": "`dept` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "desig",
+        "type": "longtext",
+        "raw": "`desig` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "min_age",
+        "type": "varchar(255)",
+        "raw": "`min_age` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "max_age",
+        "type": "varchar(255)",
+        "raw": "`max_age` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "app_link",
+        "type": "text",
+        "raw": "`app_link` text DEFAULT NULL,"
+      },
+      {
+        "name": "noti_link",
+        "type": "text",
+        "raw": "`noti_link` text DEFAULT NULL,"
+      },
+      {
+        "name": "released",
+        "type": "date",
+        "raw": "`released` date DEFAULT NULL,"
+      },
+      {
+        "name": "app_ends",
+        "type": "date",
+        "raw": "`app_ends` date DEFAULT NULL,"
+      },
+      {
+        "name": "app_start",
+        "type": "date",
+        "raw": "`app_start` date DEFAULT NULL,"
+      },
+      {
+        "name": "exam_date",
+        "type": "date",
+        "raw": "`exam_date` date DEFAULT NULL,"
+      },
+      {
+        "name": "fees",
+        "type": "text",
+        "raw": "`fees` text NOT NULL,"
+      },
+      {
+        "name": "salary",
+        "type": "text",
+        "raw": "`salary` text NOT NULL,"
+      },
+      {
+        "name": "eligibility",
+        "type": "text",
+        "raw": "`eligibility` text NOT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "longtext",
+        "raw": "`description` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 90
+  },
+  "job_admit_cards": {
+    "name": "job_admit_cards",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "job_id",
+        "type": "bigint(20)",
+        "raw": "`job_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "dept_id",
+        "type": "bigint(20)",
+        "raw": "`dept_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "editor_id",
+        "type": "bigint(20)",
+        "raw": "`editor_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "department_id",
+        "type": "bigint(20)",
+        "raw": "`department_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "title",
+        "type": "text",
+        "raw": "`title` text NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "status",
+        "type": "varchar(255)",
+        "raw": "`status` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "post",
+        "type": "varchar(255)",
+        "raw": "`post` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "desig",
+        "type": "varchar(255)",
+        "raw": "`desig` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "dept",
+        "type": "varchar(255)",
+        "raw": "`dept` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "exam_date",
+        "type": "varchar(255)",
+        "raw": "`exam_date` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "exam_rdate",
+        "type": "varchar(255)",
+        "raw": "`exam_rdate` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "exam_time",
+        "type": "varchar(255)",
+        "raw": "`exam_time` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "exam_mode",
+        "type": "varchar(255)",
+        "raw": "`exam_mode` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "site_url",
+        "type": "text",
+        "raw": "`site_url` text DEFAULT NULL,"
+      },
+      {
+        "name": "down_url",
+        "type": "text",
+        "raw": "`down_url` text DEFAULT NULL,"
+      },
+      {
+        "name": "syllabus_url",
+        "type": "text",
+        "raw": "`syllabus_url` text DEFAULT NULL,"
+      },
+      {
+        "name": "prevqp_url",
+        "type": "text",
+        "raw": "`prevqp_url` text DEFAULT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "longtext",
+        "raw": "`description` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "inst_down",
+        "type": "longtext",
+        "raw": "`inst_down` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "inst_impl",
+        "type": "longtext",
+        "raw": "`inst_impl` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 12
+  },
+  "job_results": {
+    "name": "job_results",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "job_id",
+        "type": "bigint(20)",
+        "raw": "`job_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "dept_id",
+        "type": "bigint(20)",
+        "raw": "`dept_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "editor_id",
+        "type": "bigint(20)",
+        "raw": "`editor_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "department_id",
+        "type": "bigint(20)",
+        "raw": "`department_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "title",
+        "type": "varchar(255)",
+        "raw": "`title` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "status",
+        "type": "varchar(255)",
+        "raw": "`status` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "post",
+        "type": "varchar(255)",
+        "raw": "`post` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "desig",
+        "type": "varchar(255)",
+        "raw": "`desig` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "dept",
+        "type": "varchar(255)",
+        "raw": "`dept` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "result_rdate",
+        "type": "varchar(255)",
+        "raw": "`result_rdate` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "result_edate",
+        "type": "varchar(255)",
+        "raw": "`result_edate` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "result_mode",
+        "type": "varchar(255)",
+        "raw": "`result_mode` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "site_url",
+        "type": "text",
+        "raw": "`site_url` text DEFAULT NULL,"
+      },
+      {
+        "name": "down_url",
+        "type": "text",
+        "raw": "`down_url` text DEFAULT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "longtext",
+        "raw": "`description` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "inst_down",
+        "type": "longtext",
+        "raw": "`inst_down` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "inst_impl",
+        "type": "longtext",
+        "raw": "`inst_impl` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "faqs",
+        "type": "longtext",
+        "raw": "`faqs` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 13
+  },
+  "languages": {
+    "name": "languages",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "code",
+        "type": "varchar(255)",
+        "raw": "`code` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "media": {
+    "name": "media",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "alt",
+        "type": "varchar(255)",
+        "raw": "`alt` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "varchar(255)",
+        "raw": "`description` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "caption",
+        "type": "varchar(255)",
+        "raw": "`caption` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "path",
+        "type": "varchar(255)",
+        "raw": "`path` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "file",
+        "type": "varchar(255)",
+        "raw": "`file` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "type",
+        "type": "varchar(255)",
+        "raw": "`type` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "size",
+        "type": "varchar(255)",
+        "raw": "`size` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "qlib",
+        "type": "varchar(255)",
+        "raw": "`qlib` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "dimen",
+        "type": "varchar(255)",
+        "raw": "`dimen` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "layout",
+        "type": "varchar(255)",
+        "raw": "`layout` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 63
+  },
+  "metadata": {
+    "name": "metadata",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "robots",
+        "type": "tinyint(3)",
+        "raw": "`robots` tinyint(3) UNSIGNED NOT NULL DEFAULT 1,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "canonical",
+        "type": "varchar(255)",
+        "raw": "`canonical` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "m_title",
+        "type": "varchar(255)",
+        "raw": "`m_title` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "m_desc",
+        "type": "text",
+        "raw": "`m_desc` text DEFAULT NULL,"
+      },
+      {
+        "name": "m_keys",
+        "type": "longtext",
+        "raw": "`m_keys` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "schema",
+        "type": "longtext",
+        "raw": "`schema` longtext DEFAULT NULL"
+      }
+    ],
+    "insertCount": 81
+  },
+  "metadata_hindi": {
+    "name": "metadata_hindi",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "robots",
+        "type": "tinyint(3)",
+        "raw": "`robots` tinyint(3) UNSIGNED NOT NULL DEFAULT 1,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "canonical",
+        "type": "varchar(255)",
+        "raw": "`canonical` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "m_title",
+        "type": "varchar(255)",
+        "raw": "`m_title` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "m_desc",
+        "type": "text",
+        "raw": "`m_desc` text DEFAULT NULL,"
+      },
+      {
+        "name": "m_keys",
+        "type": "longtext",
+        "raw": "`m_keys` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "schema",
+        "type": "longtext",
+        "raw": "`schema` longtext DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "migrations": {
+    "name": "migrations",
+    "columns": [
+      {
+        "name": "id",
+        "type": "int(10)",
+        "raw": "`id` int(10) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "migration",
+        "type": "varchar(255)",
+        "raw": "`migration` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "batch",
+        "type": "int(11)",
+        "raw": "`batch` int(11) NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "pages": {
+    "name": "pages",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "password_resets": {
+    "name": "password_resets",
+    "columns": [
+      {
+        "name": "email",
+        "type": "varchar(255)",
+        "raw": "`email` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "token",
+        "type": "varchar(255)",
+        "raw": "`token` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "used_at",
+        "type": "timestamp",
+        "raw": "`used_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 4
+  },
+  "personal_access_tokens": {
+    "name": "personal_access_tokens",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "tokenable_type",
+        "type": "varchar(255)",
+        "raw": "`tokenable_type` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "tokenable_id",
+        "type": "bigint(20)",
+        "raw": "`tokenable_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "token",
+        "type": "varchar(64)",
+        "raw": "`token` varchar(64) NOT NULL,"
+      },
+      {
+        "name": "abilities",
+        "type": "text",
+        "raw": "`abilities` text DEFAULT NULL,"
+      },
+      {
+        "name": "last_used_at",
+        "type": "timestamp",
+        "raw": "`last_used_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "questions": {
+    "name": "questions",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "editor_id",
+        "type": "bigint(20)",
+        "raw": "`editor_id` bigint(20) UNSIGNED DEFAULT NULL,"
+      },
+      {
+        "name": "lang_id",
+        "type": "bigint(20)",
+        "raw": "`lang_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "type_id",
+        "type": "bigint(20)",
+        "raw": "`type_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "level_id",
+        "type": "bigint(20)",
+        "raw": "`level_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "subject_id",
+        "type": "bigint(20)",
+        "raw": "`subject_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "answer_id",
+        "type": "bigint(20)",
+        "raw": "`answer_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED DEFAULT NULL,"
+      },
+      {
+        "name": "district_id",
+        "type": "bigint(20)",
+        "raw": "`district_id` bigint(20) UNSIGNED DEFAULT NULL,"
+      },
+      {
+        "name": "status",
+        "type": "varchar(255)",
+        "raw": "`status` varchar(255) NOT NULL DEFAULT 'draft',"
+      },
+      {
+        "name": "content",
+        "type": "longtext",
+        "raw": "`content` longtext NOT NULL,"
+      },
+      {
+        "name": "instruction",
+        "type": "longtext",
+        "raw": "`instruction` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "ans_info",
+        "type": "text",
+        "raw": "`ans_info` text DEFAULT NULL,"
+      },
+      {
+        "name": "city",
+        "type": "varchar(255)",
+        "raw": "`city` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "marks",
+        "type": "int(10)",
+        "raw": "`marks` int(10) UNSIGNED DEFAULT NULL,"
+      },
+      {
+        "name": "negative",
+        "type": "tinyint(3)",
+        "raw": "`negative` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 58
+  },
+  "question_levels": {
+    "name": "question_levels",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "question_options": {
+    "name": "question_options",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "question_id",
+        "type": "bigint(20)",
+        "raw": "`question_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "value",
+        "type": "varchar(255)",
+        "raw": "`value` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 27
+  },
+  "question_types": {
+    "name": "question_types",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "roles": {
+    "name": "roles",
+    "columns": [
+      {
+        "name": "id",
+        "type": "tinyint(3)",
+        "raw": "`id` tinyint(3) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "color",
+        "type": "varchar(50)",
+        "raw": "`color` varchar(50) DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "settings": {
+    "name": "settings",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "backend_registrations",
+        "type": "tinyint(3)",
+        "raw": "`backend_registrations` tinyint(3) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "frontend_registrations",
+        "type": "tinyint(3)",
+        "raw": "`frontend_registrations` tinyint(3) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "social_links": {
+    "name": "social_links",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "website",
+        "type": "varchar(255)",
+        "raw": "`website` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "youtube",
+        "type": "varchar(255)",
+        "raw": "`youtube` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "twitter",
+        "type": "varchar(255)",
+        "raw": "`twitter` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "linkedin",
+        "type": "varchar(255)",
+        "raw": "`linkedin` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "facebook",
+        "type": "varchar(255)",
+        "raw": "`facebook` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "instagram",
+        "type": "varchar(255)",
+        "raw": "`instagram` varchar(255) DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "states": {
+    "name": "states",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "state_data": {
+    "name": "state_data",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "user_id",
+        "type": "bigint(20)",
+        "raw": "`user_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "fimg_id",
+        "type": "bigint(20)",
+        "raw": "`fimg_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "jimg_id",
+        "type": "bigint(20)",
+        "raw": "`jimg_id` bigint(20) UNSIGNED DEFAULT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "metah_id",
+        "type": "bigint(20)",
+        "raw": "`metah_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "editor_id",
+        "type": "bigint(20)",
+        "raw": "`editor_id` bigint(20) UNSIGNED DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED DEFAULT 0,"
+      },
+      {
+        "name": "content",
+        "type": "longtext",
+        "raw": "`content` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "number",
+        "type": "varchar(255)",
+        "raw": "`number` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "area",
+        "type": "varchar(255)",
+        "raw": "`area` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "governor",
+        "type": "varchar(255)",
+        "raw": "`governor` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "minister",
+        "type": "varchar(255)",
+        "raw": "`minister` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "population",
+        "type": "varchar(255)",
+        "raw": "`population` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "capital",
+        "type": "varchar(255)",
+        "raw": "`capital` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "longtext",
+        "raw": "`description` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "desch",
+        "type": "longtext",
+        "raw": "`desch` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "descj",
+        "type": "longtext",
+        "raw": "`descj` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 2
+  },
+  "state_subject": {
+    "name": "state_subject",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "state_id",
+        "type": "bigint(20)",
+        "raw": "`state_id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "subject_id",
+        "type": "bigint(20)",
+        "raw": "`subject_id` bigint(20) UNSIGNED NOT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "subjects": {
+    "name": "subjects",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "text",
+        "raw": "`description` text DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "subscribers": {
+    "name": "subscribers",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "active",
+        "type": "tinyint(3)",
+        "raw": "`active` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "email",
+        "type": "varchar(255)",
+        "raw": "`email` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "phone",
+        "type": "varchar(255)",
+        "raw": "`phone` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "interest",
+        "type": "varchar(255)",
+        "raw": "`interest` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "vcode",
+        "type": "varchar(255)",
+        "raw": "`vcode` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "hash",
+        "type": "longtext",
+        "raw": "`hash` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "verified_at",
+        "type": "timestamp",
+        "raw": "`verified_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 62
+  },
+  "tags": {
+    "name": "tags",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL"
+      }
+    ],
+    "insertCount": 12
+  },
+  "ticker": {
+    "name": "ticker",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "txt",
+        "type": "text",
+        "raw": "`txt` text NOT NULL,"
+      },
+      {
+        "name": "link",
+        "type": "text",
+        "raw": "`link` text DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "topics": {
+    "name": "topics",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "group_id",
+        "type": "bigint(20)",
+        "raw": "`group_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "subject_id",
+        "type": "bigint(20)",
+        "raw": "`subject_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "longtext",
+        "raw": "`description` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 9
+  },
+  "topic_groups": {
+    "name": "topic_groups",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "meta_id",
+        "type": "bigint(20)",
+        "raw": "`meta_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "media_id",
+        "type": "bigint(20)",
+        "raw": "`media_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "slug",
+        "type": "varchar(255)",
+        "raw": "`slug` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "description",
+        "type": "longtext",
+        "raw": "`description` longtext DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL"
+      }
+    ],
+    "insertCount": 1
+  },
+  "users": {
+    "name": "users",
+    "columns": [
+      {
+        "name": "id",
+        "type": "bigint(20)",
+        "raw": "`id` bigint(20) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "role_id",
+        "type": "tinyint(3)",
+        "raw": "`role_id` tinyint(3) UNSIGNED NOT NULL,"
+      },
+      {
+        "name": "social_id",
+        "type": "bigint(20)",
+        "raw": "`social_id` bigint(20) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "active",
+        "type": "tinyint(3)",
+        "raw": "`active` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "backend",
+        "type": "tinyint(3)",
+        "raw": "`backend` tinyint(3) UNSIGNED NOT NULL DEFAULT 0,"
+      },
+      {
+        "name": "gender",
+        "type": "tinyint(3)",
+        "raw": "`gender` tinyint(3) UNSIGNED DEFAULT NULL,"
+      },
+      {
+        "name": "name",
+        "type": "varchar(255)",
+        "raw": "`name` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "nicename",
+        "type": "varchar(255)",
+        "raw": "`nicename` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "image",
+        "type": "varchar(255)",
+        "raw": "`image` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "email",
+        "type": "varchar(255)",
+        "raw": "`email` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "phone",
+        "type": "varchar(255)",
+        "raw": "`phone` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "otp",
+        "type": "varchar(255)",
+        "raw": "`otp` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "password",
+        "type": "varchar(255)",
+        "raw": "`password` varchar(255) NOT NULL,"
+      },
+      {
+        "name": "bio",
+        "type": "text",
+        "raw": "`bio` text DEFAULT NULL,"
+      },
+      {
+        "name": "phone_verified_at",
+        "type": "timestamp",
+        "raw": "`phone_verified_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "email_verified_at",
+        "type": "timestamp",
+        "raw": "`email_verified_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "remember_token",
+        "type": "varchar(100)",
+        "raw": "`remember_token` varchar(100) DEFAULT NULL,"
+      },
+      {
+        "name": "created_at",
+        "type": "timestamp",
+        "raw": "`created_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "updated_at",
+        "type": "timestamp",
+        "raw": "`updated_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "deleted_at",
+        "type": "timestamp",
+        "raw": "`deleted_at` timestamp NULL DEFAULT NULL,"
+      },
+      {
+        "name": "email_token",
+        "type": "varchar(255)",
+        "raw": "`email_token` varchar(255) DEFAULT NULL,"
+      },
+      {
+        "name": "phone_token",
+        "type": "varchar(255)",
+        "raw": "`phone_token` varchar(255) DEFAULT NULL"
+      }
+    ],
+    "insertCount": 31
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "name": "frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "dependencies": {
+    "@tinymce/tinymce-react": "^6.3.0",
+    "axios": "^1.20.0",
+    "clsx": "^2.1.1",
+    "lucide-react": "^1.44.0",
+    "next": "16.3.4",
+    "next-auth": "^4.24.15",
+    "react": "19.2.8",
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.6.0",
+    "xlsx": "^0.18.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.4",
+    "tailwindcss": "^4"
+  }
+}

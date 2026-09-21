@@ -1,0 +1,74 @@
+@import "tailwindcss";
+
+@theme inline {
+  --font-sans: var(--font-poppins), 'Poppins', sans-serif;
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #1e293b;
+}
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-poppins), 'Poppins', system-ui, sans-serif;
+  overflow-x: hidden;
+}
+
+/* Blueprint Grid Background matching hero */
+.bg-hero-blue {
+  background-color: #0b63b6;
+  background-image: 
+    linear-gradient(to right, rgba(255, 255, 255, 0.15) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.15) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+/* Smooth Horizontal Marquee Animation */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  display: flex;
+  width: max-content;
+  animation: marquee 25s linear infinite;
+}
+
+.animate-marquee:hover {
+  animation-play-state: paused;
+}
+
+/* Soft Cards Shadow */
+.shadow-card-elevated {
+  box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.08), 0 4px 10px -2px rgba(0, 0, 0, 0.04);
+}
+
+.shadow-card-hover {
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.12), 0 8px 16px -4px rgba(0, 0, 0, 0.06);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
