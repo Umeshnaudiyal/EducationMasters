@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import LiveTicker from '@/components/LiveTicker';
 import { getImageUrl } from '@/utils/image';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1';
@@ -26,15 +27,28 @@ export default function AdmitCardsPage() {
   const fetchAdmitCards = async (pageNum) => {
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/blogs?type=admit-card&page=${pageNum}&limit=${LIMIT}`);
+      // 1. Fetch from dedicated admit-cards endpoint
+      const res = await fetch(`${API_BASE}/admit-cards?status=publish&page=${pageNum}&limit=${LIMIT}`);
       const data = await res.json();
-      if (data.success && data.data) {
+      if (data.success && data.data && data.data.length > 0) {
         setItems(data.data);
-        setTotalPages(data.pages || 1);
-        setTotalItems(data.total || 0);
+        setTotalPages(data.pages || Math.ceil((data.total || data.count || data.data.length) / LIMIT) || 1);
+        setTotalItems(data.total || data.count || data.data.length);
+      } else {
+        // 2. Fallback to blogs with type admit-card
+        const fallbackRes = await fetch(`${API_BASE}/blogs?type=admit-card&page=${pageNum}&limit=${LIMIT}`);
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.success && fallbackData.data) {
+          setItems(fallbackData.data);
+          setTotalPages(fallbackData.pages || 1);
+          setTotalItems(fallbackData.total || 0);
+        } else {
+          setItems([]);
+        }
       }
     } catch (err) {
       console.error('Error fetching admit cards:', err);
+      setItems([]);
     } finally {
       setLoading(false);
     }
@@ -91,6 +105,7 @@ export default function AdmitCardsPage() {
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans">
       <Header />
+      <LiveTicker />
 
       <div className="max-w-[1550px] mx-auto px-3 sm:px-4 py-6 flex-1 w-full bg-white">
 
@@ -99,26 +114,31 @@ export default function AdmitCardsPage() {
 
           {/* 1. LEFT SKYSCRAPER AD SPACE */}
           <aside className="hidden xl:block xl:col-span-2 sticky top-20">
-            <div className="bg-[#e7f9ee] border border-[#a3e6be] rounded border-dashed p-4 min-h-[600px] flex flex-col items-center justify-between text-center relative overflow-hidden group">
-              <div className="w-full flex items-center justify-between text-[10px] text-emerald-800 font-bold uppercase tracking-wider">
-                <span>Available at</span>
-                <span className="font-extrabold text-xs">GoDaddy</span>
+            <div className="bg-[#f8fafc] border border-slate-200 rounded-lg p-3 min-h-[420px] flex flex-col items-center justify-between text-center relative overflow-hidden group shadow-2xs">
+              <div className="w-full flex items-center justify-between text-[10px] text-blue-700 font-bold uppercase tracking-wider">
+                <span>Featured Partner</span>
+                <span className="font-extrabold text-xs text-blue-900">Education</span>
               </div>
 
-              <div className="my-auto space-y-4">
-                <div className="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto shadow-md">
-                  Go
+              <div className="my-auto space-y-3 px-1 py-2">
+                <div className="w-16 h-16 bg-gradient-to-tr from-blue-700 to-cyan-500 text-white rounded-2xl flex items-center justify-center text-2xl font-bold mx-auto shadow-md">
+                  🎓
                 </div>
-                <h4 className="font-black text-slate-900 text-base leading-tight">
-                  GET A .AI DOMAIN NAME.
+                <h4 className="font-black text-slate-900 text-sm leading-tight">
+                  Learn from Top Industry Experts
                 </h4>
-                <div className="text-2xl font-black text-emerald-800">.AI</div>
-                <button className="bg-black hover:bg-zinc-800 text-white text-xs font-bold px-5 py-2 rounded transition shadow uppercase">
-                  Start Today
-                </button>
+                <p className="text-[11px] text-slate-500 leading-relaxed">
+                  Future-ready programs with strong career placement assistance.
+                </p>
+                <a
+                  href="/jobs"
+                  className="inline-block bg-blue-600 hover:bg-blue-700 text-white text-[11px] font-bold px-4 py-1.5 rounded transition shadow-xs uppercase"
+                >
+                  Apply Now
+                </a>
               </div>
 
-              <span className="text-[10px] text-slate-400">Sponsored Banner</span>
+              <span className="text-[9px] text-slate-400">Sponsored Banner</span>
             </div>
           </aside>
 
@@ -126,7 +146,7 @@ export default function AdmitCardsPage() {
           <main className="col-span-1 lg:col-span-8 xl:col-span-7 space-y-4">
 
             {/* Breadcrumb Aligned with Content */}
-            <div className="text-xs text-slate-500 mb-1 flex items-center gap-1 font-medium">
+            <div className="text-xs text-slate-500 mb-1 flex items-center gap-1.5 font-medium">
               <a href="/" className="hover:text-blue-600 text-blue-600 underline">Home</a>
               <span>›</span>
               <span className="text-slate-800 font-bold">Admit Cards</span>
@@ -137,6 +157,9 @@ export default function AdmitCardsPage() {
               <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
                 Latest Government Exam Admit Cards 2026
               </h1>
+              <p className="text-xs sm:text-sm text-slate-500 mt-1">
+                Download official hall tickets, call letters, exam city slips, and admit cards for central &amp; state exams.
+              </p>
             </div>
 
             {/* List */}
@@ -153,10 +176,16 @@ export default function AdmitCardsPage() {
                   </div>
                 ))}
               </div>
+            ) : items.length === 0 ? (
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-8 text-center space-y-3">
+                <div className="text-3xl">🎫</div>
+                <h3 className="text-base font-semibold text-slate-800">No Admit Cards Found</h3>
+                <p className="text-xs text-slate-500">Check back soon for new exam admit cards and hall ticket releases.</p>
+              </div>
             ) : (
               <div className="divide-y divide-slate-200">
                 {items.map((item) => {
-                  const mediaUrl = getImageUrl(item.featured_media);
+                  const mediaUrl = getImageUrl(item.featured_media || item.image);
 
                   return (
                     <article
@@ -189,26 +218,33 @@ export default function AdmitCardsPage() {
                             </h2>
                           </a>
 
-                          {/* Meta Information Line */}
-                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 font-medium mt-1">
+                          {/* Meta Information Line - Pure Admit Card Category */}
+                          <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 font-medium mt-1.5">
                             <span>By <strong className="text-slate-700 font-medium">{item.author?.name || 'Mohit'}</strong></span>
                             <span>|</span>
-                            <span>In <strong className="text-slate-800 font-medium">{item.categories?.[0]?.name || 'Admit Card'}</strong></span>
+                            <span>In <strong className="text-slate-800 font-medium">Admit Card</strong></span>
                             <span>|</span>
                             <span>{formatDate(item.created_at || item.createdAt)}</span>
                             <span>|</span>
-                            <span>{item.state?.name || 'All India'}</span>
+                            <span>{item.state?.name || item.dept || 'All India'}</span>
                           </div>
 
                           {/* Excerpt Snippet */}
                           <p className="text-xs sm:text-sm text-slate-600 mt-2.5 line-clamp-2 leading-relaxed">
-                            {item.description?.replace(/<[^>]*>?/gm, '') || `Download official admit card & exam hall ticket for ${item.title}.`}
+                            {item.description?.replace(/<[^>]*>?/gm, '') || `Download official admit card & exam hall ticket for ${item.title}. Check exam dates, venue, and shift timings.`}
                           </p>
                         </div>
 
-                        {/* Bottom Tag */}
-                        <div className="mt-4 text-xs text-slate-700 font-medium">
-                          Category: <span className="text-blue-600 font-semibold">{item.categories?.[0]?.name || 'Admit Card'}</span>
+                        {/* Bottom Tag - Pure Admit Card Category / Department */}
+                        <div className="mt-4 text-xs text-slate-700 font-medium flex items-center justify-between">
+                          <div>
+                            Category: <span className="text-blue-600 font-semibold">Admit Card</span>
+                          </div>
+                          {item.department?.name && (
+                            <div className="text-slate-500">
+                              Dept: <span className="text-slate-700 font-semibold">{item.department.name}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </article>
@@ -218,60 +254,62 @@ export default function AdmitCardsPage() {
             )}
 
             {/* Pagination Controls */}
-            <div className="pt-6 pb-2 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="text-xs sm:text-sm text-slate-500 font-medium">
-                Showing {startItem} to {endItem} of {totalItems} results
-              </div>
+            {totalPages > 1 && (
+              <div className="pt-6 pb-2 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="text-xs sm:text-sm text-slate-500 font-medium">
+                  Showing {startItem} to {endItem} of {totalItems} results
+                </div>
 
-              <div className="inline-flex items-center rounded-md border border-slate-200 bg-white overflow-hidden text-xs sm:text-sm shadow-xs">
-                <button
-                  disabled={page <= 1}
-                  onClick={() => setPage(page - 1)}
-                  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed border-r border-slate-200 transition font-medium"
-                >
-                  ‹
-                </button>
+                <div className="inline-flex items-center rounded-md border border-slate-200 bg-white overflow-hidden text-xs sm:text-sm shadow-xs">
+                  <button
+                    disabled={page <= 1}
+                    onClick={() => setPage(page - 1)}
+                    className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed border-r border-slate-200 transition font-medium"
+                  >
+                    ‹
+                  </button>
 
-                {getPaginationItems(page, totalPages).map((item, index) => {
-                  if (item === '...') {
+                  {getPaginationItems(page, totalPages).map((item, index) => {
+                    if (item === '...') {
+                      return (
+                        <span key={`dots-${index}`} className="px-3 py-1.5 text-slate-400 border-r border-slate-200 font-medium select-none">
+                          ...
+                        </span>
+                      );
+                    }
+
+                    const isCurrent = item === page;
                     return (
-                      <span key={`dots-${index}`} className="px-3 py-1.5 text-slate-400 border-r border-slate-200 font-medium select-none">
-                        ...
-                      </span>
+                      <button
+                        key={item}
+                        onClick={() => setPage(item)}
+                        className={`px-3 py-1.5 transition border-r border-slate-200 last:border-r-0 ${isCurrent
+                            ? 'bg-blue-600 text-white font-semibold'
+                            : 'text-blue-600 hover:bg-slate-50 font-medium'
+                          }`}
+                      >
+                        {item}
+                      </button>
                     );
-                  }
+                  })}
 
-                  const isCurrent = item === page;
-                  return (
-                    <button
-                      key={item}
-                      onClick={() => setPage(item)}
-                      className={`px-3 py-1.5 transition border-r border-slate-200 last:border-r-0 ${isCurrent
-                          ? 'bg-blue-600 text-white font-semibold'
-                          : 'text-blue-600 hover:bg-slate-50 font-medium'
-                        }`}
-                    >
-                      {item}
-                    </button>
-                  );
-                })}
-
-                <button
-                  disabled={page >= totalPages}
-                  onClick={() => setPage(page + 1)}
-                  className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition font-medium"
-                >
-                  ›
-                </button>
+                  <button
+                    disabled={page >= totalPages}
+                    onClick={() => setPage(page + 1)}
+                    className="px-2.5 py-1.5 text-slate-500 hover:bg-slate-50 disabled:opacity-30 disabled:cursor-not-allowed transition font-medium"
+                  >
+                    ›
+                  </button>
+                </div>
               </div>
-            </div>
+            )}
 
           </main>
 
           {/* 3. RIGHT SIDEBAR WIDGET */}
           <aside className="col-span-1 lg:col-span-4 xl:col-span-3 space-y-6 sticky top-20">
 
-            <div className="bg-[#f0f2f5] border border-slate-300 rounded-lg overflow-hidden">
+            <div className="bg-[#f0f2f5] border border-slate-300 rounded-lg overflow-hidden shadow-2xs">
 
               <div className="flex items-center bg-[#e4e7ec] border-b border-slate-300">
                 <button
@@ -314,7 +352,7 @@ export default function AdmitCardsPage() {
 
                     <div className="divide-y divide-slate-300">
                       {expiringJobs.map((item) => {
-                        const miniMediaUrl = getImageUrl(item.featured_media);
+                        const miniMediaUrl = getImageUrl(item.featured_media || item.image);
 
                         return (
                           <a
@@ -343,8 +381,8 @@ export default function AdmitCardsPage() {
                                 {item.title}
                               </h4>
                               <div className="text-xs text-slate-500 font-normal flex items-center justify-between mt-auto">
-                                <span>Last Date: {formatShortDate(item.app_ends)}</span>
-                                <span>Jobs</span>
+                                <span>Last Date: {formatShortDate(item.app_ends || item.dates?.last_date)}</span>
+                                <span className="text-blue-600 font-semibold">Jobs</span>
                               </div>
                             </div>
                           </a>
@@ -356,12 +394,19 @@ export default function AdmitCardsPage() {
                   <div className="text-sm text-slate-600 py-8 text-center">
                     <p className="font-medium text-slate-800 text-base">1000+ Subject-Wise MCQs</p>
                     <p className="mt-1 text-xs sm:text-sm text-slate-500">Practice History, Polity, GK, and Current Affairs MCQs daily.</p>
+                    <a
+                      href="/mcq-questions"
+                      className="inline-block mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded transition"
+                    >
+                      Explore MCQs &rarr;
+                    </a>
                   </div>
                 )}
               </div>
 
             </div>
 
+            {/* Sponsored Helicopter Banner */}
             <div className="bg-[#e7f9ee] border border-[#a3e6be] rounded border-dashed p-4 text-center relative overflow-hidden">
               <div className="text-[10px] text-emerald-800 font-bold uppercase tracking-wider mb-2">
                 Sponsored Banner
@@ -370,7 +415,7 @@ export default function AdmitCardsPage() {
                 Book a Helicopter in Greece
               </h4>
               <p className="text-[11px] text-slate-600 mt-1">
-                Luxury charters & private flight tours available online.
+                Luxury charters &amp; private flight tours available online.
               </p>
               <button className="mt-3 bg-black hover:bg-zinc-800 text-white font-bold text-xs px-4 py-1.5 rounded transition shadow-sm">
                 Book Now

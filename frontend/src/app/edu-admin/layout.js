@@ -12,11 +12,44 @@ export default function AdminLayout({ children }) {
   const { data: session, status } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
+  // Monitor daily midnight (12:00 AM) session expiry
+  React.useEffect(() => {
+    if (!session?.user) return;
+
+    const checkMidnightExpiry = () => {
+      const now = new Date();
+      // If current hour is 0 and minutes are 0 (or if last_session_date is past)
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0);
+      const remainingMs = midnight.getTime() - now.getTime();
+
+      if (remainingMs <= 1000) {
+        // Auto-logout and redirect
+        signOut({ callbackUrl: '/edu-login?expired=1' });
+      }
+    };
+
+    const interval = setInterval(checkMidnightExpiry, 5000);
+    return () => clearInterval(interval);
+  }, [session]);
+
   // If session is loading
   if (status === 'loading') {
     return (
       <div className="min-h-screen w-full bg-[#f0f0f1] flex items-center justify-center">
         <AdminLoader text="Loading Education Masters Admin Portal..." subtext="Authenticating and preparing dashboard" />
+      </div>
+    );
+  }
+
+  // If user is not authenticated, redirect immediately to login
+  if (status === 'unauthenticated' || !session?.user) {
+    if (typeof window !== 'undefined') {
+      window.location.href = '/edu-login';
+    }
+    return (
+      <div className="min-h-screen w-full bg-[#f0f0f1] flex items-center justify-center">
+        <AdminLoader text="Redirecting to Login..." subtext="Authentication required to access Education Masters Admin Portal" />
       </div>
     );
   }
@@ -74,7 +107,7 @@ export default function AdminLayout({ children }) {
       <AdminHeader session={session} />
 
       {/* Body Area with Sidebar + Content */}
-      <div className="flex-1 flex flex-row min-w-0 h-[calc(100vh-36px)] overflow-hidden">
+      <div className="flex-1 flex flex-row min-w-0 h-[calc(100vh-44px)] overflow-hidden">
         {/* Compact Collapsible Sidebar (165px) with RBAC filtering */}
         <AdminSidebar
           userRole={userRole}

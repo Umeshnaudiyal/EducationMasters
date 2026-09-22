@@ -4,6 +4,7 @@ import ApiError from '../utils/apiError.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
 import {
   resolveCategoryIds,
+  resolveCountryId,
   resolveStateId,
   resolveDepartmentId,
   sanitizeObjectId,
@@ -88,6 +89,7 @@ export const getJobs = async (req, res, next) => {
         .populate('author', 'name email nicename')
         .populate('categories', 'name slug')
         .populate('featured_media', 'path file alt name')
+        .populate('country', 'name slug code')
         .populate('state', 'name slug')
         .sort({ created_at: -1, sql_id: -1, _id: -1 })
         .skip(skip)
@@ -129,7 +131,7 @@ export const getExpiringJobs = async (req, res, next) => {
     const expiringJobs = await Job.find({ 
       app_ends: { $gte: todayStr, $nin: [null, '', '0000-00-00'] } 
     })
-      .select('title slug app_ends dates categories featured_media state created_at')
+      .select('title slug app_ends dates categories featured_media state country created_at')
       .populate('featured_media', 'path file alt')
       .populate('categories', 'name slug')
       .sort({ app_ends: 1, created_at: -1 })
@@ -152,6 +154,7 @@ export const getJobBySlug = async (req, res, next) => {
       .populate('author', 'name nicename email image bio')
       .populate('categories', 'name slug')
       .populate('featured_media', 'path file alt name')
+      .populate('country', 'name slug code')
       .populate('state', 'name slug');
 
     if (!job) {
@@ -240,7 +243,7 @@ export const createJob = async (req, res, next) => {
     }
 
     if (!req.body.categories || (Array.isArray(req.body.categories) && req.body.categories.length === 0)) {
-      validationErrors.categories = 'Please select at least one category for this job post.';
+      req.body.categories = ['Jobs'];
     }
 
     const slugValidation = await validateUniqueSlug(Job, {
@@ -270,6 +273,9 @@ export const createJob = async (req, res, next) => {
     if (req.body.categories !== undefined) {
       req.body.categories = await resolveCategoryIds(req.body.categories);
     }
+    if (req.body.country !== undefined) {
+      req.body.country = await resolveCountryId(req.body.country);
+    }
     if (req.body.state !== undefined) {
       req.body.state = await resolveStateId(req.body.state);
     }
@@ -280,23 +286,12 @@ export const createJob = async (req, res, next) => {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
     }
     // Enforce Author status restrictions: Authors cannot publish directly, forced to 'pending' or 'draft'
-    let isAuthor =
-      req.user?.role === 'author' ||
-      req.user?.role === 'writer' ||
-      req.body?.role === 'author' ||
-      req.body?.role === 'writer' ||
-      req.body?.authorRole === 'author' ||
-      req.headers?.['x-user-role'] === 'author';
-
-    if (!isAuthor && req.body.author) {
-      const authorUser = await User.findById(req.body.author).select('role sql_id');
-      if (authorUser && (authorUser.role === 'author' || authorUser.role === 'writer')) {
-        isAuthor = true;
-        if (!req.body.user_id && authorUser.sql_id) {
-          req.body.user_id = authorUser.sql_id;
-        }
-      }
-    }
+    const actingRole =
+      req.user?.role ||
+      req.headers?.['x-user-role'] ||
+      req.body?.role ||
+      req.body?.authorRole;
+    const isAuthor = actingRole === 'author' || actingRole === 'writer';
 
     if (isAuthor) {
       if (req.body.status === 'publish' || req.body.status === 'published' || req.body.status === 'active') {
@@ -305,6 +300,13 @@ export const createJob = async (req, res, next) => {
         req.body.status = 'draft';
       }
       if (req.user?._id) {
+        req.body.author = req.user._id;
+        req.body.user_id = req.user.sql_id || undefined;
+      }
+    } else {
+      if (req.body.author) {
+        req.body.author = sanitizeObjectId(req.body.author);
+      } else if (req.user?._id) {
         req.body.author = req.user._id;
         req.body.user_id = req.user.sql_id || undefined;
       }
@@ -320,23 +322,24 @@ export const createJob = async (req, res, next) => {
 export const updateJob = async (req, res, next) => {
   try {
     const isId = req.params.id.match(/^[0-9a-fA-F]{24}$/);
+    const existingJob = await Job.findOne(isId ? { _id: req.params.id } : { slug: req.params.id });
+    if (!existingJob) {
+      throw new ApiError(404, 'Job post not found or has been deleted.');
+    }
+
+    // Preserve the original author and user_id - NEVER allow author change on update/edit
+    delete req.body.author;
+    delete req.body.user_id;
+
     let { slug, title } = req.body;
 
-    // Enforce Author status restrictions: Authors cannot publish directly, forced to 'pending'
-    let isAuthor =
-      req.user?.role === 'author' ||
-      req.user?.role === 'writer' ||
-      req.body?.role === 'author' ||
-      req.body?.role === 'writer' ||
-      req.body?.authorRole === 'author' ||
-      req.headers?.['x-user-role'] === 'author';
-
-    if (!isAuthor && req.body.author) {
-      const authorUser = await User.findById(req.body.author).select('role sql_id');
-      if (authorUser && (authorUser.role === 'author' || authorUser.role === 'writer')) {
-        isAuthor = true;
-      }
-    }
+    // Enforce Author status restrictions only if the acting user is an author/writer
+    const actingRole =
+      req.user?.role ||
+      req.headers?.['x-user-role'] ||
+      req.body?.role ||
+      req.body?.authorRole;
+    const isAuthor = actingRole === 'author' || actingRole === 'writer';
 
     if (isAuthor) {
       if (req.body.status === 'publish' || req.body.status === 'published' || req.body.status === 'active') {
@@ -427,12 +430,7 @@ export const updateJob = async (req, res, next) => {
     }
 
     if (req.body.categories !== undefined && Array.isArray(req.body.categories) && req.body.categories.length === 0) {
-      validationErrors.categories = 'Please select at least one category for this job post.';
-    }
-
-    const existingJob = await Job.findOne(isId ? { _id: req.params.id } : { slug: req.params.id });
-    if (!existingJob) {
-      throw new ApiError(404, 'Job post not found or has been deleted.');
+      req.body.categories = ['Jobs'];
     }
 
     if (slug !== undefined && String(slug).trim()) {
@@ -464,6 +462,9 @@ export const updateJob = async (req, res, next) => {
     if (req.body.categories !== undefined) {
       req.body.categories = await resolveCategoryIds(req.body.categories);
     }
+    if (req.body.country !== undefined) {
+      req.body.country = await resolveCountryId(req.body.country);
+    }
     if (req.body.state !== undefined) {
       req.body.state = await resolveStateId(req.body.state);
     }
@@ -472,9 +473,6 @@ export const updateJob = async (req, res, next) => {
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
-    }
-    if (req.body.author !== undefined) {
-      req.body.author = sanitizeObjectId(req.body.author);
     }
 
     const job = await Job.findByIdAndUpdate(

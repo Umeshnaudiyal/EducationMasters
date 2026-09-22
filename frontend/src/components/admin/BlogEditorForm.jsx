@@ -21,6 +21,7 @@ import { cleanHtmlContent } from '@/utils/cleanHtml';
 import JoditEditorWrapper from '@/components/admin/JoditEditorWrapper';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import AdminLoader from '@/components/admin/AdminLoader';
+import SearchableSelectPanel from '@/components/admin/SearchableSelectPanel';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -126,9 +127,6 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
   const [isCustomSlug, setIsCustomSlug] = useState(Boolean(slugOrId));
   const [content, setContent] = useState('');
   const [status, setStatus] = useState('publish');
-  const [selectedCategories, setSelectedCategories] = useState(['Article']);
-  const [selectedState, setSelectedState] = useState('-- All India --');
-  const [featuredMedia, setFeaturedMedia] = useState(null);
 
   // Sync default status for author
   useEffect(() => {
@@ -137,7 +135,14 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
     }
   }, [isAuthor, status]);
 
+  // Right Sidebar State
+  const [featuredMedia, setFeaturedMedia] = useState(null);
+  const [selectedCountry, setSelectedCountry] = useState('India');
+  const [selectedState, setSelectedState] = useState('-- All India --');
+  const [selectedCategories, setSelectedCategories] = useState(['Article']);
+
   // Dynamic lists from DB
+  const [countryList, setCountryList] = useState([]);
   const [stateList, setStateList] = useState([]);
   const [categoryList, setCategoryList] = useState([]);
   const [categoryTab, setCategoryTab] = useState('all');
@@ -162,6 +167,7 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
   const [collapsePublish, setCollapsePublish] = useState(false);
   const [collapseFeatured, setCollapseFeatured] = useState(false);
   const [collapseCategories, setCollapseCategories] = useState(false);
+  const [collapseCountry, setCollapseCountry] = useState(false);
   const [collapseState, setCollapseState] = useState(false);
 
   // Media Library Modal
@@ -178,7 +184,7 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
     setTimeout(() => setToast({ message: '', type: '' }), 4000);
   };
 
-  // Fetch Categories & States
+  // Fetch Categories, Countries & States
   useEffect(() => {
     fetch(`${BACKEND_URL}/apis/v1/categories?page=1&limit=15`)
       .then((res) => res.json())
@@ -191,6 +197,15 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
         }
       })
       .catch((err) => console.error('Error fetching categories:', err));
+
+    fetch(`${BACKEND_URL}/apis/v1/countries?all=true`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setCountryList(data.data);
+        }
+      })
+      .catch((err) => console.error('Error fetching countries:', err));
 
     fetch(`${BACKEND_URL}/apis/v1/states`)
       .then((res) => res.json())
@@ -258,6 +273,10 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
 
             if (p.featured_media) {
               setFeaturedMedia(p.featured_media);
+            }
+
+            if (p.country) {
+              setSelectedCountry(typeof p.country === 'object' ? p.country.name : p.country);
             }
 
             if (p.state) {
@@ -395,6 +414,9 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
         return found?._id || catName;
       });
 
+      const targetId = actualId || slugOrId;
+      const isEditing = Boolean(targetId);
+
       const payload = {
         title: title.trim(),
         slug: slug.trim() || undefined,
@@ -408,12 +430,12 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
           m_desc: metaDescription,
           robots: allowIndexing ? 1 : 0,
         },
+        country: selectedCountry || 'India',
         state: selectedState === '-- All India --' ? null : selectedState,
         categories: mappedCategories,
-        author: session?.user?.id || undefined,
+        ...(isEditing ? {} : { author: session?.user?.id || undefined }),
       };
 
-      const targetId = actualId || slugOrId;
       const endpoint = targetId
         ? `${BACKEND_URL}/apis/v1/blogs/${targetId}`
         : `${BACKEND_URL}/apis/v1/blogs`;
@@ -1115,37 +1137,33 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
             })()}
           </div>
 
-          {/* Panel 4: State */}
-          <div className="bg-white border border-slate-300 rounded shadow-2xs">
-            <div
-              onClick={() => setCollapseState(!collapseState)}
-              className="px-3.5 py-2 bg-[#f6f7f7] border-b border-slate-300 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
-            >
-              <span className="text-xs font-bold text-slate-800">State</span>
-              {collapseState ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-            </div>
+          {/* Panel 4: Country */}
+          <SearchableSelectPanel
+            title="Country"
+            endpoint="/apis/v1/countries"
+            selectedValue={selectedCountry}
+            onSelect={(val) => {
+              setSelectedCountry(val);
+              setSelectedState(val === 'India' ? '-- All India --' : `-- All ${val} --`);
+            }}
+            defaultOption={{ label: 'India', value: 'India' }}
+            emptyMessage="No countries found"
+          />
 
-            {!collapseState && (
-              <div className="p-3 bg-white">
-                <select
-                  value={selectedState}
-                  onChange={(e) => setSelectedState(e.target.value)}
-                  className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
-                >
-                  <option value="-- All India --">— All India —</option>
-                  {stateList.map((st) => {
-                    const sName = typeof st === 'object' ? st.name : st;
-                    const sKey = typeof st === 'object' ? st._id || st.name : st;
-                    return (
-                      <option key={sKey} value={sName}>
-                        {sName}
-                      </option>
-                    );
-                  })}
-                </select>
-              </div>
-            )}
-          </div>
+          {/* Panel 5: State */}
+          <SearchableSelectPanel
+            title="State"
+            endpoint="/apis/v1/states"
+            selectedValue={selectedState}
+            onSelect={(val) => setSelectedState(val)}
+            defaultOption={{
+              label: selectedCountry === 'India' ? '— All India —' : `— All ${selectedCountry || 'Country'} —`,
+              value: selectedCountry === 'India' ? '-- All India --' : `-- All ${selectedCountry || 'Country'} --`,
+            }}
+            extraParams={{ country: selectedCountry }}
+            dependency={selectedCountry}
+            emptyMessage={`No states found for ${selectedCountry || 'selected country'}`}
+          />
         </div>
       </div>
       )}

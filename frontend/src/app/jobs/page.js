@@ -198,11 +198,11 @@ export default function JobsPage() {
                           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 font-medium mt-1">
                             <span>By <strong className="text-slate-700 font-medium">{job.author?.name || 'Mohit'}</strong></span>
                             <span>|</span>
-                            <span>In <strong className="text-slate-800 font-medium">{job.categories?.[0]?.name || 'Jobs'}</strong></span>
+                            <span>In <strong className="text-slate-800 font-medium">Jobs</strong></span>
                             <span>|</span>
                             <span>{formatDate(job.created_at || job.createdAt)}</span>
                             <span>|</span>
-                            <span>{job.state?.name || 'Maharashtra'}</span>
+                            <span>{job.state?.name || job.dept || 'All India'}</span>
                           </div>
 
                           {/* Excerpt Snippet */}

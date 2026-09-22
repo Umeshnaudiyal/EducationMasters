@@ -23,6 +23,22 @@ import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+const PAGE_SIZE = 10;
+
+function getPaginationItems(current, total) {
+  if (!total || total <= 1) return [1];
+  if (total <= 7) {
+    return Array.from({ length: total }, (_, i) => i + 1);
+  }
+
+  if (current <= 4) {
+    return [1, 2, 3, 4, 5, '...', total];
+  }
+  if (current >= total - 3) {
+    return [1, '...', total - 4, total - 3, total - 2, total - 1, total];
+  }
+  return [1, '...', current - 1, current, current + 1, '...', total];
+}
 
 function UserAvatarThumbnail({ user }) {
   const [imgError, setImgError] = useState(false);
@@ -122,7 +138,7 @@ export default function UsersManagementPage() {
       setLoading(true);
       const queryParams = new URLSearchParams({
         page: page.toString(),
-        limit: '15',
+        limit: String(PAGE_SIZE),
         search: search.trim(),
         role: activeTab,
       });
@@ -817,64 +833,71 @@ export default function UsersManagementPage() {
           </table>
         </div>
 
-        {/* Numbered Pagination (Screenshot style) */}
-        <div className="p-3 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500">
+        {/* Numbered Pagination (Clean sliding window style) */}
+        <div className="p-3 bg-white border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 select-none">
           <div>
-            Showing {Math.min((page - 1) * 15 + 1, total)} to{' '}
-            {Math.min(page * 15, total)} of {total.toLocaleString()} results
+            Showing {total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1} to{' '}
+            {Math.min(page * PAGE_SIZE, total)} of {total.toLocaleString()} results
           </div>
 
           <div className="flex items-center gap-1">
             <button
               disabled={page <= 1}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              className="px-2 py-1 bg-white hover:bg-slate-100 disabled:opacity-40 rounded border border-slate-300 text-slate-700 text-xs"
+              onClick={() => setPage(1)}
+              title="First Page"
+              className="px-2 py-1 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none rounded border border-slate-300 text-slate-700 text-xs shadow-2xs cursor-pointer"
             >
               «
             </button>
+            <button
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              title="Previous Page"
+              className="px-2.5 py-1 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none rounded border border-slate-300 text-slate-700 text-xs shadow-2xs cursor-pointer flex items-center gap-1"
+            >
+              <ChevronLeft size={12} />
+              <span>Prev</span>
+            </button>
 
-            {/* Page number buttons */}
-            {Array.from({ length: Math.min(pages, 7) }, (_, i) => {
-              let pageNum = i + 1;
-              if (pages > 7) {
-                if (page > 4) {
-                  pageNum = page - 3 + i;
-                  if (pageNum > pages) pageNum = pages - (6 - i);
-                }
+            {/* Smart Windowed Page number buttons */}
+            {getPaginationItems(page, pages).map((item, idx) => {
+              if (item === '...') {
+                return (
+                  <span key={`users-ellipsis-${idx}`} className="px-1.5 text-slate-400 font-bold text-xs">
+                    ...
+                  </span>
+                );
               }
-              if (pageNum < 1 || pageNum > pages) return null;
 
               return (
                 <button
-                  key={pageNum}
-                  onClick={() => setPage(pageNum)}
-                  className={`px-2.5 py-1 text-xs rounded border transition-colors ${
-                    page === pageNum
-                      ? 'bg-[#2271b1] text-white border-[#2271b1] font-bold'
+                  key={`users-page-${item}`}
+                  onClick={() => setPage(item)}
+                  className={`min-w-[28px] h-7 px-2 text-xs rounded border transition-colors cursor-pointer ${
+                    page === item
+                      ? 'bg-[#2271b1] text-white border-[#2271b1] font-bold shadow-xs'
                       : 'bg-white hover:bg-slate-100 text-slate-700 border-slate-300'
                   }`}
                 >
-                  {pageNum}
+                  {item}
                 </button>
               );
             })}
 
-            {pages > 7 && page < pages - 3 && (
-              <>
-                <span className="px-1 text-slate-400">..</span>
-                <button
-                  onClick={() => setPage(pages)}
-                  className="px-2.5 py-1 text-xs rounded border bg-white hover:bg-slate-100 text-slate-700 border-slate-300"
-                >
-                  {pages}
-                </button>
-              </>
-            )}
-
             <button
               disabled={page >= pages}
               onClick={() => setPage((p) => Math.min(pages, p + 1))}
-              className="px-2 py-1 bg-white hover:bg-slate-100 disabled:opacity-40 rounded border border-slate-300 text-slate-700 text-xs"
+              title="Next Page"
+              className="px-2.5 py-1 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none rounded border border-slate-300 text-slate-700 text-xs shadow-2xs cursor-pointer flex items-center gap-1"
+            >
+              <span>Next</span>
+              <ChevronRight size={12} />
+            </button>
+            <button
+              disabled={page >= pages}
+              onClick={() => setPage(pages)}
+              title="Last Page"
+              className="px-2 py-1 bg-white hover:bg-slate-100 disabled:opacity-30 disabled:pointer-events-none rounded border border-slate-300 text-slate-700 text-xs shadow-2xs cursor-pointer"
             >
               »
             </button>

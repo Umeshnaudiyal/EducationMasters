@@ -33,7 +33,25 @@ export async function fetchPageData(slug, preferredType = 'auto') {
   if (!slug) return null;
 
   try {
-    // 1. If explicitly a job
+    // 1. If explicitly a result
+    if (preferredType === 'result') {
+      const res = await fetch(`${API_BASE}/results/${slug}`, { next: { revalidate: 60 } });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data) return { data: json.data, type: 'result' };
+      }
+    }
+
+    // 2. If explicitly an admit-card
+    if (preferredType === 'admit-card') {
+      const res = await fetch(`${API_BASE}/admit-cards/${slug}`, { next: { revalidate: 60 } });
+      if (res.ok) {
+        const json = await res.json();
+        if (json?.data) return { data: json.data, type: 'admit-card' };
+      }
+    }
+
+    // 3. If explicitly a job
     if (preferredType === 'job') {
       const res = await fetch(`${API_BASE}/jobs/${slug}`, { next: { revalidate: 60 } });
       if (res.ok) {
@@ -42,14 +60,32 @@ export async function fetchPageData(slug, preferredType = 'auto') {
       }
     }
 
-    // 2. Try blogs API
+    // 4. Try blogs API
     const blogRes = await fetch(`${API_BASE}/blogs/${slug}`, { next: { revalidate: 60 } });
     if (blogRes.ok) {
       const blogJson = await blogRes.json();
       if (blogJson?.data) return { data: blogJson.data, type: 'blog' };
     }
 
-    // 3. Fallback check jobs API if not already tried
+    // 5. Fallback check results API
+    if (preferredType !== 'result') {
+      const resRes = await fetch(`${API_BASE}/results/${slug}`, { next: { revalidate: 60 } });
+      if (resRes.ok) {
+        const resJson = await resRes.json();
+        if (resJson?.data) return { data: resJson.data, type: 'result' };
+      }
+    }
+
+    // 6. Fallback check admit-cards API
+    if (preferredType !== 'admit-card') {
+      const acRes = await fetch(`${API_BASE}/admit-cards/${slug}`, { next: { revalidate: 60 } });
+      if (acRes.ok) {
+        const acJson = await acRes.json();
+        if (acJson?.data) return { data: acJson.data, type: 'admit-card' };
+      }
+    }
+
+    // 7. Fallback check jobs API
     if (preferredType !== 'job') {
       const jobRes = await fetch(`${API_BASE}/jobs/${slug}`, { next: { revalidate: 60 } });
       if (jobRes.ok) {

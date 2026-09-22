@@ -285,7 +285,7 @@ export const updateProfile = asyncHandler(async (req, res) => {
 // Get Paginated & Filtered Users List
 export const getAllUsers = asyncHandler(async (req, res) => {
   const page = parseInt(req.query.page, 10) || 1;
-  const limit = parseInt(req.query.limit, 10) || 15;
+  const limit = parseInt(req.query.limit, 10) || 10;
   const skip = (page - 1) * limit;
   const search = (req.query.search || req.query.q || '').trim();
   const role = (req.query.role || req.query.tab || 'all').toLowerCase();

@@ -3,7 +3,7 @@ import { fetchPageData, generatePageMetadata, generateJsonLd } from '@/utils/seo
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const result = await fetchPageData(slug, 'auto');
+  const result = await fetchPageData(slug, 'result');
   return generatePageMetadata({
     result,
     slug,
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
 
 export default async function SingleResultPage({ params }) {
   const { slug } = await params;
-  const result = await fetchPageData(slug, 'auto');
+  const result = await fetchPageData(slug, 'result');
   const jsonLd = generateJsonLd({ result, slug, canonicalPath: `/result/${slug}` });
 
   return (

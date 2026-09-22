@@ -1,14 +1,17 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { Eye, EyeOff, AlertCircle, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Eye, EyeOff, AlertCircle, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
 export default function EduLoginPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isExpired = searchParams?.get('expired') === '1';
+
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -201,6 +204,19 @@ export default function EduLoginPage() {
               ? 'Register for Education Masters access'
               : 'Sign in with your email and password'}
           </p>
+
+          {/* Expired Session Alert Card (12 AM Midnight Reset) */}
+          {isExpired && !errorMsg && !successMsg && (
+            <div className="mb-4 text-xs bg-amber-950/80 border border-amber-500/80 text-amber-200 p-3 rounded-lg flex items-start gap-2.5 animate-fadeIn">
+              <Clock size={16} className="text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-bold text-amber-300">Daily Session Expired (12:00 AM)</p>
+                <p className="mt-0.5 text-[11px] text-amber-200/90 leading-tight">
+                  Your daily session concluded at midnight. Please sign in with your credentials to start today's active session.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Inactive User Alert Card */}
           {isInactiveError && (

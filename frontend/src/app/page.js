@@ -6,6 +6,7 @@ import LiveTicker from '@/components/LiveTicker';
 import HeroSection from '@/components/HeroSection';
 import CategoriesSection from '@/components/CategoriesSection';
 import LiveUpdatesFeed from '@/components/LiveUpdatesFeed';
+import AboutSection from '@/components/AboutSection';
 import Footer from '@/components/Footer';
 import { TypingTestModal, MockTestModal } from '@/components/Modals';
 
@@ -35,6 +36,9 @@ export default function Home() {
 
         {/* Leaderboard Ad + Latest Sarkari Naukri + Subject MCQs */}
         <LiveUpdatesFeed />
+
+        {/* About EducationMasters Section */}
+        <AboutSection />
 
       </main>
 

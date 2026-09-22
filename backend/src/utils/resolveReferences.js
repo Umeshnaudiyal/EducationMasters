@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Category, Tag, State, Department, Media, User } from '../models/index.js';
+import { Category, Tag, State, Department, Media, User, Country } from '../models/index.js';
 
 const isValidObjectId = (id) => {
   return typeof id === 'string' && /^[0-9a-fA-F]{24}$/.test(id);
@@ -113,6 +113,33 @@ export const resolveTagIds = async (tags) => {
   }
 
   return [...new Set(resolvedIds.map((id) => id.toString()))].map((id) => new mongoose.Types.ObjectId(id));
+};
+
+export const resolveCountryId = async (country) => {
+  if (!country || country === '— Please Choose —' || country === '-- Please Choose --' || country === '— Select Country —' || country === '-- Select Country --') {
+    return null;
+  }
+
+  if (mongoose.Types.ObjectId.isValid(country) && isValidObjectId(String(country))) {
+    return new mongoose.Types.ObjectId(String(country));
+  }
+
+  if (typeof country === 'object' && country._id && isValidObjectId(String(country._id))) {
+    return new mongoose.Types.ObjectId(String(country._id));
+  }
+
+  const nameOrSlug = typeof country === 'object' ? (country.name || country.slug || country.code || '') : String(country).trim();
+  if (!nameOrSlug) return null;
+
+  const countryDoc = await Country.findOne({
+    $or: [
+      { name: { $regex: `^${nameOrSlug.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+      { code: nameOrSlug.toUpperCase() },
+      { slug: nameOrSlug.toLowerCase() },
+    ],
+  });
+
+  return countryDoc ? countryDoc._id : null;
 };
 
 export const resolveStateId = async (state) => {

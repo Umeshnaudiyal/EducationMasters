@@ -431,7 +431,12 @@ export default function JobsAdminPage() {
                       {/* Job Title with Thumbnail */}
                       <td className="py-2 px-3 align-top">
                         <div className="flex items-start gap-2.5">
-                          <div className="w-14 h-9 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs">
+                          <Link
+                            href={`/job/${j.slug || j._id}`}
+                            target="_blank"
+                            title="Preview Job"
+                            className="w-14 h-9 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs hover:opacity-90 transition-opacity"
+                          >
                             <img
                               src={fullMediaUrl}
                               alt={j.title}
@@ -445,10 +450,12 @@ export default function JobsAdminPage() {
                                 }
                               }}
                             />
-                          </div>
+                          </Link>
                           <div>
                             <Link
-                              href={`/edu-admin/job/edit/${j.slug || j._id}`}
+                              href={`/job/${j.slug || j._id}`}
+                              target="_blank"
+                              title="Preview Job"
                               className="font-semibold text-[#0073aa] hover:text-[#005177] hover:underline text-xs line-clamp-1 cursor-pointer block"
                             >
                               {j.title}

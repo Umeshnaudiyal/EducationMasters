@@ -399,7 +399,12 @@ export default function AdmitCardsAdminPage() {
 
                       {/* Thumbnail */}
                       <td className="py-2.5 px-3 text-center">
-                        <div className="w-12 h-8 bg-slate-100 border border-slate-200 rounded flex items-center justify-center overflow-hidden mx-auto">
+                        <Link
+                          href={`/admit-card/${a.slug || a._id}`}
+                          target="_blank"
+                          title="Preview Admit Card"
+                          className="w-12 h-8 bg-slate-100 border border-slate-200 rounded flex items-center justify-center overflow-hidden mx-auto hover:opacity-90 transition-opacity block"
+                        >
                           {a.featured_media ? (
                             <img
                               src={getImageUrl(a.featured_media)}
@@ -409,14 +414,16 @@ export default function AdmitCardsAdminPage() {
                           ) : (
                             <ImageIcon size={14} className="text-slate-400" />
                           )}
-                        </div>
+                        </Link>
                       </td>
 
                       {/* Job Post Title + Dynamic Relative Date */}
                       <td className="py-2.5 px-3">
                         <div className="space-y-0.5">
                           <Link
-                            href={`/edu-admin/admit-card/edit/${a.slug || a._id}`}
+                            href={`/admit-card/${a.slug || a._id}`}
+                            target="_blank"
+                            title="Preview Admit Card"
                             className="font-semibold text-slate-900 hover:text-[#2271b1] transition-colors leading-snug line-clamp-2 block"
                           >
                             {a.title}

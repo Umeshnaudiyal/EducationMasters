@@ -153,3 +153,39 @@ export const getDashboardStats = async (req, res, next) => {
     next(error);
   }
 };
+
+export const getCacheStats = async (req, res, next) => {
+  try {
+    const memoryCache = (await import('../services/cache.service.js')).default;
+    res.status(200).json({
+      success: true,
+      data: memoryCache.getStats()
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const clearCacheEndpoint = async (req, res, next) => {
+  try {
+    const memoryCache = (await import('../services/cache.service.js')).default;
+    const { pattern } = req.body || {};
+    let deletedCount = 0;
+
+    if (pattern) {
+      deletedCount = memoryCache.invalidatePattern(pattern);
+    } else {
+      deletedCount = memoryCache.store.size;
+      memoryCache.clear();
+    }
+
+    res.status(200).json({
+      success: true,
+      message: pattern ? `Purged cache keys matching "${pattern}"` : 'All in-memory cache successfully cleared',
+      deletedCount
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

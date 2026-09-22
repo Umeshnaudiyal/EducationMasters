@@ -1,8 +1,6 @@
 'use client';
 
-import {
-  Lock
-} from 'lucide-react';
+import Link from 'next/link';
 
 export default function Footer() {
   return (
@@ -16,13 +14,13 @@ export default function Footer() {
           <div className="space-y-4">
 
             {/* Official Brand Logo Image (logo.webp) */}
-            <a href="/" className="inline-block hover:opacity-95 transition cursor-pointer">
+            <Link href="/" className="inline-block hover:opacity-95 transition cursor-pointer">
               <img 
                 src="/logo.webp" 
                 alt="Education Masters" 
                 className="h-14 sm:h-16 w-auto object-contain"
               />
-            </a>
+            </Link>
 
             {/* Accent Line */}
             <div className="w-12 h-0.5 bg-slate-300" />
@@ -39,7 +37,9 @@ export default function Footer() {
 
                 {/* Telegram */}
                 <a
-                  href="#"
+                  href="https://t.me"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 rounded-xl border-2 border-blue-400 bg-white text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition shadow-xs"
                   title="Telegram"
                 >
@@ -50,7 +50,9 @@ export default function Footer() {
 
                 {/* WhatsApp */}
                 <a
-                  href="#"
+                  href="https://whatsapp.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 rounded-xl border-2 border-emerald-400 bg-white text-emerald-500 hover:bg-emerald-500 hover:text-white flex items-center justify-center transition shadow-xs"
                   title="WhatsApp"
                 >
@@ -61,7 +63,9 @@ export default function Footer() {
 
                 {/* Facebook */}
                 <a
-                  href="#"
+                  href="https://facebook.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 rounded-xl border-2 border-blue-400 bg-white text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition shadow-xs"
                   title="Facebook"
                 >
@@ -72,7 +76,9 @@ export default function Footer() {
 
                 {/* LinkedIn */}
                 <a
-                  href="#"
+                  href="https://linkedin.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="w-10 h-10 rounded-xl border-2 border-blue-400 bg-white text-blue-500 hover:bg-blue-500 hover:text-white flex items-center justify-center transition shadow-xs"
                   title="LinkedIn"
                 >
@@ -86,7 +92,11 @@ export default function Footer() {
 
             {/* Official DMCA Protected Badge Graphic (Matching Screenshot 2) */}
             <div className="pt-2">
-              <div className="inline-flex items-center cursor-pointer hover:opacity-95 transition">
+              <Link
+                href="/terms-of-service#intellectual-property"
+                className="inline-flex items-center cursor-pointer hover:opacity-95 transition no-underline"
+                title="DMCA & Intellectual Property Protection"
+              >
                 {/* Circle Lock Container */}
                 <div className="w-11 h-11 rounded-full border-[4px] border-[#65a30d] bg-white flex items-center justify-center shrink-0 z-10 -mr-2.5 shadow-2xs">
                   <svg className="w-6 h-6 fill-[#65a30d]" viewBox="0 0 24 24">
@@ -98,7 +108,7 @@ export default function Footer() {
                   <span className="text-lg font-black tracking-wider text-white font-sans uppercase">DMCA</span>
                   <span className="text-[10px] font-extrabold text-white uppercase tracking-widest -mt-0.5">PROTECTED</span>
                 </div>
-              </div>
+              </Link>
             </div>
 
           </div>
@@ -111,11 +121,11 @@ export default function Footer() {
             <div className="w-14 h-1 bg-slate-400 -mt-2" />
 
             <ul className="space-y-3 text-base sm:text-lg font-semibold">
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Railway</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">UPSC</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Defence</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">SSC</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Bank</a></li>
+              <li><Link href="/category/railway" className="text-blue-600 hover:text-blue-800 hover:underline transition">Railway</Link></li>
+              <li><Link href="/category/upsc" className="text-blue-600 hover:text-blue-800 hover:underline transition">UPSC</Link></li>
+              <li><Link href="/category/defence" className="text-blue-600 hover:text-blue-800 hover:underline transition">Defence</Link></li>
+              <li><Link href="/category/ssc" className="text-blue-600 hover:text-blue-800 hover:underline transition">SSC</Link></li>
+              <li><Link href="/category/bank" className="text-blue-600 hover:text-blue-800 hover:underline transition">Bank</Link></li>
             </ul>
           </div>
 
@@ -127,11 +137,11 @@ export default function Footer() {
             <div className="w-14 h-1 bg-slate-400 -mt-2" />
 
             <ul className="space-y-3 text-base sm:text-lg font-semibold">
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Home</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Disclaimer</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Contact Us</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Syllabus</a></li>
-              <li><a href="#" className="text-blue-600 hover:text-blue-800 hover:underline transition">Terms of Service</a></li>
+              <li><Link href="/" className="text-blue-600 hover:text-blue-800 hover:underline transition">Home</Link></li>
+              <li><Link href="/terms-of-service#disclaimer" className="text-blue-600 hover:text-blue-800 hover:underline transition">Disclaimer</Link></li>
+              <li><Link href="/terms-of-service#contact" className="text-blue-600 hover:text-blue-800 hover:underline transition">Contact Us</Link></li>
+              <li><Link href="/syllabus" className="text-blue-600 hover:text-blue-800 hover:underline transition">Syllabus</Link></li>
+              <li><Link href="/terms-of-service" className="text-blue-600 hover:text-blue-800 hover:underline transition">Terms of Service</Link></li>
             </ul>
           </div>
 
@@ -146,7 +156,12 @@ export default function Footer() {
             <div className="space-y-4">
 
               {/* EXACT AUTHENTIC DSOM LOGO */}
-              <div className="flex flex-col items-start cursor-pointer hover:opacity-95 transition">
+              <a 
+                href="https://dsom.in" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex flex-col items-start hover:opacity-95 transition no-underline"
+              >
                 <div className="flex items-center gap-2">
                   {/* 3D Shiny Blue Globe Sphere */}
                   <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-blue-700 via-sky-400 to-cyan-200 shadow-md flex items-center justify-center border border-sky-300 relative overflow-hidden">
@@ -162,10 +177,15 @@ export default function Footer() {
                 <div className="bg-[#f97316] text-white text-[9px] font-bold px-2 py-0.5 rounded-xs mt-1 tracking-tight">
                   Dehradun School of Online Marketing
                 </div>
-              </div>
+              </a>
 
               {/* EXACT AUTHENTIC ADXVENTURE LOGO */}
-              <div className="flex flex-col items-start cursor-pointer hover:opacity-95 transition pt-1">
+              <a 
+                href="https://adxventure.com" 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex flex-col items-start hover:opacity-95 transition pt-1 no-underline"
+              >
                 <div className="flex items-center text-xl sm:text-2xl font-black tracking-tight">
                   <span className="text-black">Ad</span>
                   <span className="text-[#007bff] font-extrabold mx-[1px]">x</span>
@@ -174,7 +194,7 @@ export default function Footer() {
                 <span className="text-[10px] text-slate-700 font-semibold tracking-tight ml-0.5">
                   Business to Brand
                 </span>
-              </div>
+              </a>
 
             </div>
 
@@ -242,7 +262,7 @@ export default function Footer() {
 
           <div className="font-medium text-slate-600 text-[11px] sm:text-xs flex items-center gap-1">
             <span>Powered by:</span>
-            <a href="#" className="text-blue-600 hover:underline font-bold">Adxventure</a>
+            <a href="https://adxventure.com" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-bold">Adxventure</a>
           </div>
         </div>
       </div>
@@ -250,3 +270,4 @@ export default function Footer() {
     </footer>
   );
 }
+

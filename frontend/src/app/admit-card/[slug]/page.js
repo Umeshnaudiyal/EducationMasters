@@ -3,7 +3,7 @@ import { fetchPageData, generatePageMetadata, generateJsonLd } from '@/utils/seo
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
-  const result = await fetchPageData(slug, 'auto');
+  const result = await fetchPageData(slug, 'admit-card');
   return generatePageMetadata({
     result,
     slug,
@@ -15,7 +15,7 @@ export async function generateMetadata({ params }) {
 
 export default async function SingleAdmitCardPage({ params }) {
   const { slug } = await params;
-  const result = await fetchPageData(slug, 'auto');
+  const result = await fetchPageData(slug, 'admit-card');
   const jsonLd = generateJsonLd({ result, slug, canonicalPath: `/admit-card/${slug}` });
 
   return (

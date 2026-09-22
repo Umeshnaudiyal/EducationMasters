@@ -371,7 +371,12 @@ export default function BlogsAdminPage() {
                       {/* Title with Thumbnail */}
                       <td className="py-2 px-3 align-top">
                         <div className="flex items-start gap-2.5">
-                          <div className="w-14 h-9 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                          <Link
+                            href={`/${b.slug || b._id}`}
+                            target="_blank"
+                            title="Preview Post"
+                            className="w-14 h-9 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center hover:opacity-90 transition-opacity"
+                          >
                             <img
                               src={fullMediaUrl}
                               alt={b.title}
@@ -385,10 +390,12 @@ export default function BlogsAdminPage() {
                                 }
                               }}
                             />
-                          </div>
+                          </Link>
                           <div>
                             <Link
-                              href={`/edu-admin/blog/edit/${b.slug || b._id}`}
+                              href={`/${b.slug || b._id}`}
+                              target="_blank"
+                              title="Preview Post"
                               className="font-semibold text-[#0073aa] hover:text-[#005177] hover:underline text-xs line-clamp-1 cursor-pointer block"
                             >
                               {b.title}

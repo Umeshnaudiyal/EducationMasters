@@ -8,8 +8,10 @@ import Footer from '@/components/Footer';
 import LiveTicker from '@/components/LiveTicker';
 import {
   Calendar, User, Share2, Copy, Bookmark,
-  ExternalLink, Download, ChevronRight, X,
-  Send, MessageSquare, Check, Award, Globe
+  ExternalLink, Download, ChevronRight, ChevronDown, X,
+  Send, MessageSquare, Check, Award, Globe,
+  Building, Clock, FileText, HelpCircle, CheckCircle2,
+  Share, BookmarkCheck
 } from 'lucide-react';
 import { getImageUrl } from '@/utils/image';
 
@@ -17,13 +19,13 @@ const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLI
 
 // Helper for clean, bulletproof date formatting
 const formatDate = (dateStr) => {
-  if (!dateStr) return 'Sep 13, 2026';
+  if (!dateStr || dateStr === '0000-00-00') return 'As per scheduled';
   try {
     const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return 'Sep 13, 2026';
+    if (isNaN(d.getTime())) return String(dateStr);
     return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
   } catch (e) {
-    return 'Sep 13, 2026';
+    return String(dateStr);
   }
 };
 
@@ -32,7 +34,6 @@ const cleanHTML = (contentStr) => {
   if (!contentStr) return '';
   let str = String(contentStr);
 
-  // Replace SQL migration line-break artifacts and escaped entities
   str = str
     .replace(/\\r\\n/g, ' ')
     .replace(/\\n/g, ' ')
@@ -50,7 +51,7 @@ const cleanHTML = (contentStr) => {
   return str.trim();
 };
 
-// Helper to normalize and fix external URLs (e.g., 'www.dsom,in' -> 'https://www.dsom.in')
+// Helper to normalize and fix external URLs
 const formatExternalUrl = (urlStr) => {
   if (!urlStr || typeof urlStr !== 'string') return '';
   let url = urlStr.trim().replace(/,/g, '.');
@@ -59,92 +60,74 @@ const formatExternalUrl = (urlStr) => {
   return `https://${url}`;
 };
 
-// Helper to render Job Highlights Table HTML after intro content & before eligibility criteria
-const buildJobHighlightsTableHTML = (title, jobDetails) => {
-  if (!jobDetails) return '';
-  const postName = jobDetails.postName || title || 'N/A';
-  const totalVacancies = jobDetails.totalVacancies || 'N/A';
-  const jobLocation = jobDetails.jobLocation || 'All India';
-  const releaseDate = jobDetails.releaseDate || 'N/A';
-  const startDate = jobDetails.startDate || releaseDate;
-  const lastDate = jobDetails.endDate || 'Check Notification';
-  const examDate = jobDetails.examDate || 'N/A';
-  const minAge = jobDetails.minAge || 'N/A';
-  const maxAge = jobDetails.maxAge || 'N/A';
-  const officialLink = formatExternalUrl(jobDetails.officialLink);
-  const applyLink = formatExternalUrl(jobDetails.applyLink);
-  const admitCardLink = formatExternalUrl(jobDetails.admitCardLink);
-  const resultLink = formatExternalUrl(jobDetails.resultLink);
+// Parse structured FAQ questions & answers from HTML string or raw content
+const parseFaqs = (faqRaw, defaultExamName = '') => {
+  if (!faqRaw) return [];
+  if (Array.isArray(faqRaw)) return faqRaw;
 
-  return `
-    <h2 class="text-2xl font-semibold text-slate-900 mt-6 mb-3 border-b border-slate-200 pb-2">${cleanHTML(title)} Job Highlights:</h2>
-    <div class="overflow-x-auto my-4 border border-slate-200 rounded-md">
-      <table class="w-full text-xs sm:text-sm border-collapse border border-slate-200 text-left">
-        <tbody>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700 w-1/3 sm:w-1/4">Name of Exam</th>
-            <td class="p-3 font-normal text-slate-900">${postName}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">No. of Seats</th>
-            <td class="p-3 font-normal text-slate-900">${totalVacancies}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Job Location</th>
-            <td class="p-3 font-normal text-slate-900">${jobLocation}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Notification Release Date</th>
-            <td class="p-3 font-normal text-slate-900">${releaseDate}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Online Application Start Date</th>
-            <td class="p-3 font-normal text-slate-900">${startDate}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Last Date to Apply</th>
-            <td class="p-3 font-normal text-slate-900">${lastDate}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Prelims Exam Date</th>
-            <td class="p-3 font-normal text-slate-500">${examDate}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Minimum age limit</th>
-            <td class="p-3 font-normal text-slate-500">${minAge}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Maximum age limit</th>
-            <td class="p-3 font-normal text-slate-500">${maxAge}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Notification Release Link</th>
-            <td class="p-3 font-medium text-blue-600">${officialLink ? `<a href="${officialLink}" target="_blank" rel="noreferrer" class="hover:underline">Click here</a>` : '<span class="text-slate-500 font-normal">N/A</span>'}</td>
-          </tr>
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Direct Online Application Link</th>
-            <td class="p-3 font-medium text-blue-600">${applyLink ? `<a href="${applyLink}" target="_blank" rel="noreferrer" class="hover:underline">Apply now</a>` : '<span class="text-slate-500 font-normal">N/A</span>'}</td>
-          </tr>
-          ${admitCardLink ? `
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Admit Card Link</th>
-            <td class="p-3 font-medium text-blue-600"><a href="${admitCardLink}" target="_blank" rel="noreferrer" class="hover:underline">Download Admit Card</a></td>
-          </tr>` : ''}
-          ${resultLink ? `
-          <tr class="border-b border-slate-200 hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Result Link</th>
-            <td class="p-3 font-medium text-blue-600"><a href="${resultLink}" target="_blank" rel="noreferrer" class="hover:underline">Download Result</a></td>
-          </tr>` : ''}
-          <tr class="hover:bg-slate-50">
-            <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Helpline</th>
-            <td class="p-3 font-normal text-slate-500">N/A</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  `;
+  const cleaned = cleanHTML(faqRaw);
+  if (!cleaned) return [];
+
+  // Match pattern like <li><strong>Q?</strong></li> <p>Answer</p> or <p><strong>Q. Question?</strong></p><p>Answer</p>
+  const faqs = [];
+  const regex = /<(?:li|p|h[3-6]|div)[^>]*>\s*<strong[^>]*>([^<]+)<\/strong>\s*<\/(?:li|p|h[3-6]|div)>\s*<(?:p|div)[^>]*>(.*?)<\/(?:p|div)>/gi;
+  let match;
+
+  while ((match = regex.exec(cleaned)) !== null) {
+    let q = match[1].replace(/^[Q0-9.\s]+/, '').trim();
+    let a = match[2].replace(/^Answer:\s*/i, '').replace(/<[^>]*>/g, '').trim();
+    if (q && a) {
+      faqs.push({ question: q, answer: a });
+    }
+  }
+
+  // If regex parsing didn't find pairs, check if list items exist
+  if (faqs.length === 0) {
+    const listItems = cleaned.match(/<li[^>]*>(.*?)<\/li>/gi);
+    if (listItems && listItems.length > 0) {
+      listItems.forEach((item, idx) => {
+        const text = item.replace(/<[^>]*>/g, '').trim();
+        if (text) {
+          faqs.push({
+            question: `Question ${idx + 1}`,
+            answer: text
+          });
+        }
+      });
+    }
+  }
+
+  return faqs;
 };
 
+// Helper to parse HTML instructions (inst_down or inst_impl) into clean text items
+const parseInstructionItems = (htmlStr) => {
+  if (!htmlStr) return [];
+  const cleaned = cleanHTML(htmlStr);
+  const items = [];
+
+  const liMatches = cleaned.match(/<li[^>]*>(.*?)<\/li>/gi);
+  if (liMatches && liMatches.length > 0) {
+    liMatches.forEach((li) => {
+      const text = li.replace(/<[^>]*>/g, '').trim();
+      if (text) items.push(text);
+    });
+  } else {
+    // Split by paragraphs or newlines
+    const pMatches = cleaned.match(/<p[^>]*>(.*?)<\/p>/gi);
+    if (pMatches && pMatches.length > 0) {
+      pMatches.forEach((p) => {
+        const text = p.replace(/<[^>]*>/g, '').trim();
+        if (text) items.push(text);
+      });
+    } else {
+      const lines = cleaned.split(/\n+/).map(l => l.replace(/<[^>]*>/g, '').trim()).filter(Boolean);
+      items.push(...lines);
+    }
+  }
+
+  return items;
+};
 
 const DEFAULT_EXPIRING_JOBS = [
   {
@@ -204,14 +187,15 @@ export default function SingleArticlePage() {
 
   const [article, setArticle] = useState(null);
   const [expiringJobs, setExpiringJobs] = useState(DEFAULT_EXPIRING_JOBS);
+  const [relatedJobs, setRelatedJobs] = useState(DEFAULT_EXPIRING_JOBS);
   const [sidebarTab, setSidebarTab] = useState('expiring'); // 'expiring' or 'mcq'
   const [loading, setLoading] = useState(true);
   const [showLeftAd, setShowLeftAd] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
 
   const isJobPage = pathname.startsWith('/job') || article?.isJob;
-  const isAdmitCardPage = pathname.startsWith('/admit-card') || article?.category?.toLowerCase().includes('admit');
-  const isResultPage = pathname.startsWith('/result') || article?.category?.toLowerCase().includes('result');
+  const isAdmitCardPage = pathname.startsWith('/admit-card') || article?.isAdmitCard || article?.category?.toLowerCase().includes('admit');
+  const isResultPage = pathname.startsWith('/result') || article?.isResult || article?.category?.toLowerCase().includes('result');
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -220,9 +204,9 @@ export default function SingleArticlePage() {
     } else {
       setLoading(false);
     }
-  }, [slug]);
+  }, [slug, pathname]);
 
-  // Dynamically update page Title, Meta Description & Keywords matching live site standard
+  // Dynamically update page Title, Meta Description & Keywords
   useEffect(() => {
     if (article && typeof document !== 'undefined') {
       const rawTitle = article.title || article.metadata?.m_title;
@@ -254,8 +238,31 @@ export default function SingleArticlePage() {
     setLoading(true);
     try {
       fetchSidebarJobs();
+      fetchRelatedJobs();
 
-      // If on /job route, try Job endpoint first
+      // 1. If on /result route, try Result endpoint first
+      if (pathname.startsWith('/result')) {
+        const resRes = await fetch(`${API_BASE}/results/${articleSlug}`);
+        const dataRes = await resRes.json();
+        if (dataRes.success && dataRes.data) {
+          setArticle(formatArticleData(dataRes.data, 'result'));
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 2. If on /admit-card route, try Admit Card endpoint first
+      if (pathname.startsWith('/admit-card')) {
+        const resAC = await fetch(`${API_BASE}/admit-cards/${articleSlug}`);
+        const dataAC = await resAC.json();
+        if (dataAC.success && dataAC.data) {
+          setArticle(formatArticleData(dataAC.data, 'admit-card'));
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 3. If on /job route, try Job endpoint first
       if (pathname.startsWith('/job')) {
         const resJob = await fetch(`${API_BASE}/jobs/${articleSlug}`);
         const dataJob = await resJob.json();
@@ -266,7 +273,7 @@ export default function SingleArticlePage() {
         }
       }
 
-      // 1. Try Blog endpoint
+      // 4. Try Blog endpoint
       let res = await fetch(`${API_BASE}/blogs/${articleSlug}`);
       let data = await res.json();
 
@@ -276,11 +283,32 @@ export default function SingleArticlePage() {
         return;
       }
 
-      // 2. Try Job endpoint (if not already tried)
+      // 5. Fallback check results
+      if (!pathname.startsWith('/result')) {
+        res = await fetch(`${API_BASE}/results/${articleSlug}`);
+        data = await res.json();
+        if (data.success && data.data) {
+          setArticle(formatArticleData(data.data, 'result'));
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 6. Fallback check admit cards
+      if (!pathname.startsWith('/admit-card')) {
+        res = await fetch(`${API_BASE}/admit-cards/${articleSlug}`);
+        data = await res.json();
+        if (data.success && data.data) {
+          setArticle(formatArticleData(data.data, 'admit-card'));
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 7. Fallback check jobs
       if (!pathname.startsWith('/job')) {
         res = await fetch(`${API_BASE}/jobs/${articleSlug}`);
         data = await res.json();
-
         if (data.success && data.data) {
           setArticle(formatArticleData(data.data, 'job'));
           setLoading(false);
@@ -288,9 +316,10 @@ export default function SingleArticlePage() {
         }
       }
 
-      // 3. Fallback mock data
+      // Fallback mock data
       setArticle(generateFallbackArticle(articleSlug));
     } catch (err) {
+      console.error('Fetch article error:', err);
       setArticle(generateFallbackArticle(articleSlug));
     } finally {
       setLoading(false);
@@ -317,15 +346,41 @@ export default function SingleArticlePage() {
     }
   };
 
+  const fetchRelatedJobs = async () => {
+    try {
+      const res = await fetch(`${API_BASE}/jobs?status=publish&limit=6`);
+      const data = await res.json();
+      if (data.success && data.data && data.data.length > 0) {
+        const formatted = data.data.map((item, idx) => ({
+          id: item._id || idx,
+          title: cleanHTML(item.title),
+          slug: item.slug || `job-${idx}`,
+          lastDate: formatDate(item.app_ends || item.dates?.last_date),
+          category: 'Jobs',
+          image: getImageUrl(item.featured_media, DEFAULT_EXPIRING_JOBS[idx % DEFAULT_EXPIRING_JOBS.length].image)
+        }));
+        setRelatedJobs(formatted);
+      }
+    } catch (err) {
+      console.error('Related jobs fetch error:', err);
+    }
+  };
+
   const formatArticleData = (raw, type) => {
-    const isJob = type === 'job';
+    const isResult = type === 'result' || pathname.startsWith('/result') || raw.result_status !== undefined || (raw.inst_down !== undefined && raw.down_url && !raw.vacancies);
+    const isAdmitCard = type === 'admit-card' || pathname.startsWith('/admit-card');
+    const isJob = type === 'job' || (!isResult && !isAdmitCard && (raw.vacancies || raw.qualification || raw.posts));
+
     let firstCat = raw.categories?.[0] || raw.category;
     let catName = typeof firstCat === 'object' ? (firstCat?.name || firstCat?.slug || '') : String(firstCat || '');
     let catSlug = typeof firstCat === 'object' ? (firstCat?.slug || '') : '';
     if (catName === '[object Object]') catName = '';
 
-    // Extract Department / Board / Agency Name intelligently if available or from title
+    // Extract Department / Board / Agency Name
     const extractDepartment = (rawItem) => {
+      if (rawItem.dept && String(rawItem.dept).trim()) {
+        return cleanHTML(rawItem.dept);
+      }
       if (rawItem.department) {
         const deptStr = typeof rawItem.department === 'object' ? rawItem.department.name : String(rawItem.department);
         if (deptStr && deptStr.trim() && deptStr !== '[object Object]') return cleanHTML(deptStr);
@@ -345,30 +400,27 @@ export default function SingleArticlePage() {
       if (lowerTitle.includes('iim')) return 'IIM';
       if (lowerTitle.includes('rrb') || lowerTitle.includes('railway')) return 'Railway / RRB';
       if (lowerTitle.includes('tiss')) return 'TISS';
+      if (lowerTitle.includes('union bank')) return 'Union Bank';
       if (lowerTitle.includes('bank of baroda') || lowerTitle.includes('bob')) return 'Bank of Baroda';
       if (lowerTitle.includes('sikkim') || lowerTitle.includes('spsc')) return 'SPSC / Sikkim';
       if (lowerTitle.includes('ibps')) return 'IBPS';
-      if (lowerTitle.includes('lic')) return 'LIC';
-      if (lowerTitle.includes('isro')) return 'ISRO';
-      if (lowerTitle.includes('drdo')) return 'DRDO';
+      if (lowerTitle.includes('dgqa') || lowerTitle.includes('dgaqa')) return 'DGQA';
 
-      if (catName && typeof catName === 'string' && catName.trim() && catName !== '[object Object]' && !['jobs', 'job', 'articles', 'latest job alert', 'uncategorized'].includes(catName.trim().toLowerCase())) {
+      if (catName && typeof catName === 'string' && catName.trim() && !['jobs', 'job', 'articles', 'results', 'admit card', 'uncategorized'].includes(catName.trim().toLowerCase())) {
         return cleanHTML(catName);
       }
 
-      const match = titleStr.match(/^([A-Z0-9\s]{2,15}?)\s+(Recruitment|Exam|Notification|Vacancies|Posts|Jobs)/i);
-      if (match && match[1] && match[1].trim().length >= 2) {
-        return match[1].trim();
-      }
-
-      return isJob ? 'Jobs' : (catName && typeof catName === 'string' && catName !== '[object Object]' ? catName : 'Articles');
+      if (isResult) return 'Results';
+      if (isAdmitCard) return 'Admit Card';
+      if (isJob) return 'Jobs';
+      return 'Articles';
     };
 
     const categoryName = extractDepartment(raw);
-    const categorySlug = catSlug || categoryName.toLowerCase().replace(/[^a-z0-9]+/g, '-');
+    const categorySlug = catSlug || (isResult ? 'results' : isAdmitCard ? 'admit-cards' : isJob ? 'jobs' : 'articles');
 
-    // Extract authentic Author details from MongoDB User schema
-    let authorName = 'Vikash Suyal';
+    // Extract authentic Author details
+    let authorName = 'Vikash Sharma';
     let authorImage = 'https://educationmasters.in/assets/img/users/admin_1777271474.png';
     let authorBio = 'Vikash Sharma is an education expert and digital learning strategist with over 10 years of experience in the Indian education ecosystem. As the founder of EducationMasters.in, he is dedicated to helping students and job aspirants stay updated with the latest government exams, results, and career guidance.';
 
@@ -377,7 +429,6 @@ export default function SingleArticlePage() {
         const rawName = raw.author.name?.trim() || '';
         const rawNice = raw.author.nicename?.trim() || '';
 
-        // Choose best display name (prefer full name over acronyms/admin)
         if (rawName.toLowerCase() === 'admin' && rawNice) {
           authorName = rawNice;
         } else if (rawName.length <= 3 && rawNice && rawNice.length > rawName.length) {
@@ -390,17 +441,12 @@ export default function SingleArticlePage() {
 
         if (raw.author.image) {
           authorImage = getImageUrl(raw.author.image, 'https://educationmasters.in/assets/img/defaults/user.png');
-        } else {
-          authorImage = 'https://educationmasters.in/assets/img/defaults/user.png';
         }
 
         if (raw.author.bio && raw.author.bio.trim()) {
           authorBio = cleanHTML(raw.author.bio);
-        } else if (authorName.toLowerCase().includes('vikash')) {
-          authorBio = 'Vikash Sharma is an education expert and digital learning strategist with over 10 years of experience in the Indian education ecosystem. As the founder of EducationMasters.in, he is dedicated to helping students and job aspirants stay updated with the latest government exams, results, and career guidance.';
-          authorImage = 'https://educationmasters.in/assets/img/users/admin_1777271474.png';
         } else {
-          authorBio = `${authorName} is an educational content contributor at Education Masters, dedicated to delivering verified, timely information regarding government exams, admit cards, job recruitments, and results to help students and job aspirants achieve their career goals.`;
+          authorBio = `I am ${authorName}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic decisions.`;
         }
       } else if (typeof raw.author === 'string') {
         authorName = raw.author;
@@ -413,119 +459,65 @@ export default function SingleArticlePage() {
       bio: authorBio
     };
 
-    const pubDate = formatDate(raw.created_at || raw.createdAt);
+    const pubDate = formatDate(raw.created_at || raw.createdAt || raw.exam_rdate || raw.result_date);
 
-    const rawReleaseDate = raw.released || raw.created_at || raw.createdAt;
-    const formattedReleaseDate = rawReleaseDate ? formatDate(rawReleaseDate) : 'N/A';
+    // Dynamic Result / Admit Card Details Object
+    const examNameVal = cleanHTML(raw.post || raw.title || 'Government Examination 2026');
+    const deptNameVal = cleanHTML(raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department) || categoryName || 'Official Authority');
+    const postNameVal = cleanHTML(raw.desig || raw.post || raw.title || 'Various Posts');
+    const examDateVal = raw.exam_date ? formatDate(raw.exam_date) : (raw.dates?.exam_date ? formatDate(raw.dates.exam_date) : 'As per scheduled');
+    const examTimeVal = cleanHTML(raw.exam_time || 'As per scheduled');
+    const examModeVal = cleanHTML(raw.exam_mode || 'Offline (OMR Based)');
+    const officialWebVal = formatExternalUrl(raw.site_url || raw.website || raw.official_website || (raw.links?.site_url) || (raw.links?.official_website));
+    const downUrlVal = formatExternalUrl(raw.down_url || raw.result_url || raw.links?.down_url || raw.links?.result_url || raw.site_url);
 
-    const rawStartDate = raw.app_start || raw.dates?.start_date;
-    const formattedStartDate = rawStartDate ? formatDate(rawStartDate) : formattedReleaseDate;
+    const descriptionHtml = cleanHTML(raw.description || raw.content || '');
+    const instDownRaw = cleanHTML(raw.inst_down || raw.downloadInstructions || '');
+    const instImplRaw = cleanHTML(raw.inst_impl || raw.importantInstructions || '');
+    const faqRaw = cleanHTML(raw.faq_content || raw.faqs || '');
 
-    const rawLastDate = raw.app_ends || raw.dates?.last_date;
-    let formattedLastDate = 'Check Notification';
-    if (rawLastDate && rawLastDate !== '0000-00-00') {
-      formattedLastDate = formatDate(rawLastDate);
-    }
+    const parsedInstDown = parseInstructionItems(instDownRaw);
+    const parsedInstImpl = parseInstructionItems(instImplRaw);
+    const parsedFaqItems = parseFaqs(faqRaw, examNameVal);
 
-    const rawExamDate = raw.exam_date || raw.dates?.exam_date;
-    const formattedExamDate = rawExamDate && String(rawExamDate) !== 'null' ? formatDate(rawExamDate) : 'N/A';
+    const resultDetailsObj = (isResult || isAdmitCard) ? {
+      examName: examNameVal,
+      deptName: deptNameVal,
+      postName: postNameVal,
+      examDate: examDateVal,
+      examTime: examTimeVal,
+      examMode: examModeVal,
+      officialWebsite: officialWebVal,
+      downUrl: downUrlVal,
+      resultStatus: cleanHTML(raw.result_status || 'Declared / Out'),
+      description: descriptionHtml,
+      instDown: instDownRaw,
+      instDownItems: parsedInstDown,
+      instImpl: instImplRaw,
+      instImplItems: parsedInstImpl,
+      faqContent: faqRaw,
+      faqItems: parsedFaqItems
+    } : null;
 
-    const minAgeVal = raw.min_age || raw.age_limit?.min_age || 'N/A';
-    const maxAgeVal = raw.max_age || raw.age_limit?.max_age || 'N/A';
-
-    // Extract dynamic job location (State name if job is state-specific, else All India)
-    const extractJobLocation = (rawItem) => {
-      if (!rawItem) return 'All India';
-      
-      // 1. Populated State object
-      if (rawItem.state && typeof rawItem.state === 'object' && rawItem.state.name) {
-        return cleanHTML(rawItem.state.name);
-      }
-      
-      // 2. Direct state_name property
-      if (rawItem.state_name && String(rawItem.state_name).trim()) {
-        return cleanHTML(rawItem.state_name);
-      }
-      
-      // 3. String state property (not a 24-char ObjectId string)
-      if (typeof rawItem.state === 'string' && rawItem.state.trim() && !rawItem.state.match(/^[0-9a-fA-F]{24}$/)) {
-        return cleanHTML(rawItem.state);
-      }
-      
-      // 4. Job Location or Location property
-      if (rawItem.job_location && String(rawItem.job_location).trim()) {
-        return cleanHTML(rawItem.job_location);
-      }
-      if (rawItem.location && String(rawItem.location).trim()) {
-        return cleanHTML(rawItem.location);
-      }
-
-      return 'All India';
-    };
-
-    const jobLocationVal = extractJobLocation(raw);
-
-    const admitCardUrl = raw.admitCardNotification?.down_url || raw.admitCardNotification?.slug || raw.links?.admit_url || '';
-    const resultUrl = raw.resultNotification?.down_url || raw.resultNotification?.slug || raw.links?.result_url || '';
-
+    // Standard Job Details Object
     const jobDetailsObj = isJob ? {
       postName: cleanHTML(raw.title),
       totalVacancies: cleanHTML(raw.posts || raw.total_posts || raw.vacancies || 'N/A'),
-      jobLocation: jobLocationVal,
+      jobLocation: cleanHTML(raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state) || 'All India'),
       qualification: cleanHTML(raw.qualification || 'As per notification'),
-      releaseDate: formattedReleaseDate,
-      startDate: formattedStartDate,
-      endDate: formattedLastDate,
-      examDate: formattedExamDate,
-      minAge: minAgeVal !== 'N/A' ? `${minAgeVal} Years` : 'N/A',
-      maxAge: maxAgeVal !== 'N/A' ? `${maxAgeVal} Years` : 'N/A',
+      releaseDate: formatDate(raw.released || raw.created_at || raw.createdAt),
+      startDate: formatDate(raw.app_start || raw.dates?.start_date || raw.created_at),
+      endDate: formatDate(raw.app_ends || raw.dates?.last_date),
+      examDate: raw.exam_date ? formatDate(raw.exam_date) : 'N/A',
+      minAge: raw.min_age ? `${raw.min_age} Years` : 'N/A',
+      maxAge: raw.max_age ? `${raw.max_age} Years` : 'N/A',
       salary: cleanHTML(raw.salary || 'As per rules'),
-      applicationFee: cleanHTML(raw.fees?.gen_fee ? `General/OBC: ₹${raw.fees.gen_fee} | SC/ST: Exempted` : (raw.fees || raw.application_fee || 'As per rules')),
-      officialLink: raw.noti_link || raw.links?.site_url || raw.official_website || raw.site_url || raw.notification_link || '',
-      applyLink: raw.app_link || raw.links?.down_url || raw.apply_link || raw.down_url || raw.online_apply_link || '',
-      admitCardLink: admitCardUrl,
-      resultLink: resultUrl
+      applicationFee: cleanHTML(raw.fees?.gen_fee ? `General/OBC: ₹${raw.fees.gen_fee} | SC/ST: Exempted` : (raw.fees || 'As per rules')),
+      officialLink: formatExternalUrl(raw.noti_link || raw.links?.site_url || raw.site_url),
+      applyLink: formatExternalUrl(raw.app_link || raw.links?.down_url || raw.down_url),
+      admitCardLink: formatExternalUrl(raw.admitCardNotification?.down_url || raw.links?.admit_url),
+      resultLink: formatExternalUrl(raw.resultNotification?.down_url || raw.links?.result_url)
     } : null;
-
-    // Base description/content
-    let fullContent = cleanHTML(raw.content || raw.description || '');
-
-    // Combine all migrated job fields (eligibility, fees, salary) if present on raw
-    if (isJob) {
-      let extraHtml = '';
-
-      if (raw.eligibility && !fullContent.includes('Eligibility Criteria')) {
-        extraHtml += `<div class="my-6"><h3 class="text-base font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Eligibility Criteria:</h3>${cleanHTML(raw.eligibility)}</div>`;
-      }
-
-      if (raw.fees && !fullContent.includes('Application Fees')) {
-        let feesStr = typeof raw.fees === 'object' ?
-          `<ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
-            <li><strong>General/OBC/EWS:</strong> ₹${raw.fees.gen_fee || '25'}</li>
-            <li><strong>SC Candidates:</strong> ${raw.fees.sc_fee || 'No fee'}</li>
-            <li><strong>ST Candidates:</strong> ${raw.fees.obc_fee || 'No fee'}</li>
-            <li><strong>PwBD / Female Candidates:</strong> ${raw.fees.ph_fee || 'No fee'}</li>
-          </ul>` : cleanHTML(raw.fees);
-        extraHtml += `<div class="my-6"><h3 class="text-base font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Application Fees:</h3>${feesStr}</div>`;
-      }
-
-      if (raw.salary && !fullContent.includes('Pay Scale')) {
-        extraHtml += `<div class="my-6"><h3 class="text-base font-semibold text-slate-900 mb-2 border-b border-slate-100 pb-1">Pay Scale:</h3>${cleanHTML(raw.salary)}</div>`;
-      }
-
-      if (!fullContent.includes('<table') && jobDetailsObj) {
-        const tableHtml = buildJobHighlightsTableHTML(cleanHTML(raw.title || 'Notification Details'), jobDetailsObj);
-        const eligMatch = fullContent.match(/(<h[1-6][^>]*>.*?Eligibility Criteria.*?<\/h[1-6]>|Eligibility Criteria:?)/i);
-        if (eligMatch) {
-          const index = eligMatch.index;
-          fullContent = fullContent.slice(0, index) + tableHtml + fullContent.slice(index) + extraHtml;
-        } else {
-          fullContent = fullContent + tableHtml + extraHtml;
-        }
-      } else {
-        fullContent += extraHtml;
-      }
-    }
 
     const metadataObj = raw.metadata ? {
       m_title: cleanHTML(raw.metadata.m_title || raw.title),
@@ -543,11 +535,14 @@ export default function SingleArticlePage() {
       category: categoryName,
       categorySlug: categorySlug,
       date: pubDate,
-      lastDate: formattedLastDate,
+      lastDate: isJob ? formatDate(raw.app_ends || raw.dates?.last_date) : (isResult ? 'Result Declared' : 'Download Available'),
       image: getImageUrl(raw.featured_media, 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80'),
-      content: fullContent,
-      isJob: isJob,
+      content: descriptionHtml,
+      isJob,
+      isResult,
+      isAdmitCard,
       jobDetails: jobDetailsObj,
+      resultDetails: resultDetailsObj,
       metadata: metadataObj
     };
   };
@@ -558,57 +553,60 @@ export default function SingleArticlePage() {
       .map(word => word.charAt(0).toUpperCase() + word.slice(1))
       .join(' '));
 
-    const isSikkim = articleSlug.includes('sikkim');
+    const isResult = pathname.startsWith('/result') || articleSlug.includes('result');
 
-    if (isSikkim) {
+    if (isResult) {
       return {
-        title: 'Sikkim All Government Exams List 2026: Complete List of Govt Exams, Eligibility & Jobs',
+        title: `${formattedTitle} Result 2026 - Check Merit List & Selection Status`,
         subtitle: '',
         author: {
-          name: 'Nisha Negi',
+          name: 'adityapanwarjaat',
           image: 'https://educationmasters.in/assets/img/defaults/user.png',
-          bio: 'Nisha Negi is a Senior Education & Govt Exam Specialist at Education Masters. She covers state SPSC recruitments, civil services examinations, admit cards, and competitive exam preparation strategies.'
+          bio: 'I am Aditya, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic decisions.'
         },
-        category: 'Latest Job Alert',
-        date: 'Jul 29, 2026',
+        category: 'Result',
+        categorySlug: 'results',
+        date: 'Sep 21, 2026',
+        lastDate: 'Result Declared',
         image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80',
-        isJob: true,
-        jobDetails: {
-          postName: 'Sikkim State Govt Various Posts 2026',
-          totalVacancies: '1,450+ Vacancies',
-          qualification: '10th Pass, 12th Pass, Graduate Degree, B.Ed, Diploma',
-          ageLimit: '18 to 40 Years (Age relaxation applicable as per rules)',
-          salary: '₹21,700 - ₹1,12,400 (7th Pay Commission)',
-          applicationFee: 'General: ₹150 | SC/ST/PWD: Exempted',
-          endDate: 'October 30, 2026',
-          officialLink: 'https://spsc.sikkim.gov.in',
-          applyLink: 'https://spsc.sikkim.gov.in'
-        },
-        contentSections: [
-          {
-            heading: 'Overview of Sikkim Government Recruitment 2026',
-            body: `Sikkim Government Exams 2026 offer excellent career opportunities for candidates looking for secure and well-paying government jobs in the state. Every year, the Sikkim Public Service Commission (SPSC) along with various Sikkim State Departments regularly announces notifications for administrative, teaching, police, engineering, and medical vacancies.`
-          },
-          {
-            heading: 'Major Government Exams Conducted in Sikkim',
-            isList: true,
-            items: [
-              { name: 'Sikkim State Civil Service (SCS) Exam', board: 'SPSC', qual: 'Graduate Degree', role: 'Deputy Collector, Under Secretary' },
-              { name: 'Sikkim Police Sub-Inspector & Constable', board: 'Sikkim Police HQ', qual: '10th / 12th / Graduate', role: 'SI, ASI, Constable' },
-              { name: 'SPSC Assistant Engineer (AE) / Junior Engineer (JE)', board: 'SPSC Dept of Power/PWD', qual: 'B.Tech / B.E / Diploma', role: 'Assistant / Junior Engineer' },
-              { name: 'Sikkim Primary & Graduate Teacher (TGT/PGT)', board: 'Education Dept Sikkim', qual: 'B.Ed / D.El.Ed / STET Pass', role: 'Primary & High School Teacher' },
-              { name: 'Sikkim Lower Division Clerk (LDC) & Stenographer', board: 'SPSC Recruitment Cell', qual: '12th Pass + Typing Speed', role: 'LDC / Junior Assistant' }
-            ]
-          },
-          {
-            heading: 'Eligibility Criteria & Age Limits for Sikkim Govt Jobs',
-            body: `To apply for Sikkim State Government Jobs, applicants must meet the specified educational qualifications and citizenship criteria. Priority and relaxations are provided to Sikkim Subject Certificate (SSC) or Certificate of Identification (COI) holders in accordance with state reservation policies.`
-          }
-        ]
+        isResult: true,
+        resultDetails: {
+          examName: formattedTitle,
+          deptName: 'Examination Authority',
+          postName: 'Manager, Specialist Officer & Various Posts',
+          examDate: 'As per scheduled',
+          examTime: 'As per scheduled',
+          examMode: 'Offline (OMR Based)',
+          officialWebsite: 'https://educationmasters.in',
+          downUrl: 'https://educationmasters.in',
+          resultStatus: 'Declared / Out',
+          description: `<p>The <strong>${formattedTitle} Result 2026</strong> has been announced for candidates who appeared in the examination process. Candidates can check their qualifying status, score card, and merit list through the official portal.</p><p>The result will show the qualifying status of candidates and details about the next stage of selection. Depending on the post, candidates may be shortlisted through Online Examination, Group Discussion or Personal Interview.</p>`,
+          instDownItems: [
+            'Visit the official recruitment website.',
+            'Open the Careers / Recruitment / Result section.',
+            `Find "${formattedTitle} Result 2026".`,
+            'Click on the result or shortlisted candidates link when released.',
+            'Enter your Registration Number and Password/Date of Birth, if login is required.',
+            'Submit the details.',
+            'Check your result and qualifying status.',
+            'Download and save the result PDF or scorecard for future reference.'
+          ],
+          instImplItems: [
+            'Check your name, roll number and qualifying status carefully.',
+            'Download a copy of the result for future use.',
+            'Check the next selection stage mentioned in the result.',
+            'Keep your original documents ready for Document Verification.',
+            'Regularly check the official recruitment page for further updates.'
+          ],
+          faqItems: [
+            { question: `When will ${formattedTitle} Result 2026 be released?`, answer: 'The result date has been announced on the official website. Candidates can check their status using the direct link provided above.' },
+            { question: `How can I download ${formattedTitle} Result 2026?`, answer: 'Visit the official website, open the result section, enter your login credentials and download your scorecard PDF.' },
+            { question: `What happens after the ${formattedTitle} Result 2026?`, answer: 'Qualified candidates will move to the next selection stage applicable to their post, such as Document Verification or Interview.' }
+          ]
+        }
       };
     }
 
-    // UPSC Full Professional Fallback Content matching reference screenshots
     return {
       title: 'UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts',
       subtitle: '',
@@ -618,6 +616,7 @@ export default function SingleArticlePage() {
         bio: 'I am mohit, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic and career decisions.'
       },
       category: 'UPSC',
+      categorySlug: 'jobs',
       date: 'Sep 13, 2026',
       image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=1200&q=80',
       isJob: true,
@@ -625,131 +624,14 @@ export default function SingleArticlePage() {
         postName: 'UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts',
         totalVacancies: '212 Vacancies',
         qualification: 'Master Degree, MBBS, MD/MS, B.E/B.Tech or equivalent',
-        ageLimit: '18 to 40 Years (Relaxation as per rules)',
+        ageLimit: '18 to 40 Years',
         salary: 'Pay Level 7 to Level 11 + Applicable Allowances',
         applicationFee: 'General/OBC: ₹25 | SC/ST/Female: Exempted',
         endDate: 'October 02, 2026',
         officialLink: 'https://upsc.gov.in',
         applyLink: 'https://upsconline.nic.in'
       },
-      content: `
-        <p>The <strong>UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts</strong> has been announced by the Union Public Service Commission (UPSC) under Advertisement No. 11/2026. This recruitment is for candidates with specialised qualifications in medical, legal, journalism and other professional fields. A total of 212 vacancies are available in different Central Government departments and offices.</p>
-        
-        <p>The vacancies include Specialist Grade III Assistant Professor posts in Anatomy and General Medicine, Assistant Editor, Specialist Grade II posts in Anaesthesiology and Paediatrics, Assistant Public Prosecutor and Public Law Officer/District Litigation Officer/Law Officer posts. The selected candidates will perform duties according to their respective departments and positions. Assistant Professors will be responsible for teaching and academic activities, while medical specialists will provide professional healthcare services. Assistant Public Prosecutors and Law Officers will handle legal and prosecution-related work. Assistant Editors will perform editing and publication duties.</p>
-        
-        <p>The selection will be conducted through <strong>direct recruitment by selection</strong>. Depending on the number of applications, UPSC may conduct a Recruitment Test for shortlisting candidates, followed by an interview where applicable. Candidates must fulfil the prescribed educational qualification, professional experience and age requirements for their selected post. The salary will be provided according to the applicable <strong>7th CPC Pay Matrix</strong> and government rules.</p>
-        
-        <h2 class="text-xl font-semibold text-slate-900 mt-6 mb-3 border-b border-slate-200 pb-2">Upsc Recruitment 2026 For 212 Specialist, Assistant Professor Job Highlights:</h2>
-        
-        <div class="overflow-x-auto my-4">
-          <table class="w-full text-xs sm:text-sm border-collapse border border-slate-200 text-left">
-            <tbody>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700 w-1/3 sm:w-1/4">Name of Exam</th>
-                <td class="p-3 font-normal text-slate-900">UPSC Recruitment 2026 for 212 Specialist, Assistant Professor</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">No. of Seats</th>
-                <td class="p-3 font-normal text-slate-900">212</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Job Location</th>
-                <td class="p-3 font-normal text-slate-900">All India</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Notification Release Date</th>
-                <td class="p-3 font-normal text-slate-900">12 September 2026</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Online Application Start Date</th>
-                <td class="p-3 font-normal text-slate-900">12 September 2026</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Prelims Exam Date</th>
-                <td class="p-3 font-normal text-slate-500">N/A</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Minimum age limit</th>
-                <td class="p-3 font-normal text-slate-500">N/A</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Maximum age limit</th>
-                <td class="p-3 font-normal text-slate-500">N/A</td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Notification Release Link</th>
-                <td class="p-3 font-medium text-blue-600"><a href="https://upsc.gov.in" target="_blank" rel="noreferrer" class="hover:underline">Click here</a></td>
-              </tr>
-              <tr class="border-b border-slate-200">
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Direct Online Application Link</th>
-                <td class="p-3 font-medium text-blue-600"><a href="https://upsconline.nic.in" target="_blank" rel="noreferrer" class="hover:underline">Apply now</a></td>
-              </tr>
-              <tr>
-                <th class="p-3 bg-slate-50 border-r border-slate-200 font-semibold text-slate-700">Helpline</th>
-                <td class="p-3 font-normal text-slate-500">N/A</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="space-y-4 my-6">
-          <div>
-            <h3 class="text-base font-semibold text-slate-900 mb-1">Eligibility Criteria:</h3>
-            <p class="text-slate-600 text-sm mb-2">The eligibility requirements are different for each post.</p>
-            <ul class="list-disc pl-5 space-y-1.5 text-sm text-slate-700">
-              <li><strong>Assistant Professor – Anatomy:</strong> Candidates need the prescribed recognised postgraduate medical qualification in Anatomy along with the required teaching experience.</li>
-              <li><strong>Assistant Professor – General Medicine:</strong> Candidates generally need MBBS and the prescribed postgraduate medical qualification in Medicine/General Medicine or equivalent DNB, along with the required teaching experience.</li>
-              <li><strong>Assistant Editor:</strong> Candidates need the prescribed degree/diploma qualification in Journalism/Mass Communication or the alternative qualification mentioned in the notification.</li>
-              <li><strong>Specialist Grade II:</strong> Candidates need the prescribed medical qualification, relevant postgraduate qualification and required professional experience.</li>
-              <li><strong>Assistant Public Prosecutor:</strong> A recognised <strong>Law degree</strong> and the prescribed experience at the Bar are required.</li>
-              <li><strong>Public Law Officer / District Litigation Officer:</strong> Candidates need a Law degree and the required legal practice experience.</li>
-              <li><strong>Age Limit:</strong> The maximum age varies according to the post, so candidates must check the exact age requirement for their selected vacancy.</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 class="text-base font-semibold text-slate-900 mb-1">Application Fees:</h3>
-            <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
-              <li><strong>General/OBC/EWS and other applicable candidates:</strong> ₹25</li>
-              <li><strong>Women candidates:</strong> No fee</li>
-              <li><strong>SC candidates:</strong> No fee</li>
-              <li><strong>ST candidates:</strong> No fee</li>
-              <li><strong>PwBD candidates:</strong> No fee</li>
-            </ul>
-          </div>
-
-          <div>
-            <h3 class="text-base font-semibold text-slate-900 mb-1">Pay Scale:</h3>
-            <p class="text-slate-600 text-sm mb-2">The salary is different for each post according to the 7th Central Pay Commission.</p>
-            <ul class="list-disc pl-5 space-y-1 text-sm text-slate-700">
-              <li><strong>Assistant Professor – Anatomy:</strong> Pay Level-11 + applicable NPA.</li>
-              <li><strong>Assistant Professor – General Medicine:</strong> Pay Level-11 + applicable NPA.</li>
-              <li><strong>Specialist Grade II:</strong> Pay Level-11 + applicable NPA.</li>
-              <li><strong>Assistant Editor:</strong> Pay Level-7.</li>
-              <li><strong>Assistant Public Prosecutor:</strong> Pay Level-10.</li>
-              <li><strong>Public Law Officer / District Litigation Officer:</strong> Pay Level-8.</li>
-            </ul>
-          </div>
-
-          <div class="my-6 space-y-4 font-normal">
-            <p class="font-bold text-slate-900 text-sm sm:text-base">सरकारी नौकरियों, जीके अपडेट्स और करेंट अफेयर्स की ताज़ा जानकारी सबसे पहले पाने के लिए:</p>
-            <div class="space-y-3 text-xs sm:text-sm">
-              <div>
-                <p class="font-bold text-slate-900 text-sm sm:text-base">हमारे WhatsApp चैनल को फॉलो करें:</p>
-                <a href="https://whatsapp.com/channel/0029Vb6sjZz0wajwDXcd5B0U" target="_blank" rel="noreferrer" class="text-[#25D366] font-bold text-sm sm:text-base underline hover:opacity-80 break-all inline-block mt-0.5">https://whatsapp.com/channel/0029Vb6sjZz0wajwDXcd5B0U</a>
-              </div>
-              <div>
-                <p class="font-bold text-slate-900 text-sm sm:text-base">हमारे Telegram चैनल को फॉलो करें:</p>
-                <a href="https://t.me/educationmastersin" target="_blank" rel="noreferrer" class="text-[#0088cc] font-bold text-sm sm:text-base underline hover:opacity-80 break-all inline-block mt-0.5">https://t.me/educationmastersin</a>
-              </div>
-              <div>
-                <p class="font-bold text-slate-900 text-sm sm:text-base">हमारे Facebook Page को फॉलो करें:</p>
-                <a href="https://www.facebook.com/educationmastersindia" target="_blank" rel="noreferrer" class="text-[#1877F2] font-bold text-sm sm:text-base underline hover:opacity-80 break-all inline-block mt-0.5">https://www.facebook.com/educationmastersindia</a>
-              </div>
-            </div>
-          </div>
-        </div>
-      `
+      content: `<p>The <strong>UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts</strong> has been announced by the Union Public Service Commission.</p>`
     };
   };
 
@@ -760,6 +642,8 @@ export default function SingleArticlePage() {
       setTimeout(() => setCopiedLink(false), 2000);
     }
   };
+
+  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://educationmasters.in';
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-800 font-sans">
@@ -792,6 +676,12 @@ export default function SingleArticlePage() {
           margin-top: 0.5rem !important;
           margin-bottom: 1rem !important;
         }
+        .article-raw-html ol {
+          list-style-type: decimal !important;
+          padding-left: 1.25rem !important;
+          margin-top: 0.5rem !important;
+          margin-bottom: 1rem !important;
+        }
         .article-raw-html li {
           margin-bottom: 0.35rem !important;
           line-height: 1.6 !important;
@@ -802,9 +692,15 @@ export default function SingleArticlePage() {
           font-weight: 500 !important;
         }
         .article-raw-html h2, .article-raw-html h3 {
-          font-weight: 600 !important;
+          font-weight: 700 !important;
           color: #0f172a !important;
-          margin-top: 1.5rem !important;
+          margin-top: 1.75rem !important;
+          margin-bottom: 0.75rem !important;
+        }
+        .article-raw-html p {
+          margin-bottom: 0.85rem !important;
+          line-height: 1.7 !important;
+          color: #334155 !important;
         }
       `}</style>
 
@@ -829,22 +725,22 @@ export default function SingleArticlePage() {
                   <X className="w-3 h-3" />
                 </button>
                 <div className="p-3 text-center border-b border-slate-800">
-                  <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">Fortinet Ad</span>
+                  <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">Sponsored Ad</span>
                 </div>
                 <div className="p-4 space-y-3 text-center">
                   <p className="text-xs font-semibold leading-snug text-slate-100">
-                    Fortinet Named a Leader in the 2026 Gartner® Magic Quadrant™
+                    Latest Government Exam & Career Updates 2026
                   </p>
-                  <div className="w-full h-44 bg-gradient-to-b from-rose-950 to-slate-900 rounded flex items-center justify-center border border-rose-900/50 p-2">
-                    <span className="text-[11px] text-rose-200 font-medium leading-tight">Hybrid Mesh Firewalls Report</span>
+                  <div className="w-full h-44 bg-gradient-to-b from-blue-950 to-slate-900 rounded flex items-center justify-center border border-blue-900/50 p-2">
+                    <span className="text-[11px] text-blue-200 font-medium leading-tight">100% Verified Job Alerts & Preparation</span>
                   </div>
                   <a
-                    href="https://fortinet.com"
+                    href="https://educationmasters.in"
                     target="_blank"
                     rel="noreferrer"
-                    className="block bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs py-2 px-2 rounded transition"
+                    className="block bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 px-2 rounded transition"
                   >
-                    Download Report
+                    Explore Updates
                   </a>
                 </div>
               </div>
@@ -854,7 +750,7 @@ export default function SingleArticlePage() {
           {/* ================= CENTER MAIN ARTICLE CONTENT ================= */}
           <section className={`col-span-1 lg:col-span-8 ${showLeftAd ? 'xl:col-span-7' : 'xl:col-span-7'} space-y-4`}>
 
-            {/* Top Breadcrumb Links - Perfectly Aligned with Content Column */}
+            {/* Top Breadcrumb Links */}
             <nav className="flex items-center space-x-1.5 text-xs text-slate-500 mb-2 overflow-x-auto whitespace-nowrap">
               <Link href="/" className="hover:text-blue-600 font-normal">Home</Link>
               <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
@@ -884,60 +780,79 @@ export default function SingleArticlePage() {
                 <div className="h-72 bg-slate-100 rounded w-full"></div>
               </div>
             ) : article ? (
-              <article className="space-y-4">
+              <article className="space-y-5">
 
-                {/* 1. Article Main Title */}
-                <h1 className="text-2xl sm:text-3xl font-semibold text-slate-900 leading-tight">
+
+
+                {/* 2. Article Main Title */}
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
                   {article.title}
                 </h1>
 
-                {/* 2. Byline Meta: Author, Category, Posted Date & Last Date */}
+                {/* 3. Byline Meta: Author, Category, Posted Date & Status */}
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-slate-700 font-normal">
                   <span>
                     By <span className="font-bold text-slate-900">{typeof article.author === 'object' ? article.author.name : article.author}</span>
                   </span>
                   <span className="text-slate-300">|</span>
                   <span>
-                    In <Link href={article.categorySlug ? `/category/${article.categorySlug}` : '/jobs'} className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">{(typeof article.category === 'object' ? article.category.name : article.category) || 'Jobs'}</Link>
+                    In{' '}
+                    {isJobPage ? (
+                      <Link href="/jobs" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
+                        Jobs
+                      </Link>
+                    ) : isAdmitCardPage ? (
+                      <Link href="/admit-cards" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
+                        Admit Card
+                      </Link>
+                    ) : isResultPage ? (
+                      <Link href="/results" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
+                        Result
+                      </Link>
+                    ) : (
+                      <Link href={article.categorySlug ? `/category/${article.categorySlug}` : '/category/articles'} className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
+                        {(typeof article.category === 'object' ? article.category.name : article.category) || 'Articles'}
+                      </Link>
+                    )}
                   </span>
                   <span className="text-slate-300">|</span>
                   <span>
                     Posted: <span className="font-bold text-slate-900">{article.date}</span>
                   </span>
-                  {(article.lastDate || article.jobDetails?.endDate) && (
+                  {article.lastDate && (
                     <>
                       <span className="text-slate-300">|</span>
                       <span>
-                        Last Date: <span className="font-bold text-slate-900">{article.lastDate || article.jobDetails?.endDate}</span>
+                        Status: <span className="font-bold text-slate-900">{article.lastDate}</span>
                       </span>
                     </>
                   )}
                 </div>
 
-                {/* 3. Official Disclaimer Box */}
+                {/* 4. Official Disclaimer Box */}
                 <div className="p-3.5 bg-[#fef9ed] border border-[#f5dfb8] rounded text-xs text-[#8a5314] leading-relaxed">
-                  <strong className="font-semibold">Disclaimer:</strong> The content shown on this page related to government jobs is either sourced from various internet website or from government websites. We do not claim any affiliation or authority over this content. It&apos;s solely for information providing purpose.
+                  <strong className="font-semibold">Disclaimer:</strong> The content shown on this page related to government jobs, admit cards and results is either sourced from various internet portals or directly from official government websites. We do not claim any affiliation or authority over this content. It is solely for information providing purposes.
                 </div>
 
-                {/* 4. Featured Banner Image */}
+                {/* 5. Featured Banner Image (if available) */}
                 {article.image && (
-                  <div className="w-full my-3">
+                  <div className="w-full my-2">
                     <img
                       src={article.image}
                       alt={article.title}
-                      className="w-full h-auto max-h-[480px] object-cover rounded-md"
+                      className="w-full h-auto max-h-[460px] object-cover rounded-md border border-slate-200"
                     />
                   </div>
                 )}
 
-                {/* 5. Professional Social Share Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 py-3 border-y border-slate-200/80 my-4 bg-slate-50/50 px-3 rounded-lg">
+                {/* 6. Professional Social Share Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 border-y border-slate-200/80 my-3 bg-slate-50/60 px-3 rounded-lg">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-1">Share:</span>
 
                     {/* WhatsApp */}
                     <a
-                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(article.title)}`}
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center space-x-1.5 bg-[#25D366] hover:bg-[#1eb956] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
@@ -948,7 +863,7 @@ export default function SingleArticlePage() {
 
                     {/* Telegram */}
                     <a
-                      href={`https://t.me/share/url?url=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}&text=${encodeURIComponent(article.title)}`}
+                      href={`https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(article.title)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center space-x-1.5 bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
@@ -959,7 +874,7 @@ export default function SingleArticlePage() {
 
                     {/* Facebook */}
                     <a
-                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(typeof window !== 'undefined' ? window.location.href : '')}`}
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center space-x-1.5 bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
@@ -970,7 +885,7 @@ export default function SingleArticlePage() {
 
                     {/* Twitter / X */}
                     <a
-                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title)}`}
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center space-x-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
@@ -990,149 +905,353 @@ export default function SingleArticlePage() {
                   </button>
                 </div>
 
-                {/* 6. Main Body Content: FIRST Description, THEN Table */}
-                <div className="text-slate-700 text-base leading-relaxed space-y-4 font-normal">
-                  {/* First: Article Description & Intro Content */}
-                  {article.contentSections ? (
-                    article.contentSections.map((sec, i) => (
-                      <div key={i} className="space-y-2">
-                        <h2 className="text-lg font-semibold text-slate-900 pt-2 border-b border-slate-100 pb-1">
-                          {sec.heading}
-                        </h2>
+                {/* ========================================================================= */}
+                {/* 7. DEDICATED RESULT & ADMIT CARD VIEW - MATCHING PRODUCTION SCREENSHOTS */}
+                {/* ========================================================================= */}
+                {(article.isResult || article.isAdmitCard) && article.resultDetails ? (
+                  <div className="space-y-6 pt-2">
 
-                        {sec.body && (
-                          <p className="text-slate-700 font-normal leading-relaxed">
-                            {sec.body}
-                          </p>
-                        )}
-
-                        {sec.isList && sec.items && (
-                          <div className="overflow-x-auto my-3 border border-slate-200 rounded">
-                            <table className="min-w-full text-xs sm:text-sm divide-y divide-slate-200">
-                              <thead className="bg-slate-100 font-semibold text-slate-700 text-left">
-                                <tr>
-                                  <th className="p-2.5">Exam Name</th>
-                                  <th className="p-2.5">Board</th>
-                                  <th className="p-2.5">Qualification</th>
-                                  <th className="p-2.5">Target Post</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 bg-white font-normal">
-                                {sec.items.map((row, idx) => (
-                                  <tr key={idx} className="hover:bg-slate-50">
-                                    <td className="p-2.5 font-medium text-blue-600">{row.name}</td>
-                                    <td className="p-2.5 text-slate-600">{row.board}</td>
-                                    <td className="p-2.5 text-slate-800">{row.qual}</td>
-                                    <td className="p-2.5 text-slate-900">{row.role}</td>
-                                  </tr>
-                                ))}
-                              </tbody>
-                            </table>
-                          </div>
-                        )}
-                      </div>
-                    ))
-                  ) : (
-                    <div
-                      className="article-raw-html text-slate-700 text-base leading-relaxed space-y-4"
-                      dangerouslySetInnerHTML={{ __html: article.content }}
-                    />
-                  )}
-
-                  {/* Second: Job Highlights Table */}
-                  {article.isJob && article.jobDetails && !article.content?.includes('<table') && (
-                    <div className="my-6 space-y-3">
-                      <h2 className="text-xl font-semibold text-slate-900 border-b border-slate-200 pb-2">
-                        {article.title} Job Highlights:
+                    {/* SECTION 1: ABOUT [EXAM NAME] RESULT */}
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2">
+                        About {article.resultDetails.examName} {article.isResult ? 'Result' : 'Admit Card'}
                       </h2>
-                      <div className="overflow-x-auto border border-slate-200 rounded-md">
+                      {article.resultDetails.description ? (
+                        <div
+                          className="article-raw-html text-slate-700 text-base leading-relaxed space-y-3 font-normal"
+                          dangerouslySetInnerHTML={{ __html: article.resultDetails.description }}
+                        />
+                      ) : (
+                        <p className="text-slate-700 text-base leading-relaxed">
+                          {article.resultDetails.deptName} will release the {article.resultDetails.examName} {article.isResult ? 'Result 2026' : 'Admit Card 2026'} for candidates who appeared in the examination process under {article.resultDetails.postName}.
+                        </p>
+                      )}
+                    </div>
+
+                    {/* SECTION 2: OVERVIEW TABLE */}
+                    <div className="pt-2">
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3">
+                        {article.resultDetails.examName} {article.isResult ? 'Result' : 'Admit Card'} – Overview
+                      </h2>
+                      <div className="overflow-x-auto border border-slate-200 rounded-md shadow-2xs">
                         <table className="w-full text-xs sm:text-sm text-left border-collapse">
                           <tbody className="divide-y divide-slate-200 bg-white">
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 w-1/3 border-r border-slate-200">Name of Exam</th>
-                              <td className="p-3 font-normal text-slate-900">{article.jobDetails.postName}</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">No. of Seats</th>
-                              <td className="p-3 font-normal text-slate-900">{article.jobDetails.totalVacancies}</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Job Location</th>
-                              <td className="p-3 font-normal text-slate-900">All India</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Date</th>
-                              <td className="p-3 font-normal text-slate-900">{article.date || '12 September 2026'}</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Online Application Start Date</th>
-                              <td className="p-3 font-normal text-slate-900">{article.date || '12 September 2026'}</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Last Date to Apply</th>
-                              <td className="p-3 font-normal text-slate-900">{article.jobDetails.endDate || 'Check Notification'}</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Prelims Exam Date</th>
-                              <td className="p-3 font-normal text-slate-500">N/A</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Minimum age limit</th>
-                              <td className="p-3 font-normal text-slate-500">N/A</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Maximum age limit</th>
-                              <td className="p-3 font-normal text-slate-500">N/A</td>
-                            </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Link</th>
-                              <td className="p-3 font-medium text-blue-600">
-                                <a href={article.jobDetails.officialLink} target="_blank" rel="noreferrer" className="hover:underline">Click here</a>
+                            <tr className="hover:bg-slate-50 transition">
+                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 w-1/3 sm:w-1/4 border-r border-slate-200">
+                                Name of Exam
+                              </th>
+                              <td className="p-3.5 font-normal text-slate-900">
+                                {article.resultDetails.examName}
                               </td>
                             </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Direct Online Application Link</th>
-                              <td className="p-3 font-medium text-blue-600">
-                                <a href={article.jobDetails.applyLink} target="_blank" rel="noreferrer" className="hover:underline">Apply now</a>
+                            <tr className="hover:bg-slate-50 transition">
+                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                Conducting Department
+                              </th>
+                              <td className="p-3.5 font-normal text-slate-900">
+                                {article.resultDetails.deptName}
                               </td>
                             </tr>
-                            <tr className="hover:bg-slate-50">
-                              <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Helpline</th>
-                              <td className="p-3 font-normal text-slate-500">N/A</td>
+                            <tr className="hover:bg-slate-50 transition">
+                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                Post Name
+                              </th>
+                              <td className="p-3.5 font-normal text-slate-900 leading-snug">
+                                {article.resultDetails.postName}
+                              </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50 transition">
+                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                Exam Date
+                              </th>
+                              <td className="p-3.5 font-normal text-slate-900">
+                                {article.resultDetails.examDate}
+                              </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50 transition">
+                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                Exam Time
+                              </th>
+                              <td className="p-3.5 font-normal text-slate-900">
+                                {article.resultDetails.examTime}
+                              </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50 transition">
+                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                Exam Mode
+                              </th>
+                              <td className="p-3.5 font-normal text-slate-900">
+                                {article.resultDetails.examMode}
+                              </td>
+                            </tr>
+                            <tr className="hover:bg-slate-50 transition">
+                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                Official Website
+                              </th>
+                              <td className="p-3.5 font-medium text-blue-600">
+                                {article.resultDetails.officialWebsite ? (
+                                  <a
+                                    href={article.resultDetails.officialWebsite}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="hover:underline break-all"
+                                  >
+                                    {article.resultDetails.officialWebsite}
+                                  </a>
+                                ) : (
+                                  <span className="text-slate-500 font-normal">Check Official Notification</span>
+                                )}
+                              </td>
                             </tr>
                           </tbody>
                         </table>
                       </div>
                     </div>
-                  )}
-                </div>
 
-                {/* Quick Action Link Buttons */}
-                {article.isJob && article.jobDetails && (
-                  <div className="my-6 flex flex-wrap gap-3 pt-2">
-                    <a
-                      href={article.jobDetails.applyLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center space-x-1.5 bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs sm:text-sm px-5 py-2.5 rounded transition shadow-sm"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                      <span>Apply Online Link</span>
-                    </a>
-                    <a
-                      href={article.jobDetails.officialLink}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center space-x-1.5 bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs sm:text-sm px-5 py-2.5 rounded transition shadow-sm"
-                    >
-                      <Download className="w-4 h-4" />
-                      <span>Official Website Notice</span>
-                    </a>
+                    {/* SECTION 3: DIRECT VIEW RESULT LINK CALLOUT BANNER */}
+                    <div className="my-6 p-6 sm:p-8 bg-[#1d68e1] text-white rounded-lg text-center shadow-md space-y-3">
+                      <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                        {article.isResult ? 'Direct View Result Link' : 'Direct Download Admit Card Link'}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-blue-100 max-w-xl mx-auto font-normal">
+                        Click the button below to visit the official website and {article.isResult ? 'view/download your result' : 'download your admit card'}
+                      </p>
+                      <div className="pt-2">
+                        <a
+                          href={article.resultDetails.downUrl || article.resultDetails.officialWebsite || '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-block bg-[#ffc107] hover:bg-[#ffb300] active:scale-95 text-slate-900 font-extrabold text-sm sm:text-base px-8 py-3 rounded-md shadow hover:shadow-md transition duration-200"
+                        >
+                          {article.isResult ? 'View Result' : 'Download Admit Card'}
+                        </a>
+                      </div>
+                    </div>
+
+                    {/* SECTION 4: HOW TO VIEW/DOWNLOAD RESULT */}
+                    <div className="pt-2 space-y-3">
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">
+                        How to {article.isResult ? 'View/Download' : 'Download'} {article.resultDetails.examName} {article.isResult ? 'Result' : 'Admit Card'}
+                      </h2>
+
+                      {/* Clean In-Content Ad Frame */}
+                      <div className="my-4 p-4 sm:p-5 bg-gradient-to-r from-slate-50 to-blue-50/40 border border-slate-200/90 rounded-lg flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <div className="space-y-1">
+                          <span className="text-[10px] font-bold text-blue-600 uppercase tracking-widest bg-blue-100 px-2 py-0.5 rounded">
+                            Official Exam Portal
+                          </span>
+                          <h4 className="text-sm font-bold text-slate-800">
+                            Download Scorecard & Merit List PDF Online
+                          </h4>
+                          <p className="text-xs text-slate-600">
+                            Keep your registration number and DOB ready for quick access.
+                          </p>
+                        </div>
+                        <a
+                          href={article.resultDetails.downUrl || '#'}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded shadow-2xs transition"
+                        >
+                          Learn More →
+                        </a>
+                      </div>
+
+                      {/* Steps List */}
+                      {article.resultDetails.instDownItems && article.resultDetails.instDownItems.length > 0 ? (
+                        <ol className="list-decimal pl-5 space-y-2.5 text-sm sm:text-base text-slate-700 font-normal leading-relaxed">
+                          {article.resultDetails.instDownItems.map((step, idx) => (
+                            <li key={idx} className="pl-1">
+                              {step}
+                            </li>
+                          ))}
+                        </ol>
+                      ) : article.resultDetails.instDown ? (
+                        <div
+                          className="article-raw-html text-slate-700 text-sm sm:text-base leading-relaxed space-y-2 font-normal"
+                          dangerouslySetInnerHTML={{ __html: article.resultDetails.instDown }}
+                        />
+                      ) : (
+                        <ol className="list-decimal pl-5 space-y-2.5 text-sm sm:text-base text-slate-700 font-normal leading-relaxed">
+                          <li className="pl-1">Visit the official {article.resultDetails.deptName} website.</li>
+                          <li className="pl-1">Open the Careers / Recruitment / Result section.</li>
+                          <li className="pl-1">Find &quot;{article.resultDetails.examName} Result 2026&quot;.</li>
+                          <li className="pl-1">Click on the result or shortlisted candidates link when released.</li>
+                          <li className="pl-1">Enter your Registration Number and Password/Date of Birth, if login is required.</li>
+                          <li className="pl-1">Submit the details and view your result status.</li>
+                          <li className="pl-1">Download and save the result PDF or scorecard for future reference.</li>
+                        </ol>
+                      )}
+                    </div>
+
+                    {/* SECTION 5: DETAILS MENTIONED */}
+                    <div className="pt-2 space-y-3">
+                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">
+                        Details Mentioned in {article.resultDetails.examName}
+                      </h2>
+
+                      {article.resultDetails.instImplItems && article.resultDetails.instImplItems.length > 0 ? (
+                        <ul className="list-disc pl-5 space-y-2.5 text-sm sm:text-base text-slate-700 font-normal leading-relaxed">
+                          {article.resultDetails.instImplItems.map((point, idx) => (
+                            <li key={idx} className="pl-1">
+                              {point}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : article.resultDetails.instImpl ? (
+                        <div
+                          className="article-raw-html text-slate-700 text-sm sm:text-base leading-relaxed space-y-2 font-normal"
+                          dangerouslySetInnerHTML={{ __html: article.resultDetails.instImpl }}
+                        />
+                      ) : (
+                        <ul className="list-disc pl-5 space-y-2.5 text-sm sm:text-base text-slate-700 font-normal leading-relaxed">
+                          <li className="pl-1">Check your name, roll number, and qualifying status carefully.</li>
+                          <li className="pl-1">Download a copy of the result for future reference.</li>
+                          <li className="pl-1">Check the next selection stage mentioned in the result notification.</li>
+                          <li className="pl-1">Keep your original documents ready for Document Verification (DV).</li>
+                          <li className="pl-1">Regularly check the official recruitment page for further selection rounds.</li>
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* SECTION 6: FAQS & DISCOVER MORE BOX */}
+                    {article.resultDetails.faqItems && article.resultDetails.faqItems.length > 0 && (
+                      <div className="pt-3 space-y-4">
+                        <h2 className="text-xl sm:text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">
+                          Frequently Asked Questions (FAQs)
+                        </h2>
+
+                        <div className="space-y-4">
+                          {article.resultDetails.faqItems.slice(0, 3).map((faq, idx) => (
+                            <div key={idx} className="space-y-1">
+                              <p className="font-bold text-slate-900 text-sm sm:text-base">
+                                Q{idx + 1}. {faq.question}
+                              </p>
+                              <p className="text-slate-700 text-sm sm:text-base leading-relaxed font-normal">
+                                Answer: {faq.answer}
+                              </p>
+                            </div>
+                          ))}
+
+                          {/* Discover More Box 1 matching screenshot */}
+                          <div className="my-4 border border-[#d2def2] rounded-md overflow-hidden bg-[#f3f7fd]">
+                            <div className="px-4 py-2.5 bg-[#e4edfa] border-b border-[#d2def2] font-bold text-slate-800 text-sm">
+                              Discover more
+                            </div>
+                            <div className="divide-y divide-[#e0ebf8]">
+                              <Link href="/jobs" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
+                                <span>Recruitment & Staffing</span>
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              </Link>
+                              <Link href="/jobs" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
+                                <span>Job</span>
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              </Link>
+                              <Link href="/category/articles" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
+                                <span>education</span>
+                                <ChevronRight className="w-4 h-4 text-slate-400" />
+                              </Link>
+                            </div>
+                          </div>
+
+                          {article.resultDetails.faqItems.slice(3).map((faq, idx) => (
+                            <div key={idx + 3} className="space-y-1">
+                              <p className="font-bold text-slate-900 text-sm sm:text-base">
+                                Q{idx + 4}. {faq.question}
+                              </p>
+                              <p className="text-slate-700 text-sm sm:text-base leading-relaxed font-normal">
+                                Answer: {faq.answer}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                  </div>
+                ) : (
+                  /* ========================================================================= */
+                  /* 7. GENERAL / JOB ARTICLE VIEW */
+                  /* ========================================================================= */
+                  <div className="text-slate-700 text-base leading-relaxed space-y-4 font-normal">
+                    {article.content ? (
+                      <div
+                        className="article-raw-html text-slate-700 text-base leading-relaxed space-y-4"
+                        dangerouslySetInnerHTML={{ __html: article.content }}
+                      />
+                    ) : null}
+
+                    {/* Job Highlights Table for Job Articles */}
+                    {article.isJob && article.jobDetails && !article.content?.includes('<table') && (
+                      <div className="my-6 space-y-3">
+                        <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">
+                          {article.title} Job Highlights:
+                        </h2>
+                        <div className="overflow-x-auto border border-slate-200 rounded-md">
+                          <table className="w-full text-xs sm:text-sm text-left border-collapse">
+                            <tbody className="divide-y divide-slate-200 bg-white">
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 w-1/3 border-r border-slate-200">Name of Exam</th>
+                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.postName}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">No. of Seats</th>
+                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.totalVacancies}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Job Location</th>
+                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.jobLocation}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Date</th>
+                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.releaseDate || article.date}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Online Application Start Date</th>
+                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.startDate || article.date}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Last Date to Apply</th>
+                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.endDate || 'Check Notification'}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Prelims Exam Date</th>
+                                <td className="p-3 font-normal text-slate-500">{article.jobDetails.examDate}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Minimum age limit</th>
+                                <td className="p-3 font-normal text-slate-500">{article.jobDetails.minAge}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Maximum age limit</th>
+                                <td className="p-3 font-normal text-slate-500">{article.jobDetails.maxAge}</td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Link</th>
+                                <td className="p-3 font-medium text-blue-600">
+                                  {article.jobDetails.officialLink ? (
+                                    <a href={article.jobDetails.officialLink} target="_blank" rel="noreferrer" className="hover:underline">Click here</a>
+                                  ) : 'N/A'}
+                                </td>
+                              </tr>
+                              <tr className="hover:bg-slate-50">
+                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Direct Online Application Link</th>
+                                <td className="p-3 font-medium text-blue-600">
+                                  {article.jobDetails.applyLink ? (
+                                    <a href={article.jobDetails.applyLink} target="_blank" rel="noreferrer" className="hover:underline">Apply now</a>
+                                  ) : 'N/A'}
+                                </td>
+                              </tr>
+                            </tbody>
+                          </table>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 
-                {/* 7. Government Jobs & GK Updates Channel Follow Section */}
-                <div className="my-6 space-y-4 font-normal">
+                {/* 8. Government Jobs & GK Updates Channel Follow Section */}
+                <div className="my-6 space-y-4 font-normal pt-2">
                   <p className="font-bold text-slate-900 text-sm sm:text-base">
                     सरकारी नौकरियों, जीके अपडेट्स और करेंट अफेयर्स की ताज़ा जानकारी सबसे पहले पाने के लिए:
                   </p>
@@ -1175,15 +1294,168 @@ export default function SingleArticlePage() {
                   </div>
                 </div>
 
-                {/* 8. White Banner Ad Space (728x90 ratio) */}
-                <div className="my-6 w-full bg-white border border-dashed border-slate-300 rounded-md p-6 flex flex-col items-center justify-center text-center min-h-[90px] shadow-2xs">
-                  <span className="text-xs font-semibold text-slate-400 uppercase tracking-widest">
-                    Ad Space (728 × 90 Ratio)
-                  </span>
+                {/* 9. AddressGuru / Free Classified Banner Ad Space */}
+                <div className="my-6 w-full bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white rounded-md p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border border-purple-900/40">
+                  <div className="space-y-1 text-center sm:text-left">
+                    <div className="flex items-center justify-center sm:justify-start space-x-2">
+                      <span className="bg-amber-400 text-slate-950 font-extrabold text-[10px] px-2 py-0.5 rounded">FREE</span>
+                      <span className="font-bold text-sm sm:text-base tracking-wide text-white">www.addressguru.in</span>
+                    </div>
+                    <p className="text-xs text-purple-200">
+                      FREE CLASSIFIED INDIA • POST FREE AD • LOCAL DIRECTORY
+                    </p>
+                  </div>
+                  <a
+                    href="https://addressguru.in"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="bg-amber-400 hover:bg-amber-500 text-slate-950 font-bold text-xs px-5 py-2.5 rounded shadow transition"
+                  >
+                    POST FREE AD →
+                  </a>
                 </div>
 
-                {/* 9. Professional Author Box Matching Live Reference Image */}
-                {article.author && !article.content?.includes('class="author') && !article.content?.includes('class="mt-5 author') && (
+                {/* 10. Share this Post Box with Circular Buttons & Discover More */}
+                <div className="my-6 space-y-3">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900">Share this Post</h3>
+                    <p className="text-xs text-slate-500 font-normal mt-0.5">(इस पोस्ट को अपने दोस्तों के साथ शेयर करना ना भूले)</p>
+                  </div>
+
+                  {/* Circular Social Share Buttons */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {/* WhatsApp */}
+                    <a
+                      href={`https://api.whatsapp.com/send?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-9 h-9 rounded-full bg-[#25D366] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      title="WhatsApp"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.157 4.228 4.228-1.157z" /></svg>
+                    </a>
+
+                    {/* Telegram */}
+                    <a
+                      href={`https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(article.title)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-9 h-9 rounded-full bg-[#0088cc] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      title="Telegram"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.832.942z" /></svg>
+                    </a>
+
+                    {/* Facebook */}
+                    <a
+                      href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-9 h-9 rounded-full bg-[#1877F2] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      title="Facebook"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+                    </a>
+
+                    {/* LinkedIn */}
+                    <a
+                      href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-9 h-9 rounded-full bg-[#0077b5] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      title="LinkedIn"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
+                    </a>
+
+                    {/* Twitter */}
+                    <a
+                      href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-9 h-9 rounded-full bg-slate-900 hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      title="Twitter / X"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                    </a>
+
+                    {/* Reddit */}
+                    <a
+                      href={`https://reddit.com/submit?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent(article.title)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="w-9 h-9 rounded-full bg-[#FF4500] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      title="Reddit"
+                    >
+                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" /></svg>
+                    </a>
+                  </div>
+
+                  {/* Discover More Box 2 */}
+                  <div className="my-4 border border-[#d2def2] rounded-md overflow-hidden bg-[#f3f7fd]">
+                    <div className="px-4 py-2.5 bg-[#e4edfa] border-b border-[#d2def2] font-bold text-slate-800 text-sm">
+                      Discover more
+                    </div>
+                    <div className="divide-y divide-[#e0ebf8]">
+                      <Link href="/category/articles" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
+                        <span>education</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </Link>
+                      <Link href="/category/articles" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
+                        <span>Educational Resources</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </Link>
+                      <Link href="/jobs" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
+                        <span>job</span>
+                        <ChevronRight className="w-4 h-4 text-slate-400" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 11. Others Category Jobs Grid */}
+                <div className="my-8 pt-4 border-t border-slate-200">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">
+                    Others Category Jobs
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                    {relatedJobs.map((job, idx) => (
+                      <Link
+                        key={job.id || idx}
+                        href={`/job/${job.slug}`}
+                        className="group bg-white border border-slate-200 rounded-md overflow-hidden hover:shadow-md transition duration-200 flex flex-col"
+                      >
+                        <div className="w-full h-28 sm:h-32 bg-slate-100 overflow-hidden relative">
+                          <img
+                            src={job.image}
+                            alt={job.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            onError={(e) => {
+                              if (!e.currentTarget.dataset.fallback) {
+                                e.currentTarget.dataset.fallback = 'true';
+                                e.currentTarget.src = '/logo.webp';
+                              } else {
+                                e.currentTarget.style.display = 'none';
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+                            {job.title}
+                          </h4>
+                          <span className="text-[11px] text-blue-600 font-semibold pt-1">
+                            Apply Now →
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 12. Professional Author Box Matching Live Reference Image */}
+                {article.author && !article.content?.includes('class="author') && (
                   <div className="my-8 p-5 bg-[#f8f9fa] border border-slate-200/90 rounded-md flex flex-col sm:flex-row items-start gap-4">
                     {/* Left Square Avatar Frame */}
                     <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border border-slate-200 rounded p-1 shadow-2xs overflow-hidden">
@@ -1211,13 +1483,12 @@ export default function SingleArticlePage() {
                         {typeof article.author === 'object' && article.author.bio ? article.author.bio : 'Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content covering government jobs, entrance exams, admissions, results, and career guidance.'}
                       </p>
 
-                      {/* Social Links Row matching reference image */}
+                      {/* Social Links Row */}
                       <div className="flex items-center space-x-2.5 pt-1 text-slate-400">
                         <a href="#" className="hover:text-blue-600 transition" title="Website"><Globe className="w-3.5 h-3.5" /></a>
                         <a href="#" className="hover:text-blue-600 transition" title="Facebook"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg></a>
                         <a href="#" className="hover:text-sky-500 transition" title="Twitter"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg></a>
                         <a href="#" className="hover:text-blue-700 transition" title="LinkedIn"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg></a>
-                        <a href="#" className="hover:text-rose-600 transition" title="Instagram"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" /></svg></a>
                       </div>
                     </div>
                   </div>
@@ -1226,7 +1497,7 @@ export default function SingleArticlePage() {
               </article>
             ) : (
               <div className="py-12 text-center text-slate-500">
-                <p>Article content unavailable.</p>
+                <p>Content unavailable or could not be loaded.</p>
                 <Link href="/" className="mt-3 inline-block text-sm text-blue-600 font-medium hover:underline">
                   Return to Home
                 </Link>
@@ -1263,7 +1534,6 @@ export default function SingleArticlePage() {
 
               {sidebarTab === 'expiring' ? (
                 <div>
-                  {/* Subheader matching screenshot: "28 Jobs are expiring in 30 Days" + "View All [Jobs]" */}
                   <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
                     <span className="font-normal text-slate-600">28 Jobs are expiring in 30 Days</span>
                     <div className="flex items-center space-x-1.5">
@@ -1351,7 +1621,7 @@ export default function SingleArticlePage() {
               </p>
               <div className="flex items-center justify-center space-x-2 pt-1">
                 <a
-                  href="https://whatsapp.com"
+                  href="https://whatsapp.com/channel/0029Vb6sjZz0wajwDXcd5B0U"
                   target="_blank"
                   rel="noreferrer"
                   className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center space-x-1 shadow-2xs transition"

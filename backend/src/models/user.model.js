@@ -153,6 +153,11 @@ const userSchema = new mongoose.Schema(
       },
       default: 'Male',
     },
+    login_time: { type: Date },
+    logout_time: { type: Date },
+    last_login_time: { type: Date },
+    last_session_date: { type: String }, // Format: YYYY-MM-DD
+    session_expires_at: { type: Date },
     otp: String,
     phone_verified_at: String,
     email_verified_at: String,
@@ -180,9 +185,23 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, hash);
 };
 
-userSchema.methods.generateAuthToken = function () {
-  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET || 'secretKey', {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
+userSchema.methods.generateAuthToken = function (customExpiresIn = null) {
+  // If custom expiry is not provided, calculate seconds remaining until 12:00 AM midnight
+  let expiresIn = customExpiresIn;
+  if (!expiresIn) {
+    if (process.env.JWT_EXPIRES_AT_MIDNIGHT === 'false') {
+      expiresIn = process.env.JWT_EXPIRES_IN || '7d';
+    } else {
+      const now = new Date();
+      const midnight = new Date(now);
+      midnight.setHours(24, 0, 0, 0); // Next 00:00:00
+      const diffSec = Math.floor((midnight.getTime() - now.getTime()) / 1000);
+      expiresIn = Math.max(diffSec, 60); // In seconds
+    }
+  }
+
+  return jwt.sign({ id: this._id, role: this.role }, process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_in_production', {
+    expiresIn,
   });
 };
 

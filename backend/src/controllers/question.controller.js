@@ -1,7 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
-import { Question, Subject, State, Exam } from '../models/index.js';
+import { Question, Subject, State, Exam, District, Topic } from '../models/index.js';
 
 const validateQuestionData = (data, { isNew = false } = {}) => {
   const errors = {};
@@ -97,7 +97,23 @@ export const getQuestions = asyncHandler(async (req, res) => {
     if (/^[0-9a-fA-F]{24}$/.test(subjectFilter)) {
       query.subject = subjectFilter;
     } else {
-      query.subject_name = { $regex: subjectFilter, $options: 'i' };
+      const cleanSub = subjectFilter.replace(/-/g, ' ');
+      const subRegex = new RegExp(`^${cleanSub.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      const subjectDoc = await Subject.findOne({
+        $or: [
+          { slug: subjectFilter.toLowerCase() },
+          { name: subRegex },
+        ],
+      });
+      if (subjectDoc) {
+        query.$or = [
+          { subject: subjectDoc._id },
+          { subject_name: { $regex: subjectDoc.name, $options: 'i' } },
+          { subject_name: { $regex: cleanSub, $options: 'i' } },
+        ];
+      } else {
+        query.subject_name = { $regex: cleanSub, $options: 'i' };
+      }
     }
   }
 
@@ -105,7 +121,23 @@ export const getQuestions = asyncHandler(async (req, res) => {
     if (/^[0-9a-fA-F]{24}$/.test(stateFilter)) {
       query.state = stateFilter;
     } else {
-      query.state_name = { $regex: stateFilter, $options: 'i' };
+      const cleanState = stateFilter.replace(/-/g, ' ');
+      const stateRegex = new RegExp(`^${cleanState.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, 'i');
+      const stateDoc = await State.findOne({
+        $or: [
+          { slug: stateFilter.toLowerCase() },
+          { name: stateRegex },
+        ],
+      });
+      if (stateDoc) {
+        query.$or = [
+          { state: stateDoc._id },
+          { state_name: { $regex: stateDoc.name, $options: 'i' } },
+          { state_name: { $regex: cleanState, $options: 'i' } },
+        ];
+      } else {
+        query.state_name = { $regex: cleanState, $options: 'i' };
+      }
     }
   }
 
@@ -113,8 +145,14 @@ export const getQuestions = asyncHandler(async (req, res) => {
     if (/^[0-9a-fA-F]{24}$/.test(examFilter)) {
       query.examinations = examFilter;
     } else {
-      query.examination_names = { $in: [new RegExp(examFilter, 'i')] };
+      const cleanExam = examFilter.replace(/-/g, ' ');
+      query.examination_names = { $in: [new RegExp(cleanExam, 'i'), new RegExp(examFilter, 'i')] };
     }
+  }
+
+  const languageFilter = req.query.language || req.query.lang || '';
+  if (languageFilter && languageFilter !== 'all') {
+    query.language = { $regex: languageFilter, $options: 'i' };
   }
 
   if (levelFilter && levelFilter !== 'all') {
@@ -510,21 +548,73 @@ export const bulkActionQuestions = asyncHandler(async (req, res) => {
 });
 
 export const importExcelQuestions = asyncHandler(async (req, res) => {
-  const { questions: items } = req.body;
+  const { questions: items, batchDefaults = {} } = req.body;
 
   if (!Array.isArray(items) || items.length === 0) {
     throw new ApiError(400, 'No questions provided for import');
   }
 
-  const subjects = await Subject.find({}).lean();
-  const states = await State.find({}).lean();
-  const exams = await Exam.find({}).lean();
+  const [subjects, states, districts, exams, topics] = await Promise.all([
+    Subject.find({}).lean(),
+    State.find({}).lean(),
+    District.find({}).lean(),
+    Exam.find({}).lean(),
+    Topic.find({}).lean(),
+  ]);
 
   const highest = await Question.findOne({ sql_id: { $ne: null } }).sort({ sql_id: -1 }).select('sql_id').lean();
   let nextSqlId = (highest?.sql_id || 0) + 1;
 
   const authorId = req.user?._id || req.user?.id || null;
   const authorName = req.user?.name || 'Excel Importer';
+
+  // Resolve Batch Defaults if provided
+  let batchDefaultState = null;
+  if (batchDefaults.state) {
+    batchDefaultState = states.find(
+      (s) => String(s._id) === String(batchDefaults.state) || s.name.toLowerCase() === String(batchDefaults.state).toLowerCase()
+    );
+  }
+
+  let batchDefaultDistrict = null;
+  if (batchDefaults.district) {
+    batchDefaultDistrict = districts.find(
+      (d) => String(d._id) === String(batchDefaults.district) || d.name.toLowerCase() === String(batchDefaults.district).toLowerCase()
+    );
+  }
+
+  let batchDefaultSubject = null;
+  if (batchDefaults.subject) {
+    batchDefaultSubject = subjects.find(
+      (s) => String(s._id) === String(batchDefaults.subject) || s.name.toLowerCase() === String(batchDefaults.subject).toLowerCase()
+    );
+  }
+
+  let batchDefaultTopic = null;
+  if (batchDefaults.topic) {
+    batchDefaultTopic = topics.find(
+      (t) => String(t._id) === String(batchDefaults.topic) || t.name.toLowerCase() === String(batchDefaults.topic).toLowerCase()
+    );
+  }
+
+  let batchDefaultExamIds = [];
+  let batchDefaultExamNames = [];
+  if (Array.isArray(batchDefaults.examinations) && batchDefaults.examinations.length > 0) {
+    batchDefaults.examinations.forEach((ex) => {
+      const match = exams.find((e) => String(e._id) === String(ex) || e.name.toLowerCase() === String(ex).toLowerCase());
+      if (match && !batchDefaultExamIds.some((id) => String(id) === String(match._id))) {
+        batchDefaultExamIds.push(match._id);
+        batchDefaultExamNames.push(match.name);
+      }
+    });
+  } else if (batchDefaults.examination || batchDefaults.exam) {
+    const raw = String(batchDefaults.examination || batchDefaults.exam);
+    const match = exams.find((e) => String(e._id) === raw || e.name.toLowerCase() === raw.toLowerCase());
+    if (match) {
+      batchDefaultExamIds.push(match._id);
+      batchDefaultExamNames.push(match.name);
+    }
+  }
 
   const validDocs = [];
   const errors = [];
@@ -533,19 +623,19 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
     const item = items[i];
     const rowNum = i + 2; // Excel row reference (header is row 1)
 
-    const content = String(item.content || item.question || item.Question || '').trim();
+    const content = String(item.content || item.question || item.Question || item['Question Text'] || '').trim();
     if (!content) {
       errors.push({ row: rowNum, error: 'Question text is missing' });
       continue;
     }
 
     // Extract options
-    const optA = String(item.option_a || item.option1 || item.OptionA || item.Option1 || item.A || '').trim();
-    const optB = String(item.option_b || item.option2 || item.OptionB || item.Option2 || item.B || '').trim();
-    const optC = String(item.option_c || item.option3 || item.OptionC || item.Option3 || item.C || '').trim();
-    const optD = String(item.option_d || item.option4 || item.OptionD || item.Option4 || item.D || '').trim();
-    const optE = String(item.option_e || item.option5 || item.OptionE || item.Option5 || item.E || '').trim();
-    const optF = String(item.option_f || item.option6 || item.OptionF || item.Option6 || item.F || '').trim();
+    const optA = String(item.option_a || item.option1 || item.OptionA || item.Option1 || item['Option A'] || item['Option 1'] || item.A || '').trim();
+    const optB = String(item.option_b || item.option2 || item.OptionB || item.Option2 || item['Option B'] || item['Option 2'] || item.B || '').trim();
+    const optC = String(item.option_c || item.option3 || item.OptionC || item.Option3 || item['Option C'] || item['Option 3'] || item.C || '').trim();
+    const optD = String(item.option_d || item.option4 || item.OptionD || item.Option4 || item['Option D'] || item['Option 4'] || item.D || '').trim();
+    const optE = String(item.option_e || item.option5 || item.OptionE || item.Option5 || item['Option E'] || item['Option 5'] || item.E || '').trim();
+    const optF = String(item.option_f || item.option6 || item.OptionF || item.Option6 || item['Option F'] || item['Option 6'] || item.F || '').trim();
 
     const options = [];
     if (optA) options.push({ index: 1, text: optA, is_correct: false });
@@ -561,7 +651,7 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
     }
 
     // Resolve correct answer
-    const rawAnswer = String(item.answer || item.correct_answer || item.Answer || item.CorrectAnswer || '').trim();
+    const rawAnswer = String(item.answer || item.correct_answer || item.Answer || item.CorrectAnswer || item['Correct Answer'] || '').trim();
     let isCorrectMatched = false;
 
     if (rawAnswer) {
@@ -594,60 +684,104 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
 
     // Resolve subject
     const rawSubject = String(item.subject || item.Subject || '').trim();
-    let matchedSubject = null;
+    let matchedSubject = batchDefaultSubject;
     if (rawSubject) {
-      matchedSubject = subjects.find(
+      const found = subjects.find(
         (s) => s.name.toLowerCase() === rawSubject.toLowerCase() || s.slug.toLowerCase() === rawSubject.toLowerCase()
       );
+      if (found) matchedSubject = found;
+    }
+
+    // Resolve topic
+    const rawTopic = String(item.topic || item.Topic || '').trim();
+    let matchedTopic = batchDefaultTopic;
+    if (rawTopic) {
+      const found = topics.find(
+        (t) => t.name.toLowerCase() === rawTopic.toLowerCase() || t.slug.toLowerCase() === rawTopic.toLowerCase()
+      );
+      if (found) matchedTopic = found;
     }
 
     // Resolve state
     const rawState = String(item.state || item.State || '').trim();
-    let matchedState = null;
+    let matchedState = batchDefaultState;
     if (rawState) {
-      matchedState = states.find(
+      const found = states.find(
         (s) => s.name.toLowerCase() === rawState.toLowerCase() || s.slug.toLowerCase() === rawState.toLowerCase()
       );
+      if (found) matchedState = found;
     }
 
-    // Resolve exam
-    const rawExam = String(item.exam || item.examination || item.Exam || '').trim();
-    let matchedExamIds = [];
-    let matchedExamNames = [];
-    if (rawExam) {
-      const foundExam = exams.find(
-        (e) => e.name.toLowerCase() === rawExam.toLowerCase() || e.slug.toLowerCase() === rawExam.toLowerCase()
+    // Resolve district
+    const rawDistrict = String(item.district || item.District || '').trim();
+    let matchedDistrict = batchDefaultDistrict;
+    if (rawDistrict) {
+      const found = districts.find(
+        (d) => d.name.toLowerCase() === rawDistrict.toLowerCase()
       );
-      if (foundExam) {
-        matchedExamIds.push(foundExam._id);
-        matchedExamNames.push(foundExam.name);
+      if (found) matchedDistrict = found;
+    }
+
+    // Resolve city
+    const rawCity = String(item.city || item.City || item.location || item.Location || '').trim();
+    const finalCity = rawCity || batchDefaults.city || '';
+
+    // Resolve exam (support multiple exams separated by comma in Excel or fallback to batch defaults)
+    const rawExam = String(item.exam || item.examination || item.Exam || item.Examinations || item.examinations || '').trim();
+    let matchedExamIds = [...batchDefaultExamIds];
+    let matchedExamNames = [...batchDefaultExamNames];
+
+    if (rawExam) {
+      const examParts = rawExam.split(/[,;|]/).map((p) => p.trim()).filter(Boolean);
+      for (const part of examParts) {
+        const foundExam = exams.find(
+          (e) => e.name.toLowerCase() === part.toLowerCase() || e.slug.toLowerCase() === part.toLowerCase()
+        );
+        if (foundExam && !matchedExamIds.some((id) => String(id) === String(foundExam._id))) {
+          matchedExamIds.push(foundExam._id);
+          matchedExamNames.push(foundExam.name);
+        }
       }
     }
+
+    // Language
+    const rawLanguage = String(item.language || item.Language || batchDefaults.language || 'Hindi').trim();
+
+    // Level
+    const rawLevel = String(item.level || item.Level || item.difficulty || item.Difficulty || batchDefaults.level || 'Medium').trim();
+
+    // Status
+    const rawStatus = String(item.status || item.Status || batchDefaults.status || 'Published').trim();
 
     const doc = {
       sql_id: nextSqlId++,
       content,
       instruction: String(item.instruction || item.Instruction || '').trim(),
-      ans_info: String(item.ans_info || item.explanation || item.Explanation || '').trim(),
-      marks: Number(item.marks || item.Marks) || 1,
-      negative: Number(item.negative || item.Negative) || 0,
+      ans_info: String(item.ans_info || item.explanation || item.Explanation || item.solution || item.Solution || '').trim(),
+      marks: Number(item.marks || item.Marks) || Number(batchDefaults.marks) || 1,
+      negative: Number(item.negative || item.Negative || item['Negative Marks']) || Number(batchDefaults.negative) || 0,
       type: { name: 'Objective', slug: 'objective' },
-      language: String(item.language || item.Language || 'Hindi').trim(),
+      language: rawLanguage,
       level: {
-        name: String(item.level || item.Level || 'Medium').trim(),
-        slug: String(item.level || item.Level || 'medium').trim().toLowerCase(),
+        name: rawLevel,
+        slug: rawLevel.toLowerCase(),
       },
       subject: matchedSubject ? matchedSubject._id : null,
-      subject_name: matchedSubject ? matchedSubject.name : (rawSubject || ''),
+      subject_name: matchedSubject ? matchedSubject.name : (rawSubject || batchDefaults.subject_name || ''),
+      topic: matchedTopic ? matchedTopic._id : null,
+      topic_name: matchedTopic ? matchedTopic.name : (rawTopic || batchDefaults.topic_name || ''),
       state: matchedState ? matchedState._id : null,
-      state_name: matchedState ? matchedState.name : (rawState || ''),
+      state_name: matchedState ? matchedState.name : (rawState || batchDefaults.state_name || ''),
+      district: matchedDistrict ? matchedDistrict._id : null,
+      district_name: matchedDistrict ? matchedDistrict.name : (rawDistrict || batchDefaults.district_name || ''),
+      city: finalCity,
       examinations: matchedExamIds,
       examination_names: matchedExamNames,
       options,
       correct_answer: rawAnswer || 'A',
       author: authorId,
       author_name: authorName,
-      status: String(item.status || item.Status || 'Published').trim(),
+      status: rawStatus,
     };
 
     validDocs.push(doc);

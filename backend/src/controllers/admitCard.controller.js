@@ -3,6 +3,7 @@ import ApiError from '../utils/apiError.js';
 import { cleanHtmlContent } from '../utils/cleanHtml.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
 import {
+  resolveCountryId,
   resolveStateId,
   resolveDepartmentId,
   sanitizeObjectId,
@@ -79,6 +80,7 @@ export const getAdmitCards = async (req, res, next) => {
       AdmitCard.find(query)
         .populate('author', 'name email nicename image')
         .populate('featured_media', 'path file alt name')
+        .populate('country', 'name slug code')
         .populate('state', 'name slug')
         .populate('department', 'name slug')
         .sort({ created_at: -1, sql_id: -1, _id: -1 })
@@ -121,6 +123,7 @@ export const getAdmitCardBySlug = async (req, res, next) => {
     )
       .populate('author', 'name nicename email image bio')
       .populate('featured_media', 'path file alt name')
+      .populate('country', 'name slug code')
       .populate('state', 'name slug')
       .populate('department', 'name slug');
 
@@ -213,7 +216,10 @@ export const createAdmitCard = async (req, res, next) => {
       }
     });
 
-    // Resolve state and department ObjectId if strings passed
+    // Resolve country, state and department ObjectId if strings passed
+    if (req.body.country !== undefined) {
+      req.body.country = await resolveCountryId(req.body.country);
+    }
     if (req.body.state !== undefined) {
       req.body.state = await resolveStateId(req.body.state);
     }
@@ -224,23 +230,12 @@ export const createAdmitCard = async (req, res, next) => {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
     }
     // Enforce Author status restrictions: Authors cannot publish directly, forced to 'pending' or 'draft'
-    let isAuthor =
-      req.user?.role === 'author' ||
-      req.user?.role === 'writer' ||
-      req.body?.role === 'author' ||
-      req.body?.role === 'writer' ||
-      req.body?.authorRole === 'author' ||
-      req.headers?.['x-user-role'] === 'author';
-
-    if (!isAuthor && req.body.author) {
-      const authorUser = await User.findById(req.body.author).select('role sql_id');
-      if (authorUser && (authorUser.role === 'author' || authorUser.role === 'writer')) {
-        isAuthor = true;
-        if (!req.body.user_id && authorUser.sql_id) {
-          req.body.user_id = authorUser.sql_id;
-        }
-      }
-    }
+    const actingRole =
+      req.user?.role ||
+      req.headers?.['x-user-role'] ||
+      req.body?.role ||
+      req.body?.authorRole;
+    const isAuthor = actingRole === 'author' || actingRole === 'writer';
 
     if (isAuthor) {
       if (req.body.status === 'publish' || req.body.status === 'published' || req.body.status === 'active') {
@@ -249,6 +244,13 @@ export const createAdmitCard = async (req, res, next) => {
         req.body.status = 'draft';
       }
       if (req.user?._id) {
+        req.body.author = req.user._id;
+        req.body.user_id = req.user.sql_id || undefined;
+      }
+    } else {
+      if (req.body.author) {
+        req.body.author = sanitizeObjectId(req.body.author);
+      } else if (req.user?._id) {
         req.body.author = req.user._id;
         req.body.user_id = req.user.sql_id || undefined;
       }
@@ -266,21 +268,22 @@ export const updateAdmitCard = async (req, res, next) => {
     const isId = req.params.id.match(/^[0-9a-fA-F]{24}$/);
     const query = isId ? { _id: req.params.id } : { slug: req.params.id };
 
-    // Enforce Author status restrictions: Authors cannot publish directly, forced to 'pending'
-    let isAuthor =
-      req.user?.role === 'author' ||
-      req.user?.role === 'writer' ||
-      req.body?.role === 'author' ||
-      req.body?.role === 'writer' ||
-      req.body?.authorRole === 'author' ||
-      req.headers?.['x-user-role'] === 'author';
-
-    if (!isAuthor && req.body.author) {
-      const authorUser = await User.findById(req.body.author).select('role sql_id');
-      if (authorUser && (authorUser.role === 'author' || authorUser.role === 'writer')) {
-        isAuthor = true;
-      }
+    const existingAdmitCard = await AdmitCard.findOne(query);
+    if (!existingAdmitCard) {
+      throw new ApiError(404, 'Admit Card post not found or has been deleted.');
     }
+
+    // Preserve the original author and user_id - NEVER allow author change on update/edit
+    delete req.body.author;
+    delete req.body.user_id;
+
+    // Enforce Author status restrictions only if the acting user is an author/writer
+    const actingRole =
+      req.user?.role ||
+      req.headers?.['x-user-role'] ||
+      req.body?.role ||
+      req.body?.authorRole;
+    const isAuthor = actingRole === 'author' || actingRole === 'writer';
 
     if (isAuthor) {
       if (req.body.status === 'publish' || req.body.status === 'published' || req.body.status === 'active') {
@@ -339,11 +342,6 @@ export const updateAdmitCard = async (req, res, next) => {
       }
     }
 
-    const existingAdmitCard = await AdmitCard.findOne(query);
-    if (!existingAdmitCard) {
-      throw new ApiError(404, 'Admit Card post not found or has been deleted.');
-    }
-
     if (req.body.slug !== undefined && String(req.body.slug).trim()) {
       const slugValidation = await validateUniqueSlug(AdmitCard, {
         slug: req.body.slug,
@@ -369,7 +367,10 @@ export const updateAdmitCard = async (req, res, next) => {
       }
     });
 
-    // Resolve state and department ObjectId if strings passed
+    // Resolve country, state and department ObjectId if strings passed
+    if (req.body.country !== undefined) {
+      req.body.country = await resolveCountryId(req.body.country);
+    }
     if (req.body.state !== undefined) {
       req.body.state = await resolveStateId(req.body.state);
     }
@@ -378,9 +379,6 @@ export const updateAdmitCard = async (req, res, next) => {
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
-    }
-    if (req.body.author !== undefined) {
-      req.body.author = sanitizeObjectId(req.body.author);
     }
 
     const admitCard = await AdmitCard.findByIdAndUpdate(

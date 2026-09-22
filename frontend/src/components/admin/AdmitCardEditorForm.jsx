@@ -17,6 +17,7 @@ import { getImageUrl } from '@/utils/image';
 import JoditEditorWrapper from '@/components/admin/JoditEditorWrapper';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import AdminLoader from '@/components/admin/AdminLoader';
+import SearchableSelectPanel from '@/components/admin/SearchableSelectPanel';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -181,10 +182,12 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
   // Right Sidebar State
   const [featuredMedia, setFeaturedMedia] = useState(null);
   const [selectedDepartment, setSelectedDepartment] = useState('— Please Choose —');
+  const [selectedCountry, setSelectedCountry] = useState('India');
   const [selectedState, setSelectedState] = useState('-- All India --');
 
   // Dynamic Lists loaded from Database
   const [departmentList, setDepartmentList] = useState([]);
+  const [countryList, setCountryList] = useState([]);
   const [stateList, setStateList] = useState([]);
 
   // SEO Fields
@@ -198,6 +201,7 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
   const [collapsePublish, setCollapsePublish] = useState(false);
   const [collapseFeatured, setCollapseFeatured] = useState(false);
   const [collapseDepartment, setCollapseDepartment] = useState(false);
+  const [collapseCountry, setCollapseCountry] = useState(false);
   const [collapseState, setCollapseState] = useState(false);
 
   // Media Library Modal
@@ -222,7 +226,7 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
     return d;
   };
 
-  // 1. Fetch Dynamic Departments and States
+  // 1. Fetch Dynamic Departments, Countries, and States
   useEffect(() => {
     fetch(`${BACKEND_URL}/apis/v1/departments`)
       .then((res) => res.json())
@@ -232,6 +236,15 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
         }
       })
       .catch((err) => console.error('Failed to load departments:', err));
+
+    fetch(`${BACKEND_URL}/apis/v1/countries?all=true`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setCountryList(data.data);
+        }
+      })
+      .catch((err) => console.error('Failed to load countries:', err));
 
     fetch(`${BACKEND_URL}/apis/v1/states`)
       .then((res) => res.json())
@@ -294,11 +307,15 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
               setFeaturedMedia(a.featured_media);
             }
 
-            // Department & State Dropdowns
+            // Department, Country & State Dropdowns
             if (a.department) {
               setSelectedDepartment(typeof a.department === 'object' ? a.department.name : a.department);
             } else if (a.dept) {
               setSelectedDepartment(a.dept);
+            }
+
+            if (a.country) {
+              setSelectedCountry(typeof a.country === 'object' ? a.country.name : a.country);
             }
 
             if (a.state) {
@@ -358,6 +375,7 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
         inst_impl: importantInstructions,
         featured_media: featuredMedia?._id || undefined,
         department: selectedDepartment === '— Please Choose —' ? null : selectedDepartment,
+        country: selectedCountry || 'India',
         state: selectedState === '-- All India --' ? null : selectedState,
         metadata: {
           m_title: metaTitle || title,
@@ -365,10 +383,9 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
           m_desc: metaDescription,
           robots: allowIndexing ? 1 : 0,
         },
-        author: session?.user?.id || undefined,
+        ...(isEditing ? {} : { author: session?.user?.id || undefined }),
       };
 
-      const targetId = actualId || slugOrId;
       const endpoint = targetId
         ? `${BACKEND_URL}/apis/v1/admit-cards/${targetId}`
         : `${BACKEND_URL}/apis/v1/admit-cards`;
@@ -1079,74 +1096,48 @@ export default function AdmitCardEditorForm({ slugOrId = null, isEdit = false })
               )}
             </div>
 
-            {/* Panel 3: Department (Dynamic DB Dropdown) */}
-            <div className="bg-white border border-slate-300 rounded shadow-2xs">
-              <div
-                onClick={() => setCollapseDepartment(!collapseDepartment)}
-                className="px-3.5 py-2 bg-[#f6f7f7] border-b border-slate-300 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
-              >
-                <span className="text-xs font-bold text-slate-800">Department</span>
-                {collapseDepartment ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-              </div>
+            {/* Panel 3: Department */}
+            <SearchableSelectPanel
+              title="Department"
+              endpoint="/apis/v1/departments"
+              selectedValue={selectedDepartment}
+              onSelect={(val) => {
+                setSelectedDepartment(val);
+                if (val !== '— Please Choose —' && !deptName) {
+                  setDeptName(val);
+                }
+              }}
+              defaultOption={{ label: '— Please Choose —', value: '— Please Choose —' }}
+              emptyMessage="No departments found"
+            />
 
-              {!collapseDepartment && (
-                <div className="p-3 bg-white">
-                  <select
-                    value={selectedDepartment}
-                    onChange={(e) => {
-                      setSelectedDepartment(e.target.value);
-                      if (e.target.value !== '— Please Choose —' && !deptName) {
-                        setDeptName(e.target.value);
-                      }
-                    }}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
-                  >
-                    <option value="— Please Choose —">— Please Choose —</option>
-                    {departmentList.map((dept) => {
-                      const dName = typeof dept === 'object' ? dept.name : dept;
-                      const dKey = typeof dept === 'object' ? dept._id || dept.name : dept;
-                      return (
-                        <option key={dKey} value={dName}>
-                          {dName}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
-            </div>
+            {/* Panel 4: Country */}
+            <SearchableSelectPanel
+              title="Country"
+              endpoint="/apis/v1/countries"
+              selectedValue={selectedCountry}
+              onSelect={(val) => {
+                setSelectedCountry(val);
+                setSelectedState(val === 'India' ? '-- All India --' : `-- All ${val} --`);
+              }}
+              defaultOption={{ label: 'India', value: 'India' }}
+              emptyMessage="No countries found"
+            />
 
-            {/* Panel 4: State (Dynamic DB Dropdown) */}
-            <div className="bg-white border border-slate-300 rounded shadow-2xs">
-              <div
-                onClick={() => setCollapseState(!collapseState)}
-                className="px-3.5 py-2 bg-[#f6f7f7] border-b border-slate-300 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
-              >
-                <span className="text-xs font-bold text-slate-800">State</span>
-                {collapseState ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-              </div>
-
-              {!collapseState && (
-                <div className="p-3 bg-white">
-                  <select
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
-                  >
-                    <option value="-- All India --">— All India —</option>
-                    {stateList.map((st) => {
-                      const sName = typeof st === 'object' ? st.name : st;
-                      const sKey = typeof st === 'object' ? st._id || st.name : st;
-                      return (
-                        <option key={sKey} value={sName}>
-                          {sName}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
-            </div>
+            {/* Panel 5: State */}
+            <SearchableSelectPanel
+              title="State"
+              endpoint="/apis/v1/states"
+              selectedValue={selectedState}
+              onSelect={(val) => setSelectedState(val)}
+              defaultOption={{
+                label: selectedCountry === 'India' ? '— All India —' : `— All ${selectedCountry || 'Country'} —`,
+                value: selectedCountry === 'India' ? '-- All India --' : `-- All ${selectedCountry || 'Country'} --`,
+              }}
+              extraParams={{ country: selectedCountry }}
+              dependency={selectedCountry}
+              emptyMessage={`No states found for ${selectedCountry || 'selected country'}`}
+            />
           </div>
         </div>
       )}

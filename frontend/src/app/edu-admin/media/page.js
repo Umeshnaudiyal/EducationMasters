@@ -158,6 +158,10 @@ export default function MediaLibraryPage() {
     }
   }, [searchParams]);
 
+  const token =
+    session?.user?.accessToken ||
+    (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
+
   // Fetch Media List with Deduplication
   const fetchMedia = async (pageNum = 1, append = false) => {
     try {
@@ -175,7 +179,11 @@ export default function MediaLibraryPage() {
         date: selectedDate !== 'all' ? selectedDate : '',
       });
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/media?${queryParams}`);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/media?${queryParams}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       const data = await res.json();
 
       if (data.success && data.data) {
@@ -296,7 +304,10 @@ export default function MediaLibraryPage() {
       setSaveStatus('saving');
       const res = await fetch(`${BACKEND_URL}/apis/v1/media/${mediaId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(updatedFields),
       });
 
@@ -320,7 +331,7 @@ export default function MediaLibraryPage() {
       console.error('Failed to update media details:', err);
       setSaveStatus('error');
     }
-  }, []);
+  }, [isAuthor, token]);
 
   const triggerAutoSave = (fieldUpdate) => {
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
@@ -378,7 +389,12 @@ export default function MediaLibraryPage() {
       if (deleteModal.isBulk) {
         const count = selectedIds.size;
         for (const id of selectedIds) {
-          await fetch(`${BACKEND_URL}/apis/v1/media/${id}`, { method: 'DELETE' });
+          await fetch(`${BACKEND_URL}/apis/v1/media/${id}`, {
+            method: 'DELETE',
+            headers: {
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+          });
         }
         setMediaList((prev) =>
           prev.filter((m) => !selectedIds.has(m._id || m.sql_id))
@@ -390,6 +406,9 @@ export default function MediaLibraryPage() {
         const deleteId = deleteModal.item._id || deleteModal.item.sql_id;
         const res = await fetch(`${BACKEND_URL}/apis/v1/media/${deleteId}`, {
           method: 'DELETE',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         });
         const data = await res.json();
         if (data.success) {
@@ -426,6 +445,9 @@ export default function MediaLibraryPage() {
         formData.append('image', files[i]);
         const res = await fetch(`${BACKEND_URL}/apis/v1/media/upload`, {
           method: 'POST',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: formData,
         });
         const data = await res.json();

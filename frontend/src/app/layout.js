@@ -5,6 +5,8 @@ import Providers from "@/components/Providers";
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["300", "400", "500", "600", "700", "800"],
+  style: ["normal", "italic"],
+  display: "swap",
   variable: "--font-poppins",
 });
 
@@ -20,17 +22,15 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html
-      lang="en"
-      className={`${poppins.variable} h-full antialiased`}
-    >
+    <html lang="en" className={`h-full antialiased ${poppins.className} ${poppins.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icon.png" />
       </head>
-      <body className={`${poppins.className} min-h-full flex flex-col bg-white text-slate-800 font-sans selection:bg-blue-600 selection:text-white`}>
+      <body className="min-h-full flex flex-col bg-white text-slate-800 font-sans selection:bg-blue-600 selection:text-white">
         <Providers>{children}</Providers>
       </body>
     </html>
   );
 }
+

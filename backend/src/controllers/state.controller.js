@@ -1,8 +1,9 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
-import { State, District } from '../models/index.js';
+import { State, District, Country } from '../models/index.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
+import mongoose from 'mongoose';
 
 const validateStateData = async (data, { isNew = false, currentId = null } = {}) => {
   const errors = {};
@@ -41,16 +42,66 @@ const validateStateData = async (data, { isNew = false, currentId = null } = {})
 export const getStates = asyncHandler(async (req, res) => {
   const isAll = req.query.all === 'true' || req.query.all === true;
   const search = (req.query.search || req.query.q || '').trim();
+  const countryParam = (req.query.country || req.query.countryId || '').trim();
 
   const query = { name: { $exists: true, $ne: '' } };
+
+  if (countryParam) {
+    let countryDoc = null;
+    if (mongoose.Types.ObjectId.isValid(countryParam)) {
+      countryDoc = await Country.findById(countryParam);
+    } else {
+      countryDoc = await Country.findOne({
+        $or: [
+          { name: { $regex: `^${countryParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+          { slug: countryParam.toLowerCase() },
+          { code: countryParam.toUpperCase() },
+        ],
+      });
+    }
+
+    if (countryDoc) {
+      if (countryDoc.slug === 'india' || countryDoc.code === 'IN' || countryDoc.sql_id === 1) {
+        query.$or = [
+          { country: countryDoc._id },
+          { country_id: countryDoc.sql_id },
+          { country: { $exists: false } },
+          { country: null },
+        ];
+      } else {
+        query.$or = [
+          { country: countryDoc._id },
+          { country_id: countryDoc.sql_id },
+        ];
+      }
+    } else if (countryParam.toLowerCase() === 'india') {
+      query.$or = [
+        { country_id: 1 },
+        { country: { $exists: false } },
+        { country: null },
+      ];
+    } else {
+      query.country = new mongoose.Types.ObjectId(); // Unlinked country
+    }
+  }
+
   if (search) {
-    query.$or = [
-      { name: { $regex: search, $options: 'i' } },
-      { slug: { $regex: search, $options: 'i' } },
-      { capital: { $regex: search, $options: 'i' } },
-      { governor: { $regex: search, $options: 'i' } },
-      { chief_minister: { $regex: search, $options: 'i' } },
-    ];
+    const searchCondition = {
+      $or: [
+        { name: { $regex: search, $options: 'i' } },
+        { slug: { $regex: search, $options: 'i' } },
+        { capital: { $regex: search, $options: 'i' } },
+        { governor: { $regex: search, $options: 'i' } },
+        { chief_minister: { $regex: search, $options: 'i' } },
+      ],
+    };
+
+    if (query.$or) {
+      query.$and = [{ $or: query.$or }, searchCondition];
+      delete query.$or;
+    } else {
+      query.$or = searchCondition.$or;
+    }
   }
 
   if (isAll) {
@@ -62,6 +113,7 @@ export const getStates = asyncHandler(async (req, res) => {
     return res.status(200).json({
       success: true,
       count: states.length,
+      total: states.length,
       data: states,
     });
   }
@@ -73,7 +125,7 @@ export const getStates = asyncHandler(async (req, res) => {
   const [states, total] = await Promise.all([
     State.find(query)
       .collation({ locale: 'en', strength: 2 })
-      .sort({ sql_id: 1, name: 1 })
+      .sort({ name: 1 })
       .skip(skip)
       .limit(limit)
       .lean(),
@@ -83,6 +135,7 @@ export const getStates = asyncHandler(async (req, res) => {
   res.status(200).json({
     success: true,
     data: states,
+    count: states.length,
     total,
     page,
     pages: Math.ceil(total / limit) || 1,

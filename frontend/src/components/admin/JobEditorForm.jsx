@@ -21,6 +21,7 @@ import { cleanHtmlContent } from '@/utils/cleanHtml';
 import JoditEditorWrapper from '@/components/admin/JoditEditorWrapper';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import AdminLoader from '@/components/admin/AdminLoader';
+import SearchableSelectPanel from '@/components/admin/SearchableSelectPanel';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -41,7 +42,6 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
   const descriptionRef = useRef(null);
   const metaTitleRef = useRef(null);
   const metaDescriptionRef = useRef(null);
-  const categoriesRef = useRef(null);
 
   // Field-specific validation errors
   const [errors, setErrors] = useState({});
@@ -100,9 +100,6 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
       metaDescriptionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
       const textarea = metaDescriptionRef.current.querySelector('textarea') || metaDescriptionRef.current;
       textarea?.focus?.();
-    } else if (field === 'categories' && categoriesRef.current) {
-      setCollapseCategories(false);
-      categoriesRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
   };
 
@@ -164,10 +161,6 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
       newErrors.metaDescription = 'SEO Meta Description is required.';
     }
 
-    if (!selectedCategories || selectedCategories.length === 0) {
-      newErrors.categories = 'Please select at least one category for this job post.';
-    }
-
     setErrors(newErrors);
 
     if (Object.keys(newErrors).length > 0) {
@@ -215,24 +208,14 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
 
   // Right Sidebar State
   const [featuredMedia, setFeaturedMedia] = useState(null);
-  const [selectedCategories, setSelectedCategories] = useState(['Jobs']);
   const [selectedDepartment, setSelectedDepartment] = useState('— Please Choose —');
+  const [selectedCountry, setSelectedCountry] = useState('India');
   const [selectedState, setSelectedState] = useState('-- All India --');
 
   // Dynamic Lists loaded from Database
   const [departmentList, setDepartmentList] = useState([]);
+  const [countryList, setCountryList] = useState([]);
   const [stateList, setStateList] = useState([]);
-  const [categoryList, setCategoryList] = useState([]);
-  const [categoryTab, setCategoryTab] = useState('all');
-  const [showAddCat, setShowAddCat] = useState(false);
-  const [newCatName, setNewCatName] = useState('');
-  const [catPage, setCatPage] = useState(1);
-  const [catTotal, setCatTotal] = useState(0);
-  const [hasMoreCats, setHasMoreCats] = useState(false);
-  const [loadingMoreCats, setLoadingMoreCats] = useState(false);
-  const [categorySearch, setCategorySearch] = useState('');
-  const [searchResults, setSearchResults] = useState(null);
-  const [searchingCats, setSearchingCats] = useState(false);
 
   // SEO Fields
   const [allowIndexing, setAllowIndexing] = useState(true);
@@ -244,8 +227,8 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
   const [collapseSEO, setCollapseSEO] = useState(false);
   const [collapsePublish, setCollapsePublish] = useState(false);
   const [collapseFeatured, setCollapseFeatured] = useState(false);
-  const [collapseCategories, setCollapseCategories] = useState(false);
   const [collapseDepartment, setCollapseDepartment] = useState(false);
+  const [collapseCountry, setCollapseCountry] = useState(false);
   const [collapseState, setCollapseState] = useState(false);
 
   // Media Library Modal
@@ -262,7 +245,7 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
     setTimeout(() => setToast({ message: '', type: '' }), 4000);
   };
 
-  // Fetch Dynamic Stored Departments, States, Categories
+  // Fetch Dynamic Stored Departments, Countries, and States
   useEffect(() => {
     // 1. Fetch Departments (all)
     fetch(`${BACKEND_URL}/apis/v1/departments?all=true`)
@@ -274,7 +257,17 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
       })
       .catch((err) => console.error('Failed to load departments:', err));
 
-    // 2. Fetch States
+    // 2. Fetch Countries (all)
+    fetch(`${BACKEND_URL}/apis/v1/countries?all=true`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.success && Array.isArray(data.data)) {
+          setCountryList(data.data);
+        }
+      })
+      .catch((err) => console.error('Failed to load countries:', err));
+
+    // 3. Fetch States
     fetch(`${BACKEND_URL}/apis/v1/states`)
       .then((res) => res.json())
       .then((data) => {
@@ -283,51 +276,7 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
         }
       })
       .catch((err) => console.error('Failed to load states:', err));
-
-    // 3. Fetch Categories
-    fetch(`${BACKEND_URL}/apis/v1/categories?page=1&limit=15`)
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.success && Array.isArray(data.data)) {
-          setCategoryList(data.data);
-          setCatPage(1);
-          setCatTotal(data.total || data.count || 0);
-          setHasMoreCats((data.page || 1) < (data.pages || 1));
-        }
-      })
-      .catch((err) => console.error('Failed to load categories:', err));
   }, []);
-
-  // Search Categories with debounce
-  useEffect(() => {
-    const term = categorySearch.trim();
-    if (!term) {
-      setSearchResults(null);
-      setSearchingCats(false);
-      return;
-    }
-
-    setSearchingCats(true);
-    const timer = setTimeout(async () => {
-      try {
-        const res = await fetch(
-          `${BACKEND_URL}/apis/v1/categories?search=${encodeURIComponent(term)}&limit=50`
-        );
-        const data = await res.json();
-        if (data.success && Array.isArray(data.data)) {
-          setSearchResults(data.data);
-        } else {
-          setSearchResults([]);
-        }
-      } catch (err) {
-        console.error('Error searching categories:', err);
-      } finally {
-        setSearchingCats(false);
-      }
-    }, 250);
-
-    return () => clearTimeout(timer);
-  }, [categorySearch]);
 
   // Fetch Job Data if Editing
   useEffect(() => {
@@ -386,27 +335,17 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
               setSelectedDepartment(j.dept);
             }
 
+            // Country & State Dropdowns
+            if (j.country) {
+              setSelectedCountry(typeof j.country === 'object' ? j.country.name : j.country);
+            }
             if (j.state) {
               setSelectedState(typeof j.state === 'object' ? j.state.name : j.state);
             }
-
-            // Categories
-            if (j.categories && j.categories.length > 0) {
-              const catNames = j.categories.map((c) => (typeof c === 'object' ? c.name : c)).filter(Boolean);
-              setSelectedCategories(catNames);
-              setCategoryList((prev) => {
-                const existingNames = new Set(prev.map((c) => (typeof c === 'object' ? c.name : c)));
-                const missing = catNames.filter((name) => !existingNames.has(name));
-                if (missing.length === 0) return prev;
-                return [
-                  ...missing.map((name) => ({ name, slug: name.toLowerCase().replace(/\s+/g, '-') })),
-                  ...prev,
-                ];
-              });
-            }
           }
         } catch (err) {
-          console.error('Failed to load job:', err);
+          console.error('Failed to load job data:', err);
+          showToast('Failed to load job details', 'error');
         } finally {
           setFetchingJob(false);
         }
@@ -416,78 +355,6 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
       setFetchingJob(false);
     }
   }, [slugOrId]);
-
-  // Category Toggle
-  const toggleCategory = (catName) => {
-    clearError('categories');
-    setSelectedCategories((prev) =>
-      prev.includes(catName) ? prev.filter((c) => c !== catName) : [...prev, catName]
-    );
-  };
-
-  // Load More Categories
-  const handleLoadMoreCategories = async () => {
-    if (loadingMoreCats || !hasMoreCats) return;
-    try {
-      setLoadingMoreCats(true);
-      const nextPage = catPage + 1;
-      const res = await fetch(`${BACKEND_URL}/apis/v1/categories?page=${nextPage}&limit=15`);
-      const data = await res.json();
-      if (data.success && Array.isArray(data.data)) {
-        setCategoryList((prev) => {
-          const existingKeys = new Set(
-            prev.map((c) => (typeof c === 'object' ? c._id || c.slug || c.name : c))
-          );
-          const uniqueNew = data.data.filter(
-            (c) => !existingKeys.has(typeof c === 'object' ? c._id || c.slug || c.name : c)
-          );
-          return [...prev, ...uniqueNew];
-        });
-        setCatPage(nextPage);
-        setCatTotal(data.total || 0);
-        setHasMoreCats(nextPage < (data.pages || 1));
-      }
-    } catch (err) {
-      console.error('Error loading more categories:', err);
-    } finally {
-      setLoadingMoreCats(false);
-    }
-  };
-
-  // Add Inline Category
-  const handleAddCategory = async () => {
-    if (!newCatName.trim()) return;
-    try {
-      const res = await fetch(`${BACKEND_URL}/apis/v1/categories`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name: newCatName.trim() }),
-      });
-      const data = await res.json();
-      const addedObj = data.data || {
-        name: newCatName.trim(),
-        slug: newCatName.trim().toLowerCase().replace(/\s+/g, '-'),
-      };
-      const addedName = addedObj.name || newCatName.trim();
-      setCategoryList((prev) => [addedObj, ...prev]);
-      setSelectedCategories((prev) => [...prev, addedName]);
-      clearError('categories');
-      setCatTotal((prev) => prev + 1);
-      setNewCatName('');
-      setShowAddCat(false);
-    } catch {
-      const fallbackCat = {
-        name: newCatName.trim(),
-        slug: newCatName.trim().toLowerCase().replace(/\s+/g, '-'),
-      };
-      setCategoryList((prev) => [fallbackCat, ...prev]);
-      setSelectedCategories((prev) => [...prev, newCatName.trim()]);
-      clearError('categories');
-      setCatTotal((prev) => prev + 1);
-      setNewCatName('');
-      setShowAddCat(false);
-    }
-  };
 
   // Handle Media Selection
   const handleMediaSelected = (mediaItem) => {
@@ -509,13 +376,6 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
 
     setIsSubmitting(true);
     try {
-      const mappedCategories = selectedCategories.map((catName) => {
-        const found = categoryList.find(
-          (c) => (typeof c === 'object' ? c.name === catName || c.slug === catName : c === catName)
-        );
-        return found?._id || catName;
-      });
-
       const payload = {
         title: title.trim(),
         slug: slug.trim() || undefined,
@@ -559,12 +419,12 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
           m_desc: metaDescription,
           robots: allowIndexing ? 1 : 0,
         },
+        country: selectedCountry || 'India',
         state: selectedState === '-- All India --' ? null : selectedState,
-        categories: mappedCategories,
-        author: session?.user?.id || undefined,
+        categories: ['Jobs'],
+        ...(isEditing ? {} : { author: session?.user?.id || undefined }),
       };
 
-      const targetId = actualId || slugOrId;
       const endpoint = targetId
         ? `${BACKEND_URL}/apis/v1/jobs/${targetId}`
         : `${BACKEND_URL}/apis/v1/jobs`;
@@ -1389,313 +1249,50 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
               )}
             </div>
 
-            {/* Panel 3: Categories */}
-            <div
-              ref={categoriesRef}
-              className={`bg-white border rounded shadow-2xs transition-all duration-200 ${
-                errors.categories
-                  ? 'border-rose-500 ring-2 ring-rose-500/20'
-                  : 'border-slate-300'
-              }`}
-            >
-              <div
-                onClick={() => setCollapseCategories(!collapseCategories)}
-                className="px-3.5 py-2 bg-[#f6f7f7] border-b border-slate-300 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-bold text-slate-800">Categories</span>
-                  {errors.categories && (
-                    <span className="text-[10px] font-semibold text-rose-600 bg-rose-50 px-1.5 py-0.2 rounded border border-rose-200">
-                      Required
-                    </span>
-                  )}
-                </div>
-                {collapseCategories ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-              </div>
+            {/* Panel 3: Categories removed as Jobs are automatically categorized */}
 
-              {errors.categories && !collapseCategories && (
-                <div className="px-3 py-1.5 bg-rose-50 border-b border-rose-200 flex items-center gap-1.5 text-xs font-medium text-rose-600 animate-in fade-in duration-200">
-                  <AlertCircle size={13} className="shrink-0 text-rose-500" />
-                  <span>{errors.categories}</span>
-                </div>
-              )}
+            {/* Panel 4: Department */}
+            <SearchableSelectPanel
+              title="Department"
+              endpoint="/apis/v1/departments"
+              selectedValue={selectedDepartment}
+              onSelect={(val) => {
+                setSelectedDepartment(val);
+                if (val !== '— Please Choose —' && !deptName) {
+                  setDeptName(val);
+                }
+              }}
+              defaultOption={{ label: '— Please Choose —', value: '— Please Choose —' }}
+              emptyMessage="No departments found"
+            />
 
-              {!collapseCategories && (() => {
-                const displayedCategories = (() => {
-                  if (categorySearch.trim()) {
-                    if (searchResults !== null) {
-                      return searchResults;
-                    }
-                    const q = categorySearch.toLowerCase().trim();
-                    return categoryList.filter((cat) => {
-                      const catName = typeof cat === 'object' ? cat.name : cat;
-                      return String(catName).toLowerCase().includes(q);
-                    });
-                  }
-                  if (categoryTab === 'most_used') {
-                    return categoryList.filter((cat) => {
-                      const catName = typeof cat === 'object' ? cat.name : cat;
-                      return selectedCategories.includes(catName);
-                    });
-                  }
-                  return categoryList;
-                })();
+            {/* Panel 5: Country */}
+            <SearchableSelectPanel
+              title="Country"
+              endpoint="/apis/v1/countries"
+              selectedValue={selectedCountry}
+              onSelect={(val) => {
+                setSelectedCountry(val);
+                setSelectedState(val === 'India' ? '-- All India --' : `-- All ${val} --`);
+              }}
+              defaultOption={{ label: 'India', value: 'India' }}
+              emptyMessage="No countries found"
+            />
 
-                return (
-                  <div className="p-3 bg-white space-y-2.5">
-                    {/* Categories Tabs */}
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-1.5 text-xs">
-                      <div className="flex items-center gap-3">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCategoryTab('all');
-                            setCategorySearch('');
-                          }}
-                          className={`font-medium transition-colors cursor-pointer ${
-                            categoryTab === 'all'
-                              ? 'text-slate-900 border-b-2 border-slate-800 font-bold pb-0.5'
-                              : 'text-slate-500 hover:text-slate-800'
-                          }`}
-                        >
-                          All Categories
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCategoryTab('most_used');
-                            setCategorySearch('');
-                          }}
-                          className={`font-medium transition-colors cursor-pointer ${
-                            categoryTab === 'most_used'
-                              ? 'text-slate-900 border-b-2 border-slate-800 font-bold pb-0.5'
-                              : 'text-slate-500 hover:text-slate-800'
-                          }`}
-                        >
-                          Most Used
-                        </button>
-                      </div>
-                      {catTotal > 0 && categoryTab === 'all' && !categorySearch.trim() && (
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {categoryList.length} of {catTotal}
-                        </span>
-                      )}
-                    </div>
-
-                    {/* Search Input Bar */}
-                    <div className="relative">
-                      <Search
-                        size={12}
-                        className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
-                      />
-                      <input
-                        type="text"
-                        placeholder="Search categories..."
-                        value={categorySearch}
-                        onChange={(e) => setCategorySearch(e.target.value)}
-                        className="w-full pl-7 pr-7 py-1 bg-slate-50 border border-slate-200 rounded text-xs text-slate-800 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:border-[#2271b1] transition-all"
-                      />
-                      {categorySearch && !searchingCats && (
-                        <button
-                          type="button"
-                          onClick={() => setCategorySearch('')}
-                          className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
-                        >
-                          <X size={11} />
-                        </button>
-                      )}
-                      {searchingCats && (
-                        <Loader2
-                          size={11}
-                          className="animate-spin text-[#2271b1] absolute right-2 top-1/2 -translate-y-1/2"
-                        />
-                      )}
-                    </div>
-
-                    {/* Checkbox List */}
-                    <div className="max-h-48 overflow-y-auto border border-slate-200 rounded p-2 space-y-1.5 custom-scrollbar bg-slate-50/50">
-                      {displayedCategories.map((cat) => {
-                        const catName = typeof cat === 'object' ? cat.name : cat;
-                        const catKey = typeof cat === 'object' ? cat._id || cat.slug || cat.name : cat;
-                        return (
-                          <label
-                            key={catKey}
-                            className="flex items-center gap-2 text-xs text-slate-700 hover:text-slate-900 cursor-pointer select-none py-0.5"
-                          >
-                            <input
-                              type="checkbox"
-                              checked={selectedCategories.includes(catName)}
-                              onChange={() => toggleCategory(catName)}
-                              className="rounded border-slate-300 text-[#2271b1] focus:ring-[#2271b1] cursor-pointer"
-                            />
-                            <span className="truncate">{catName}</span>
-                          </label>
-                        );
-                      })}
-
-                      {categorySearch.trim() && displayedCategories.length === 0 && !searchingCats && (
-                        <div className="text-[11px] text-slate-400 italic py-3 text-center">
-                          No categories found matching &quot;{categorySearch}&quot;
-                        </div>
-                      )}
-
-                      {!categorySearch.trim() &&
-                        categoryTab === 'most_used' &&
-                        displayedCategories.length === 0 && (
-                          <div className="text-[11px] text-slate-400 italic py-3 text-center">
-                            No categories selected yet
-                          </div>
-                        )}
-                    </div>
-
-                    {/* Load More Button */}
-                    {!categorySearch.trim() && categoryTab === 'all' && hasMoreCats && (
-                      <div className="pt-0.5">
-                        <button
-                          type="button"
-                          disabled={loadingMoreCats}
-                          onClick={handleLoadMoreCategories}
-                          className="w-full py-1.5 px-2.5 bg-slate-50 hover:bg-slate-100 text-[#2271b1] hover:text-[#135e96] border border-slate-200 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
-                        >
-                          {loadingMoreCats ? (
-                            <>
-                              <Loader2 size={13} className="animate-spin text-[#2271b1]" />
-                              <span>Loading more categories...</span>
-                            </>
-                          ) : (
-                            <>
-                              <span>+ Load More Categories</span>
-                              <span className="text-[10px] text-slate-500 font-normal">
-                                ({categoryList.length} of {catTotal})
-                              </span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    )}
-
-                    {/* + Add New Category */}
-                    {!isAuthor && (
-                      <div>
-                        {!showAddCat ? (
-                          <button
-                            type="button"
-                            onClick={() => setShowAddCat(true)}
-                            className="text-xs text-[#2271b1] hover:text-[#135e96] hover:underline flex items-center gap-1 cursor-pointer"
-                          >
-                            <span>+ Add New Category</span>
-                          </button>
-                        ) : (
-                          <div className="space-y-1.5 pt-1 border-t border-slate-100">
-                            <input
-                              type="text"
-                              placeholder="New category name"
-                              value={newCatName}
-                              onChange={(e) => setNewCatName(e.target.value)}
-                              onKeyDown={(e) => {
-                                if (e.key === 'Enter') {
-                                  e.preventDefault();
-                                  handleAddCategory();
-                                }
-                              }}
-                              className="w-full px-2 py-1 text-xs border border-slate-300 rounded focus:outline-none focus:border-[#2271b1]"
-                            />
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                type="button"
-                                onClick={handleAddCategory}
-                                className="px-2.5 py-0.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-medium cursor-pointer"
-                              >
-                                Add Category
-                              </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setShowAddCat(false);
-                                  setNewCatName('');
-                                }}
-                                className="px-2.5 py-0.5 text-slate-500 hover:text-slate-700 text-xs cursor-pointer"
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
-            </div>
-
-            {/* Panel 4: Department (Dynamic Stored Departments) */}
-            <div className="bg-white border border-slate-300 rounded shadow-2xs">
-              <div
-                onClick={() => setCollapseDepartment(!collapseDepartment)}
-                className="px-3.5 py-2 bg-[#f6f7f7] border-b border-slate-300 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
-              >
-                <span className="text-xs font-bold text-slate-800">Department</span>
-                {collapseDepartment ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-              </div>
-
-              {!collapseDepartment && (
-                <div className="p-3 bg-white">
-                  <select
-                    value={selectedDepartment}
-                    onChange={(e) => {
-                      setSelectedDepartment(e.target.value);
-                      if (e.target.value !== '— Please Choose —' && !deptName) {
-                        setDeptName(e.target.value);
-                      }
-                    }}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
-                  >
-                    <option value="— Please Choose —">— Please Choose —</option>
-                    {departmentList.map((dept) => {
-                      const dName = typeof dept === 'object' ? dept.name : dept;
-                      const dKey = typeof dept === 'object' ? dept._id || dept.name : dept;
-                      return (
-                        <option key={dKey} value={dName}>
-                          {dName}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
-            </div>
-
-            {/* Panel 5: State (Dynamic Stored States) */}
-            <div className="bg-white border border-slate-300 rounded shadow-2xs">
-              <div
-                onClick={() => setCollapseState(!collapseState)}
-                className="px-3.5 py-2 bg-[#f6f7f7] border-b border-slate-300 flex items-center justify-between cursor-pointer hover:bg-slate-100 transition-colors"
-              >
-                <span className="text-xs font-bold text-slate-800">State</span>
-                {collapseState ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
-              </div>
-
-              {!collapseState && (
-                <div className="p-3 bg-white">
-                  <select
-                    value={selectedState}
-                    onChange={(e) => setSelectedState(e.target.value)}
-                    className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
-                  >
-                    <option value="-- All India --">— All India —</option>
-                    {stateList.map((st) => {
-                      const sName = typeof st === 'object' ? st.name : st;
-                      const sKey = typeof st === 'object' ? st._id || st.name : st;
-                      return (
-                        <option key={sKey} value={sName}>
-                          {sName}
-                        </option>
-                      );
-                    })}
-                  </select>
-                </div>
-              )}
-            </div>
+            {/* Panel 6: State */}
+            <SearchableSelectPanel
+              title="State"
+              endpoint="/apis/v1/states"
+              selectedValue={selectedState}
+              onSelect={(val) => setSelectedState(val)}
+              defaultOption={{
+                label: selectedCountry === 'India' ? '— All India —' : `— All ${selectedCountry || 'Country'} —`,
+                value: selectedCountry === 'India' ? '-- All India --' : `-- All ${selectedCountry || 'Country'} --`,
+              }}
+              extraParams={{ country: selectedCountry }}
+              dependency={selectedCountry}
+              emptyMessage={`No states found for ${selectedCountry || 'selected country'}`}
+            />
           </div>
         </div>
       )}

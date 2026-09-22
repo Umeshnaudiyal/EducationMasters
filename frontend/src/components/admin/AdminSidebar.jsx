@@ -14,6 +14,7 @@ import {
   ChevronRight,
   CheckSquare,
   User as UserIcon,
+  History,
 } from 'lucide-react';
 
 export default function AdminSidebar({ userRole = 'admin', isCollapsed, setIsCollapsed }) {
@@ -143,11 +144,19 @@ export default function AdminSidebar({ userRole = 'admin', isCollapsed, setIsCol
       subItems: [
         { label: 'All Users', href: '/edu-admin/users' },
         { label: 'Add New', href: '/edu-admin/users/create' },
+        { label: 'Session Logs', href: '/edu-admin/users/logs' },
         { label: 'Profile', href: '/edu-admin/profile' },
         { label: 'Roles & RBAC', href: '/edu-admin/users/roles' },
       ],
     },
-    // Standalone profile item for non-admins
+    // Standalone profile and login logs item for non-admins
+    {
+      id: 'session-logs',
+      label: 'Login Logs',
+      icon: History,
+      href: '/edu-admin/users/logs',
+      roles: ['editor', 'author', 'writer', 'institute', 'institute_admin', 'institute_employee'],
+    },
     {
       id: 'profile',
       label: 'My Profile',

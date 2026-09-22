@@ -37,6 +37,8 @@ const jobSchema = new mongoose.Schema(
     featured_media: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
     media_id: Number,
     
+    country: { type: mongoose.Schema.Types.ObjectId, ref: 'Country' },
+    country_id: Number,
     state: { type: mongoose.Schema.Types.ObjectId, ref: 'State' },
     state_id: Number,
     

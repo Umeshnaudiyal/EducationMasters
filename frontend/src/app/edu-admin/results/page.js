@@ -417,7 +417,12 @@ export default function ResultsAdminPage() {
                       <td className="p-2.5">
                         <div className="flex items-start gap-2.5">
                           {/* Featured Media Thumbnail */}
-                          <div className="w-12 h-9 rounded bg-slate-100 border border-slate-200 shrink-0 overflow-hidden flex items-center justify-center">
+                          <Link
+                            href={`/result/${item.slug || item._id}`}
+                            target="_blank"
+                            title="Preview Result"
+                            className="w-12 h-9 rounded bg-slate-100 border border-slate-200 shrink-0 overflow-hidden flex items-center justify-center hover:opacity-90 transition-opacity"
+                          >
                             {mediaUrl ? (
                               <img
                                 src={mediaUrl}
@@ -427,12 +432,14 @@ export default function ResultsAdminPage() {
                             ) : (
                               <ImageIcon size={14} className="text-slate-400" />
                             )}
-                          </div>
+                          </Link>
 
                           {/* Title & Dates */}
                           <div className="space-y-0.5">
                             <Link
-                              href={`/edu-admin/result/edit/${item.slug || item._id}`}
+                              href={`/result/${item.slug || item._id}`}
+                              target="_blank"
+                              title="Preview Result"
                               className="font-bold text-[#0073aa] hover:text-[#005177] hover:underline line-clamp-1 cursor-pointer"
                             >
                               {item.title}

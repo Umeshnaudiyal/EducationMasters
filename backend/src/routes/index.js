@@ -13,15 +13,18 @@ import questionRoutes from './question.routes.js';
 import categoryRoutes from './category.routes.js';
 import departmentRoutes from './department.routes.js';
 import stateRoutes from './state.routes.js';
+import countryRoutes from './country.routes.js';
 import tagRoutes from './tag.routes.js';
 import resultRoutes from './result.routes.js';
 import examRoutes from './exam.routes.js';
 import subjectRoutes from './subject.routes.js';
 import topicRoutes from './topic.routes.js';
 import topicGroupRoutes from './topicGroup.routes.js';
+import searchRoutes from './search.routes.js';
 
 const router = express.Router();
 
+router.use('/search', searchRoutes);
 router.use('/admit-cards', admitCardRoutes);
 router.use('/admit-card', admitCardRoutes);
 router.use('/results', resultRoutes);
@@ -44,6 +47,8 @@ router.use('/questions', questionRoutes);
 router.use('/categories', categoryRoutes);
 router.use('/departments', departmentRoutes);
 router.use('/department', departmentRoutes);
+router.use('/countries', countryRoutes);
+router.use('/country', countryRoutes);
 router.use('/tags', tagRoutes);
 router.use('/tag', tagRoutes);
 router.use('/states', stateRoutes);

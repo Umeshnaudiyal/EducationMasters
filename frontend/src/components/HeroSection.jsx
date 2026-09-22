@@ -9,7 +9,7 @@ const HERO_CARDS = [
     countColor: 'text-pink-600',
     title: 'M.C.Q',
     image: '/mcq.png',
-    href: '/jobs'
+    href: '/general-knowledge/mcq-questions'
   },
   {
     id: 'syllabus',

@@ -6,27 +6,32 @@ const TICKER_ITEMS = [
   {
     tag: 'Update',
     tagStyle: 'bg-blue-50 text-blue-700 border-blue-100',
-    text: 'New 30 MCQs added for General Knowledge & Current Affairs'
+    text: 'New 30 MCQs added for General Knowledge & Current Affairs',
+    href: '/general-knowledge/mcq-questions',
   },
   {
     tag: 'Admit Card',
     tagStyle: 'bg-cyan-50 text-cyan-700 border-cyan-100',
-    text: 'UPSC IAS Prelims official admit card released - download now'
+    text: 'UPSC IAS Prelims official admit card released - download now',
+    href: '/admit-cards',
   },
   {
     tag: 'Result',
     tagStyle: 'bg-emerald-50 text-emerald-700 border-emerald-100',
-    text: 'SBI PO 2026 Mains result & merit list uploaded'
+    text: 'SBI PO 2026 Mains result & merit list uploaded',
+    href: '/results',
   },
   {
     tag: 'Dates',
     tagStyle: 'bg-amber-50 text-amber-800 border-amber-100',
-    text: 'Railway RRB NTPC CBT-2 exam dates & intimation slip live'
+    text: 'Railway RRB NTPC CBT-2 exam dates & intimation slip live',
+    href: '/jobs',
   },
   {
     tag: 'Registration',
     tagStyle: 'bg-rose-50 text-rose-700 border-rose-100',
-    text: 'Indian Army Agniveer 2026 online registration open'
+    text: 'Indian Army Agniveer 2026 online registration open',
+    href: '/jobs',
   }
 ];
 
@@ -52,7 +57,7 @@ export default function LiveTicker() {
             {TICKER_ITEMS.concat(TICKER_ITEMS).map((item, index) => (
               <a
                 key={index}
-                href="#"
+                href={item.href || '#'}
                 className="group flex items-center gap-2 text-xs font-semibold text-slate-600 transition-colors hover:text-[#0b66c3]"
               >
                 <span className={`shrink-0 rounded border px-2 py-0.5 text-[10px] font-bold ${item.tagStyle}`}>

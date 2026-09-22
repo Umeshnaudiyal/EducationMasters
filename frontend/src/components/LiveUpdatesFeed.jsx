@@ -7,22 +7,22 @@ import { getImageUrl } from '@/utils/image';
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1';
 
 const SUBJECT_MCQS = [
-  { name: 'Maths', icon: '📐', href: '/jobs' },
-  { name: 'History', icon: '📜', href: '/jobs' },
-  { name: 'Agriculture', icon: '🌱', href: '/jobs' },
-  { name: 'English', icon: '📖', href: '/jobs' },
-  { name: 'Economics', icon: '🌐', href: '/jobs' },
-  { name: 'Geography', icon: '🐯', href: '/jobs' },
-  { name: 'G.K.', icon: '🔴', href: '/jobs' },
-  { name: 'Computer', icon: '💻', href: '/jobs' },
-  { name: 'Science', icon: '⚛️', href: '/jobs' },
-  { name: 'Politics', icon: '🗳️', href: '/jobs' },
-  { name: 'Sociology', icon: '📚', href: '/jobs' },
-  { name: 'Humanities', icon: '🎨', href: '/jobs' },
-  { name: 'Reasoning', icon: '💡', href: '/jobs' },
-  { name: 'Hindi', icon: '🕉️', href: '/jobs' },
-  { name: 'Philosophy', icon: '🧠', href: '/jobs' },
-  { name: 'Current Affair', icon: '💡', href: '/jobs' }
+  { name: 'Maths', prefix: 'Math', accent: 's', image: '/maths.png', href: '/mathematics/mcq-questions' },
+  { name: 'History', prefix: 'Histor', accent: 'y', image: '/history.png', href: '/history/mcq-questions' },
+  { name: 'Agriculture', prefix: 'Agri', accent: 'culture', image: '/agriculture.png', href: '/agriculture/mcq-questions' },
+  { name: 'English', prefix: 'Engl', accent: 'ish', image: '/english.png', href: '/english/mcq-questions' },
+  { name: 'Economics', prefix: 'Economi', accent: 'cs', image: '/economics.png', href: '/economics/mcq-questions' },
+  { name: 'Geography', prefix: 'Geogra', accent: 'phy', image: '/geography.png', href: '/geography/mcq-questions' },
+  { name: 'G.K.', prefix: 'G.', accent: 'K.', image: '/gk.png', href: '/general-knowledge/mcq-questions' },
+  { name: 'Computer', prefix: 'Compu', accent: 'ter', image: '/computer.png', href: '/computer/mcq-questions' },
+  { name: 'Science', prefix: 'Sci', accent: 'ence', image: '/science.png', href: '/science/mcq-questions' },
+  { name: 'Politics', prefix: 'Poli', accent: 'tics', image: '/politics.png', href: '/polity/mcq-questions' },
+  { name: 'Sociology', prefix: 'Sociolo', accent: 'gy', image: '/sociology.png', href: '/sociology/mcq-questions' },
+  { name: 'Humanities', prefix: 'Humani', accent: 'ties', image: '/humanities.png', href: '/humanities/mcq-questions' },
+  { name: 'Reasoning', prefix: 'Reason', accent: 'ing', image: '/reasoning.png', href: '/reasoning/mcq-questions' },
+  { name: 'Hindi', prefix: 'Hin', accent: 'di', image: '/hindi.png', href: '/hindi/mcq-questions' },
+  { name: 'Philosophy', prefix: 'Philoso', accent: 'phy', image: '/philosophy.png', href: '/philosophy/mcq-questions' },
+  { name: 'Current Affair', prefix: 'Current ', accent: 'Affair', image: '/ca.png', href: '/current-affairs/mcq-questions' },
 ];
 
 export default function LiveUpdatesFeed() {
@@ -62,8 +62,8 @@ export default function LiveUpdatesFeed() {
   };
 
   return (
-    <section id="updates" className="py-12 bg-white relative">
-      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-12">
+    <section id="updates" className="pt-8 pb-4 bg-white relative">
+      <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
 
         {/* ==================================================== */}
@@ -170,10 +170,10 @@ export default function LiveUpdatesFeed() {
         {/* ==================================================== */}
         {/* SECTION 3: Subject Wise MCQ General Knowledge (Image 3) */}
         {/* ==================================================== */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-xs">
+        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs">
 
-          <div className="text-center space-y-1 mb-8">
-            <h3 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight">
+          <div className="text-center space-y-1.5 mb-8">
+            <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1a4a75] tracking-tight">
               Subject Wise MCQ General Knowledge
             </h3>
             <p className="text-xs sm:text-sm text-slate-500 font-medium">
@@ -181,18 +181,25 @@ export default function LiveUpdatesFeed() {
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-4 sm:gap-6">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
             {SUBJECT_MCQS.map((sub) => (
               <a
                 key={sub.name}
                 href={sub.href}
-                className="flex flex-col items-center justify-center p-3 rounded-xl hover:bg-slate-50 transition group border border-slate-100 hover:border-slate-200 hover:shadow-md no-underline"
+                className="bg-white border border-slate-200/80 hover:border-blue-400 rounded-xl p-3 sm:p-3.5 flex flex-col items-center justify-center text-center shadow-2xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 group no-underline"
               >
-                <div className="w-14 h-14 rounded-full bg-slate-100 border border-slate-200 flex items-center justify-center text-2xl mb-2 group-hover:scale-110 transition-transform shadow-2xs">
-                  {sub.icon}
+                {/* Circular image avatar */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden flex items-center justify-center bg-slate-50 border border-slate-200/70 shadow-2xs mb-2.5 group-hover:scale-105 transition-transform duration-300">
+                  <img
+                    src={sub.image}
+                    alt={sub.name}
+                    className="w-full h-full object-cover"
+                    loading="lazy"
+                  />
                 </div>
-                <span className="text-xs font-semibold text-[#e11d48] group-hover:text-blue-600 transition">
-                  {sub.name}
+                <span className="text-xs sm:text-[13px] font-bold text-slate-800 tracking-tight group-hover:text-blue-600 transition-colors leading-snug">
+                  {sub.prefix}
+                  <span className="text-[#e11d48]">{sub.accent}</span>
                 </span>
               </a>
             ))}

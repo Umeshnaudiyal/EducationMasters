@@ -278,23 +278,12 @@ export const createBlog = async (req, res, next) => {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
     }
     // Enforce Author status restrictions: Authors cannot publish directly, forced to 'pending' or 'draft'
-    let isAuthor =
-      req.user?.role === 'author' ||
-      req.user?.role === 'writer' ||
-      req.body?.role === 'author' ||
-      req.body?.role === 'writer' ||
-      req.body?.authorRole === 'author' ||
-      req.headers?.['x-user-role'] === 'author';
-
-    if (!isAuthor && req.body.author) {
-      const authorUser = await User.findById(req.body.author).select('role sql_id');
-      if (authorUser && (authorUser.role === 'author' || authorUser.role === 'writer')) {
-        isAuthor = true;
-        if (!req.body.user_id && authorUser.sql_id) {
-          req.body.user_id = authorUser.sql_id;
-        }
-      }
-    }
+    const actingRole =
+      req.user?.role ||
+      req.headers?.['x-user-role'] ||
+      req.body?.role ||
+      req.body?.authorRole;
+    const isAuthor = actingRole === 'author' || actingRole === 'writer';
 
     if (isAuthor) {
       if (req.body.status === 'publish' || req.body.status === 'published' || req.body.status === 'active') {
@@ -303,6 +292,13 @@ export const createBlog = async (req, res, next) => {
         req.body.status = 'draft';
       }
       if (req.user?._id) {
+        req.body.author = req.user._id;
+        req.body.user_id = req.user.sql_id || undefined;
+      }
+    } else {
+      if (req.body.author) {
+        req.body.author = sanitizeObjectId(req.body.author);
+      } else if (req.user?._id) {
         req.body.author = req.user._id;
         req.body.user_id = req.user.sql_id || undefined;
       }
@@ -318,23 +314,24 @@ export const createBlog = async (req, res, next) => {
 export const updateBlog = async (req, res, next) => {
   try {
     const isId = req.params.id.match(/^[0-9a-fA-F]{24}$/);
+    const existingBlog = await Blog.findOne(isId ? { _id: req.params.id } : { slug: req.params.id });
+    if (!existingBlog) {
+      throw new ApiError(404, 'Blog post not found or has been deleted.');
+    }
+
+    // Preserve the original author and user_id - NEVER allow author change on update/edit
+    delete req.body.author;
+    delete req.body.user_id;
+
     let { slug, title, content } = req.body;
 
-    // Enforce Author status restrictions: Authors cannot publish directly, forced to 'pending'
-    let isAuthor =
-      req.user?.role === 'author' ||
-      req.user?.role === 'writer' ||
-      req.body?.role === 'author' ||
-      req.body?.role === 'writer' ||
-      req.body?.authorRole === 'author' ||
-      req.headers?.['x-user-role'] === 'author';
-
-    if (!isAuthor && req.body.author) {
-      const authorUser = await User.findById(req.body.author).select('role sql_id');
-      if (authorUser && (authorUser.role === 'author' || authorUser.role === 'writer')) {
-        isAuthor = true;
-      }
-    }
+    // Enforce Author status restrictions only if the acting user is an author/writer
+    const actingRole =
+      req.user?.role ||
+      req.headers?.['x-user-role'] ||
+      req.body?.role ||
+      req.body?.authorRole;
+    const isAuthor = actingRole === 'author' || actingRole === 'writer';
 
     if (isAuthor) {
       if (req.body.status === 'publish' || req.body.status === 'published' || req.body.status === 'active') {
@@ -376,11 +373,6 @@ export const updateBlog = async (req, res, next) => {
       validationErrors.categories = 'Please select at least one category for this post.';
     }
 
-    const existingBlog = await Blog.findOne(isId ? { _id: req.params.id } : { slug: req.params.id });
-    if (!existingBlog) {
-      throw new ApiError(404, 'Blog post not found or has been deleted.');
-    }
-
     if (slug !== undefined && String(slug).trim()) {
       const slugValidation = await validateUniqueSlug(Blog, {
         slug,
@@ -416,9 +408,6 @@ export const updateBlog = async (req, res, next) => {
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
-    }
-    if (req.body.author !== undefined) {
-      req.body.author = sanitizeObjectId(req.body.author);
     }
 
     const blog = await Blog.findByIdAndUpdate(

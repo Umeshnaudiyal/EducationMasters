@@ -20,6 +20,7 @@ import Tag from './tag.model.js';
 import Topic from './topic.model.js';
 import TopicGroup from './topicGroup.model.js';
 import User from './user.model.js';
+import UserLog from './userLog.model.js';
 
 export {
   AdmitCard,
@@ -44,4 +45,5 @@ export {
   Topic,
   TopicGroup,
   User,
+  UserLog,
 };

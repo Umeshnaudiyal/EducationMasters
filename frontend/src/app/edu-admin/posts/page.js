@@ -183,9 +183,14 @@ export default function PostsManagementPage() {
                   <tr key={p._id} className="hover:bg-slate-50 transition-colors">
                     {/* Title */}
                     <td className="py-3 px-4 max-w-md">
-                      <div className="font-semibold text-slate-800 text-xs line-clamp-2 hover:text-blue-600 transition-colors">
+                      <Link
+                        href={`/${p.slug || p._id}`}
+                        target="_blank"
+                        title="Preview Content"
+                        className="font-semibold text-slate-800 text-xs line-clamp-2 hover:text-blue-600 transition-colors block"
+                      >
                         {p.title}
-                      </div>
+                      </Link>
                       <div className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">/{p.slug}</div>
                     </td>
 
