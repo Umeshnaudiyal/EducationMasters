@@ -97,10 +97,10 @@ export function getTaxonomyInfo(slug) {
       name: 'General Knowledge',
       breadcrumbCategory: 'Subjects',
       breadcrumbCatLink: '/mcq-questions',
-      title: 'General Knowledge MCQ Questions with Answers | GK Questions MCQ - Education Masters',
+      title: 'General Knowledge MCQ Questions with Answers - Education Masters',
       description: 'Practice General Knowledge MCQ questions with answers in English & Hindi for competitive exams like SSC, UPSC, State PCS, Railway, Bank, and Teaching exams.',
-      subtitle: 'Latest General Knowledge Multiple Choice Questions, Objective Type GK Quiz with Answers & Explanations in English',
-      tag: 'Knowledge Management',
+      subtitle: 'Practice General Knowledge Multiple Choice Questions with Verified Answers & Detailed Explanations',
+      tag: 'Knowledge Hub',
       queryParamKey: 'subject',
     };
   }
@@ -117,10 +117,10 @@ export function getTaxonomyInfo(slug) {
       rawName: foundExam.name,
       breadcrumbCategory: 'Exams',
       breadcrumbCatLink: '/syllabus',
-      title: `${foundExam.name} MCQ Questions with Answers | ${foundExam.fullExamName} Practice Test`,
+      title: `${foundExam.name} MCQ Questions with Answers | ${foundExam.fullExamName}`,
       description: `Practice ${foundExam.name} MCQ questions with answers and step-by-step explanations in English & Hindi. Solved previous year objective questions for ${foundExam.fullExamName}.`,
       subtitle: `Practice ${foundExam.fullExamName} Multiple Choice Questions with Verified Answers & Detailed Explanations`,
-      tag: 'Competitive Exam Prep',
+      tag: 'Exam Prep',
       queryParamKey: 'exam',
     };
   }
@@ -131,13 +131,14 @@ export function getTaxonomyInfo(slug) {
     return {
       type: 'state',
       slug: foundState.slug,
+      urlPath: `/state/${foundState.slug}/mcq-questions`,
       name: `${foundState.name} GK`,
       rawName: foundState.name,
       breadcrumbCategory: 'State GK',
       breadcrumbCatLink: '/mcq-questions',
-      title: `${foundState.name} GK MCQ Questions with Answers | State General Knowledge Quiz`,
+      title: `${foundState.name} GK Questions with Answers | State MCQ Quiz`,
       description: `Practice ${foundState.name} GK MCQ questions with answers in English & Hindi for State Govt Exams, PSC, Police Bharti, and Competitive Tests.`,
-      subtitle: `Latest ${foundState.name} General Knowledge Multiple Choice Questions with Answers & Explanations`,
+      subtitle: `Practice ${foundState.name} General Knowledge Multiple Choice Questions with Answers & Explanations`,
       tag: 'State Preparation',
       queryParamKey: 'state',
     };
@@ -153,10 +154,10 @@ export function getTaxonomyInfo(slug) {
       rawName: foundSub.name,
       breadcrumbCategory: 'Subjects',
       breadcrumbCatLink: '/mcq-questions',
-      title: `${foundSub.name} MCQ Questions with Answers | GK Questions MCQ - Education Masters`,
+      title: `${foundSub.name} MCQ Questions with Answers - Education Masters`,
       description: `Practice ${foundSub.name} MCQ questions with answers and detailed explanations in English & Hindi for competitive exams like SSC, UPSC, State PCS, Railway, Bank, and Teaching exams.`,
-      subtitle: `Latest ${foundSub.name} Multiple Choice Questions, Objective Type GK Quiz with Answers & Explanations`,
-      tag: 'Knowledge Management',
+      subtitle: `Practice ${foundSub.name} Multiple Choice Questions with Answers & Explanations`,
+      tag: 'Subject Prep',
       queryParamKey: 'subject',
     };
   }
@@ -174,9 +175,9 @@ export function getTaxonomyInfo(slug) {
     rawName: formatted,
     breadcrumbCategory: 'Subjects',
     breadcrumbCatLink: '/mcq-questions',
-    title: `${formatted} MCQ Questions with Answers | GK Questions MCQ - Education Masters`,
+    title: `${formatted} MCQ Questions with Answers - Education Masters`,
     description: `Practice ${formatted} MCQ questions with answers in English & Hindi for competitive exams.`,
-    subtitle: `Latest ${formatted} Multiple Choice Questions with Answers & Explanations`,
+    subtitle: `Practice ${formatted} Multiple Choice Questions with Answers & Explanations`,
     tag: 'Educational Resources',
     queryParamKey: 'subject',
   };

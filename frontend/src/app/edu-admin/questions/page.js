@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   Plus,
   Search,
@@ -23,10 +24,12 @@ import {
 } from 'lucide-react';
 import ExcelQuestionImportModal from '@/components/admin/ExcelQuestionImportModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 export default function QuestionsListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
 
   // State
   const [questions, setQuestions] = useState([]);
@@ -102,8 +105,18 @@ export default function QuestionsListPage() {
         date: selectedDate,
       });
 
+      const token = getAuthToken(session);
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions?${query}`
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions?${query}`,
+        {
+          cache: 'no-store',
+          headers: {
+            'Content-Type': 'application/json',
+            'Cache-Control': 'no-cache',
+            'x-bypass-cache': '1',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
       );
       const data = await res.json();
 
@@ -120,7 +133,7 @@ export default function QuestionsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, activeTab, activeSearch, selectedSubject, selectedState, selectedDate]);
+  }, [pagination.page, pagination.limit, activeTab, activeSearch, selectedSubject, selectedState, selectedDate, session]);
 
   useEffect(() => {
     fetchQuestions();
@@ -180,7 +193,7 @@ export default function QuestionsListPage() {
 
     try {
       setBulkLoading(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token = getAuthToken(session);
 
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/bulk-action`,
@@ -221,7 +234,7 @@ export default function QuestionsListPage() {
     if (!itemToDelete) return;
     try {
       setIsDeleting(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token = getAuthToken(session);
       const isPermanently = activeTab === 'trash';
 
       const res = await fetch(

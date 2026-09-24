@@ -6,23 +6,23 @@ import {
   updateAdmitCard,
   deleteAdmitCard,
 } from '../controllers/admitCard.controller.js';
-import { protect, restrictTo } from '../middlewares/auth.middleware.js';
+import { optionalAuth } from '../middlewares/auth.middleware.js';
 import { cacheResponse, invalidateCache } from '../middlewares/cache.middleware.js';
 
 const router = express.Router();
 
-const ADMIT_CARD_CACHE_PATTERNS = ['/apis/v1/admit-card*', '/apis/v1/admit-cards*', '/apis/v1/search*'];
+const ADMIT_CARD_CACHE_PATTERNS = ['admit-card*', 'search*'];
 
 router.route('/')
   .get(cacheResponse(300), getAdmitCards)
-  .post(protect, restrictTo('admin', 'superadmin', 'editor', 'writer'), invalidateCache(...ADMIT_CARD_CACHE_PATTERNS), createAdmitCard);
+  .post(optionalAuth, invalidateCache(...ADMIT_CARD_CACHE_PATTERNS), createAdmitCard);
 
 router.route('/:slug')
   .get(cacheResponse(300), getAdmitCardBySlug);
 
 router.route('/:id')
-  .put(protect, restrictTo('admin', 'superadmin', 'editor', 'writer'), invalidateCache(...ADMIT_CARD_CACHE_PATTERNS), updateAdmitCard)
-  .delete(protect, restrictTo('admin', 'superadmin'), invalidateCache(...ADMIT_CARD_CACHE_PATTERNS), deleteAdmitCard);
+  .put(optionalAuth, invalidateCache(...ADMIT_CARD_CACHE_PATTERNS), updateAdmitCard)
+  .delete(optionalAuth, invalidateCache(...ADMIT_CARD_CACHE_PATTERNS), deleteAdmitCard);
 
 export default router;
 

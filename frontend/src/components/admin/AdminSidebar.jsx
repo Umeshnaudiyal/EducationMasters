@@ -129,6 +129,7 @@ export default function AdminSidebar({ userRole = 'admin', isCollapsed, setIsCol
       subItems: [
         { label: 'Exams', href: '/edu-admin/exams' },
         { label: 'States', href: '/edu-admin/states' },
+        { label: 'Add New State', href: '/edu-admin/states/create' },
         { label: 'Subjects', href: '/edu-admin/subjects' },
         { label: 'Topics', href: '/edu-admin/topics' },
         { label: 'Topic Groups', href: '/edu-admin/topic-groups' },

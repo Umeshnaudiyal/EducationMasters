@@ -54,6 +54,29 @@ const stateSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    description: {
+      type: String,
+      default: '',
+    },
+    description_hi: {
+      type: String,
+      default: '',
+    },
+    job_description: {
+      type: String,
+      default: '',
+    },
+    seo: {
+      allow_indexing: { type: Boolean, default: true },
+      meta_title: { type: String, default: '' },
+      meta_keywords: { type: String, default: '' },
+      meta_description: { type: String, default: '' },
+    },
+    seo_hi: {
+      meta_title: { type: String, default: '' },
+      meta_keywords: { type: String, default: '' },
+      meta_description: { type: String, default: '' },
+    },
   },
   { timestamps: true }
 );

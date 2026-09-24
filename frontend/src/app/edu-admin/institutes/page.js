@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import {
   Plus,
   Search,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -81,6 +83,7 @@ function InstituteThumbnail({ inst }) {
 export default function InstitutesListPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { data: session } = useSession();
 
   const initialStatus = searchParams.get('status') || 'all';
   const initialPage = parseInt(searchParams.get('page') || '1', 10);
@@ -131,7 +134,15 @@ export default function InstitutesListPage() {
         status: statusTab,
       });
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/institutes?${queryParams}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/institutes?${queryParams}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'x-bypass-cache': '1',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       if (!res.ok) {
         throw new Error(`Server returned HTTP ${res.status}`);
       }
@@ -154,7 +165,7 @@ export default function InstitutesListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, statusTab, search]);
+  }, [page, statusTab, search, session]);
 
   useEffect(() => {
     fetchInstitutes();
@@ -191,9 +202,13 @@ export default function InstitutesListPage() {
     );
 
     try {
+      const token = getAuthToken(session);
       const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
@@ -211,7 +226,13 @@ export default function InstitutesListPage() {
         
         // Refresh counts
         const queryParams = new URLSearchParams({ page: '1', limit: '1' });
-        const countRes = await fetch(`${BACKEND_URL}/apis/v1/institutes?${queryParams}`).catch(() => null);
+        const countRes = await fetch(`${BACKEND_URL}/apis/v1/institutes?${queryParams}`, {
+          cache: 'no-store',
+          headers: {
+            'x-bypass-cache': '1',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }).catch(() => null);
         if (countRes && countRes.ok) {
           const countData = await countRes.json();
           if (countData.statusCounts) setStatusCounts(countData.statusCounts);
@@ -257,9 +278,13 @@ export default function InstitutesListPage() {
       else if (bulkAction === 'draft') actionParam = 'draft';
       else if (bulkAction === 'restore') actionParam = 'restore';
 
+      const token = getAuthToken(session);
       const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/bulk`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ action: actionParam, ids: selectedIds }),
       });
 
@@ -292,11 +317,15 @@ export default function InstitutesListPage() {
   const handleConfirmDelete = async () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
+      const token = getAuthToken(session);
       if (deleteModal.isBulk) {
         const actionParam = deleteModal.isTrash ? 'delete' : 'trash';
         const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ action: actionParam, ids: selectedIds }),
         });
         const data = await res.json();
@@ -313,7 +342,12 @@ export default function InstitutesListPage() {
           ? `${BACKEND_URL}/apis/v1/institutes/${deleteModal.id}?permanent=true`
           : `${BACKEND_URL}/apis/v1/institutes/${deleteModal.id}`;
 
-        const res = await fetch(url, { method: 'DELETE' });
+        const res = await fetch(url, {
+          method: 'DELETE',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        });
         const data = await res.json();
 
         if (data.success) {
@@ -333,9 +367,13 @@ export default function InstitutesListPage() {
 
   const handleRestore = async (id, name = '') => {
     try {
+      const token = getAuthToken(session);
       const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status: 'publish' }),
       });
       const data = await res.json();

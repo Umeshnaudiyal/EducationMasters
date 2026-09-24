@@ -8,11 +8,16 @@ import {
   updateUser,
   deleteUser,
   bulkActionUsers,
+  getPublicAuthorProfile,
 } from '../controllers/user.controller.js';
 import { protect, restrictTo } from '../middlewares/auth.middleware.js';
 import { getSessionLogs } from '../controllers/auth.controller.js';
 
 const router = express.Router();
+
+// Public Author Profile (No auth required)
+router.get('/author/:slug', getPublicAuthorProfile);
+router.get('/:slug/author', getPublicAuthorProfile);
 
 // User's own profile routes (Any authenticated user can view & update their own profile)
 router.route('/profile').get(protect, getProfile).put(protect, updateProfile);

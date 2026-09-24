@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -82,7 +83,14 @@ export default function TagsManagementPage() {
         search: search.trim(),
       });
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/tags?${queryParams}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/tags?${queryParams}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -96,7 +104,7 @@ export default function TagsManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, session]);
 
   useEffect(() => {
     fetchTags();
@@ -158,19 +166,18 @@ export default function TagsManagementPage() {
 
     try {
       setSaving(true);
-      const payload = {
-        ...formData,
-        slug: formData.slug.trim() || slugify(formData.name),
-      };
-
       const url = editingTag
         ? `${BACKEND_URL}/apis/v1/tags/${editingTag._id}`
         : `${BACKEND_URL}/apis/v1/tags`;
       const method = editingTag ? 'PUT' : 'POST';
+      const token = getAuthToken(session);
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           name: formData.name.trim(),
           slug: formData.slug.trim() || slugify(formData.name),
@@ -210,10 +217,16 @@ export default function TagsManagementPage() {
   const handleConfirmDelete = async () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
+      const token = getAuthToken(session);
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
       if (deleteModal.isBulk) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/tags/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ action: 'delete', ids: selectedIds }),
         });
 
@@ -229,6 +242,7 @@ export default function TagsManagementPage() {
       } else if (deleteModal.id) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/tags/${deleteModal.id}`, {
           method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const data = await res.json();
 

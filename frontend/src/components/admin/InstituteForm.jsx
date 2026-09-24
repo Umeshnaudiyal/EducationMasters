@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
   Building2,
@@ -44,6 +45,8 @@ import {
 } from 'lucide-react';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
+import { getImageUrl } from '@/utils/image';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -68,19 +71,12 @@ function ImagePreviewBox({
     setImgError(false);
   }, [url]);
 
-  const fullUrl = url
-    ? url.startsWith('http')
-      ? url
-      : `https://educationmasters.in/${url.startsWith('/') ? url.slice(1) : url}`
-    : null;
-
+  const fullUrl = url ? getImageUrl(url) : null;
   const isBanner = type === 'banner';
 
   return (
     <div
-      className={`relative w-full ${
-        isBanner ? 'h-40' : 'h-40'
-      } bg-[#f0f0f1] border-2 border-dashed border-slate-300 rounded overflow-hidden flex flex-col items-center justify-center text-slate-500 hover:border-[#2271b1] transition-colors group`}
+      className={`relative w-full h-40 bg-[#f0f0f1] border-2 border-dashed border-slate-300 rounded overflow-hidden flex flex-col items-center justify-center text-slate-500 hover:border-[#2271b1] transition-colors group`}
     >
       {fullUrl && !imgError ? (
         <>
@@ -96,14 +92,15 @@ function ImagePreviewBox({
             <button
               type="button"
               onClick={onOpenModal}
-              className="px-2.5 py-1 bg-white text-slate-800 rounded text-xs font-semibold hover:bg-slate-100 transition-colors shadow"
+              className="px-2.5 py-1 bg-white text-slate-800 rounded text-xs font-semibold hover:bg-slate-100 transition-colors shadow cursor-pointer"
             >
               Change
             </button>
             <button
               type="button"
               onClick={onRemove}
-              className="p-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors shadow"
+              className="p-1 bg-red-600 text-white rounded text-xs hover:bg-red-700 transition-colors shadow cursor-pointer"
+              title="Remove Image"
             >
               <Trash2 size={13} />
             </button>
@@ -115,7 +112,7 @@ function ImagePreviewBox({
           <button
             type="button"
             onClick={onOpenModal}
-            className="px-3 py-1 bg-[#2271b1] text-white rounded text-xs font-semibold hover:bg-[#135e96] transition-colors shadow-2xs"
+            className="px-3 py-1 bg-[#2271b1] text-white rounded text-xs font-semibold hover:bg-[#135e96] transition-colors shadow-2xs cursor-pointer"
           >
             {isBanner ? 'Select Banner Cover' : 'Choose Logo'}
           </button>
@@ -130,6 +127,7 @@ function ImagePreviewBox({
 
 export default function InstituteForm({ initialData = null, isEdit = false }) {
   const router = useRouter();
+  const { data: session } = useSession();
 
   // Form states
   const [name, setName] = useState(initialData?.name || '');
@@ -332,8 +330,14 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
 
   // Media Selection Handler
   const handleMediaSelect = (mediaItem) => {
+    if (!mediaItem) return;
     const url =
-      mediaItem.url || mediaItem.path || (mediaItem.file ? `uploads/${mediaItem.file}` : '');
+      mediaItem.file ||
+      mediaItem.url ||
+      mediaItem.img_url ||
+      (mediaItem.path && mediaItem.name ? `${mediaItem.path.replace(/\/$/, '')}/${mediaItem.name}` : mediaItem.path) ||
+      '';
+
     if (mediaTarget === 'cover') {
       setCover(url);
     } else if (mediaTarget === 'logo') {
@@ -432,10 +436,14 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
         : `${BACKEND_URL}/apis/v1/institutes`;
 
       const method = isEdit ? 'PUT' : 'POST';
+      const token = getAuthToken(session);
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
@@ -486,8 +494,12 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
     if (!initialData?._id) return;
     try {
       setLoading(true);
+      const token = getAuthToken(session);
       const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/${initialData._id}`, {
         method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
       const data = await res.json();
       if (data.success) {

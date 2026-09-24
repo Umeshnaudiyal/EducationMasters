@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import StateLink from '@/components/StateLink';
 
 import { getImageUrl } from '@/utils/image';
 
@@ -131,7 +133,7 @@ export default function JobsPage() {
             
             {/* Breadcrumb Aligned with Content */}
             <div className="text-xs text-slate-500 mb-1 flex items-center gap-1 font-medium">
-              <a href="/" className="hover:text-blue-600 text-blue-600 underline">Home</a>
+              <Link href="/" className="hover:text-blue-600 text-blue-600 underline">Home</Link>
               <span>›</span>
               <span className="text-slate-800 font-bold">Jobs</span>
             </div>
@@ -187,22 +189,30 @@ export default function JobsPage() {
                       {/* Right Details */}
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
-                          <a href={`/job/${job.slug || job._id}`}>
+                          <Link href={`/job/${job.slug || job._id}`}>
                             {/* Reduced font weight on job list title */}
                             <h2 className="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
                               {job.title}
                             </h2>
-                          </a>
+                          </Link>
 
                           {/* Meta Information Line */}
                           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 font-medium mt-1">
-                            <span>By <strong className="text-slate-700 font-medium">{job.author?.name || 'Mohit'}</strong></span>
+                            <span>
+                              By{' '}
+                              <Link
+                                href={`/author/${job.author?.nicename || job.author?.name || 'DigitalDeepak'}`}
+                                className="text-slate-700 font-medium hover:text-blue-600 hover:underline"
+                              >
+                                {job.author?.name || 'Mohit'}
+                              </Link>
+                            </span>
                             <span>|</span>
                             <span>In <strong className="text-slate-800 font-medium">Jobs</strong></span>
                             <span>|</span>
                             <span>{formatDate(job.created_at || job.createdAt)}</span>
                             <span>|</span>
-                            <span>{job.state?.name || job.dept || 'All India'}</span>
+                            <StateLink state={job.state} dept={job.dept} />
                           </div>
 
                           {/* Excerpt Snippet */}
@@ -320,9 +330,9 @@ export default function JobsPage() {
                         28 Jobs are expiring in 30 Days
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <a href="#" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
+                        <Link href="/jobs" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
                           View All
-                        </a>
+                        </Link>
                         <span className="bg-blue-600 text-white text-[10px] sm:text-[11px] font-normal px-1.5 py-0.5 rounded inline-flex items-center gap-1 leading-none whitespace-nowrap shadow-2xs">
                           <span>📰</span>
                           <span>Jobs</span>
@@ -336,7 +346,7 @@ export default function JobsPage() {
                         const miniMediaUrl = getImageUrl(item.featured_media);
 
                         return (
-                          <a
+                          <Link
                             key={item._id}
                             href={`/job/${item.slug || item._id}`}
                             className="py-3.5 first:pt-1 last:pb-1 flex items-start gap-3.5 group transition"
@@ -368,7 +378,7 @@ export default function JobsPage() {
                                 <span>Jobs</span>
                               </div>
                             </div>
-                          </a>
+                          </Link>
                         );
                       })}
                     </div>
@@ -377,6 +387,12 @@ export default function JobsPage() {
                   <div className="text-sm text-slate-600 py-8 text-center">
                     <p className="font-medium text-slate-800 text-base">1000+ Subject-Wise MCQs</p>
                     <p className="mt-1 text-xs sm:text-sm text-slate-500">Practice History, Polity, GK, and Current Affairs MCQs daily.</p>
+                    <Link
+                      href="/mcq-questions"
+                      className="inline-block mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded transition"
+                    >
+                      Explore MCQs &rarr;
+                    </Link>
                   </div>
                 )}
               </div>

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   CreditCard,
   Building2,
@@ -18,8 +19,12 @@ import {
   Edit2
 } from 'lucide-react';
 import AdminLoader from '@/components/admin/AdminLoader';
+import { getAuthToken } from '@/utils/auth';
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
 export default function InstituteCrmPlansPage() {
+  const { data: session } = useSession();
   const [institutes, setInstitutes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -43,7 +48,15 @@ export default function InstituteCrmPlansPage() {
   const fetchInstitutes = async () => {
     setLoading(true);
     try {
-      const res = await fetch('http://localhost:5001/apis/v1/institutes?limit=50');
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/institutes?limit=50`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'x-bypass-cache': '1',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       const data = await res.json();
       if (data.success) {
         setInstitutes(data.data || []);
@@ -71,6 +84,7 @@ export default function InstituteCrmPlansPage() {
     if (!selectedInstitute) return;
     setSaving(true);
     try {
+      const token = getAuthToken(session);
       const startDate = new Date();
       const expiryDate = new Date();
       expiryDate.setMonth(expiryDate.getMonth() + parseInt(planForm.durationMonths));
@@ -85,9 +99,12 @@ export default function InstituteCrmPlansPage() {
         },
       };
 
-      const res = await fetch(`http://localhost:5001/apis/v1/institutes/${selectedInstitute._id}`, {
+      const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/${selectedInstitute._id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
       const data = await res.json();

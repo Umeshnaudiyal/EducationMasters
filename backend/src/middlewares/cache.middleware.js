@@ -7,7 +7,8 @@ export const generateCacheKey = (req) => {
   const url = req.originalUrl || req.url;
   // Strip trailing slashes and normalize
   const cleanUrl = url.replace(/\/+$/, '') || '/';
-  return `cache:${cleanUrl}`;
+  const userPrefix = req.user?._id ? `user:${req.user._id}:` : 'public:';
+  return `cache:${userPrefix}${cleanUrl}`;
 };
 
 /**
@@ -21,8 +22,15 @@ export const cacheResponse = (ttlSeconds = 300) => {
       return next();
     }
 
-    // Skip if bypass requested (e.g., ?bypass_cache=1)
-    if (req.query.bypass_cache || req.headers['x-bypass-cache']) {
+    // Skip if bypass requested (e.g., ?bypass_cache=1, x-bypass-cache header, or Cache-Control: no-cache)
+    const isBypass =
+      req.query.bypass_cache === '1' ||
+      req.query.bypass_cache === 'true' ||
+      Boolean(req.headers['x-bypass-cache']) ||
+      req.headers['cache-control']?.includes('no-cache') ||
+      req.headers['pragma'] === 'no-cache';
+
+    if (isBypass) {
       res.setHeader('X-Cache', 'BYPASS');
       return next();
     }
@@ -58,24 +66,39 @@ export const cacheResponse = (ttlSeconds = 300) => {
 };
 
 /**
- * Middleware to invalidate cache patterns after successful mutation (POST, PUT, DELETE, PATCH)
- * @param  {...string} patterns - Wildcard patterns to purge, e.g. '/apis/v1/jobs*', '/apis/v1/search*'
+ * Middleware to invalidate cache patterns immediately after mutation (POST, PUT, DELETE, PATCH)
+ * @param  {...string} patterns - Patterns to purge, e.g. 'exams*', 'questions*', 'topics*', 'search*'
  */
 export const invalidateCache = (...patterns) => {
   return (req, res, next) => {
-    // Run invalidation after response is finished
+    let hasInvalidated = false;
+
+    const doInvalidation = () => {
+      if (hasInvalidated) return;
+      hasInvalidated = true;
+      try {
+        const count = memoryCache.invalidatePatterns(...patterns);
+        if (count > 0) {
+          console.log(`[Cache Invalidation] Instantly cleared ${count} keys for:`, patterns);
+        }
+      } catch (err) {
+        console.warn('[Cache Invalidation] Error clearing cache:', err.message);
+      }
+    };
+
+    // 1. Hook into res.json to invalidate synchronously before the client receives the response
+    const originalJson = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        doInvalidation();
+      }
+      return originalJson(body);
+    };
+
+    // 2. Fallback hook on response stream finish
     res.on('finish', () => {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        try {
-          // Add 'cache:' prefix if not already present
-          const fullPatterns = patterns.map(p => p.startsWith('cache:') ? p : `cache:${p}`);
-          const count = memoryCache.invalidatePatterns(...fullPatterns);
-          if (count > 0) {
-            console.log(`[Cache Invalidation] Cleared ${count} keys for patterns:`, patterns);
-          }
-        } catch (err) {
-          console.warn('[Cache Invalidation] Error clearing cache:', err.message);
-        }
+        doInvalidation();
       }
     });
 
@@ -87,13 +110,12 @@ export const invalidateCache = (...patterns) => {
  * Direct programmatic cache invalidation helper
  */
 export const purgeCache = (...patterns) => {
-  const fullPatterns = patterns.map(p => p.startsWith('cache:') ? p : `cache:${p}`);
-  return memoryCache.invalidatePatterns(...fullPatterns);
+  return memoryCache.invalidatePatterns(...patterns);
 };
 
 export default {
   cacheResponse,
   invalidateCache,
   purgeCache,
-  generateCacheKey
+  generateCacheKey,
 };

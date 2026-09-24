@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { useSession } from 'next-auth/react';
 import Link from 'next/link';
 import {
   HelpCircle,
@@ -19,6 +20,7 @@ import {
   Minus,
 } from 'lucide-react';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 // Helper to parse the correct option index (0-indexed) from various data formats
 const parseCorrectOptionIndex = (data) => {
@@ -69,6 +71,7 @@ const buildOptionsArray = (data) => {
 
 export default function QuestionEditorForm({ initialData = null, isEdit = false }) {
   const router = useRouter();
+  const { data: session } = useSession();
 
   const initialOptions = buildOptionsArray(initialData);
   const initialCorrectIdx = parseCorrectOptionIndex(initialData);
@@ -326,7 +329,7 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
 
     try {
       setSaving(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token = getAuthToken(session);
 
       const url = isEdit && initialData?._id
         ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${initialData._id}`
@@ -382,7 +385,7 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
     if (!initialData?._id) return;
     try {
       setIsDeleting(true);
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token = getAuthToken(session);
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${initialData._id}`,
         {

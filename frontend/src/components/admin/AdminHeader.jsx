@@ -34,6 +34,7 @@ export default function AdminHeader({ session }) {
     loginTime: session?.user?.login_time || null,
     logoutTime: session?.user?.logout_time || null,
     expiresAt: session?.user?.expires_at || null,
+    sessionDate: session?.user?.session_date || null,
     timeRemaining: '',
   });
 
@@ -55,13 +56,24 @@ export default function AdminHeader({ session }) {
         `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'}/apis/v1/auth/session-info?userId=${user.id}`
       );
       const data = await res.json();
-      if (data.success && data.data?.user) {
-        setSessionData({
-          loginTime: data.data.user.login_time,
-          logoutTime: data.data.user.logout_time,
-          expiresAt: data.data.user.expires_at,
-          timeRemaining: data.data.formattedTimeRemaining || '',
-        });
+      if (data.success && data.data) {
+        if (data.data.isExpired) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+          }
+          signOut({ callbackUrl: '/edu-login?expired=1' });
+          return;
+        }
+
+        if (data.data.user) {
+          setSessionData({
+            loginTime: data.data.user.login_time,
+            logoutTime: data.data.user.logout_time,
+            expiresAt: data.data.user.expires_at,
+            sessionDate: data.data.user.session_date,
+            timeRemaining: data.data.formattedTimeRemaining || '',
+          });
+        }
       }
     } catch (err) {
       // Fallback to session props
@@ -74,18 +86,44 @@ export default function AdminHeader({ session }) {
     return () => clearInterval(interval);
   }, [fetchSessionInfo]);
 
-  // Live Countdown to 12:00 AM Midnight
+  // Live Countdown to 12:00 AM Midnight with Active Day Checking
   const [countdownText, setCountdownText] = useState('');
   useEffect(() => {
     const updateCountdown = () => {
       const now = new Date();
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0); // 00:00:00 next day
-      const diffMs = midnight.getTime() - now.getTime();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+
+      const sessionDate = sessionData.sessionDate || session?.user?.session_date;
+
+      // 1. If session was established on a previous calendar day, expire immediately
+      if (sessionDate && sessionDate !== todayStr) {
+        setCountdownText('Session Expired');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+        }
+        signOut({ callbackUrl: '/edu-login?expired=1' });
+        return;
+      }
+
+      // 2. Compute time remaining until 12:00 AM midnight expiration
+      let targetMidnight;
+      if (sessionData.expiresAt || session?.user?.expires_at) {
+        targetMidnight = new Date(sessionData.expiresAt || session.user.expires_at);
+      } else {
+        targetMidnight = new Date(now);
+        targetMidnight.setHours(24, 0, 0, 0);
+      }
+
+      const diffMs = targetMidnight.getTime() - now.getTime();
 
       if (diffMs <= 0) {
-        setCountdownText('Expiring...');
-        // Trigger auto-logout on midnight pass
+        setCountdownText('Session Expired');
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+        }
         signOut({ callbackUrl: '/edu-login?expired=1' });
         return;
       }
@@ -98,9 +136,24 @@ export default function AdminHeader({ session }) {
     };
 
     updateCountdown();
-    const timer = setInterval(updateCountdown, 10000);
-    return () => clearInterval(timer);
-  }, []);
+    const timer = setInterval(updateCountdown, 5000);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        updateCountdown();
+        fetchSessionInfo();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
+  }, [sessionData.sessionDate, sessionData.expiresAt, session?.user?.session_date, session?.user?.expires_at, fetchSessionInfo]);
 
   // Format time helpers (HH:MM AM/PM)
   const formatTimeOnly = (dateStr) => {

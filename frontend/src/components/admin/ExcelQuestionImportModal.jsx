@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useMemo } from 'react';
+import { useSession } from 'next-auth/react';
 import * as XLSX from 'xlsx';
 import {
   FileSpreadsheet,
@@ -24,8 +25,10 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
+import { getAuthToken } from '@/utils/auth';
 
 export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess }) {
+  const { data: session } = useSession();
   // File & parsing state
   const [file, setFile] = useState(null);
   const [parsedRows, setParsedRows] = useState([]);
@@ -529,7 +532,7 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
       setIsUploading(true);
       setStatusMessage(null);
 
-      const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+      const token = getAuthToken(session);
 
       // Bundle batch defaults
       const batchDefaults = {

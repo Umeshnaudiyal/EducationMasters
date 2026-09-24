@@ -27,6 +27,17 @@ const examSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    author: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+    },
+    author_name: {
+      type: String,
+      default: '',
+    },
+    user_id: {
+      type: Number,
+    },
     seo: {
       allow_indexing: { type: Boolean, default: true },
       meta_title: { type: String, default: '' },

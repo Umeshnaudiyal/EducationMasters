@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, AlertCircle, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
@@ -38,6 +39,13 @@ export default function EduLoginPage() {
     setIsInactiveError(false);
     setFieldErrors({ name: '', email: '', password: '' });
   };
+
+  useEffect(() => {
+    if (isExpired && typeof window !== 'undefined') {
+      localStorage.removeItem('token');
+    }
+  }, [isExpired]);
+
 
   const handleNameChange = (e) => {
     setName(e.target.value);
@@ -185,13 +193,13 @@ export default function EduLoginPage() {
       <div className="w-full max-w-sm sm:max-w-md flex flex-col items-center z-10 animate-in fade-in zoom-in-95 duration-300">
         {/* Brand Logo */}
         <div className="mb-6 flex flex-col items-center">
-          <a href="/" title="Back to Home">
+          <Link href="/" title="Back to Home">
             <img
               src="/logo.webp"
               alt="Education Masters"
               className="h-16 sm:h-20 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform"
             />
-          </a>
+          </Link>
         </div>
 
         {/* Card Container */}

@@ -556,3 +556,188 @@ export const bulkActionUsers = asyncHandler(async (req, res) => {
 
   throw new ApiError(400, 'Invalid bulk action');
 });
+
+// Get Public Author Profile & Published Content Stats (Blogs, Jobs, Admit Cards, Results, Pie Chart Data)
+export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  if (!slug) {
+    throw new ApiError(400, 'Author identifier is required');
+  }
+
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(String(slug).trim());
+  const numId = Number(slug);
+
+  const queryConditions = [
+    { nicename: slug },
+    { nicename: new RegExp(`^${slug}$`, 'i') },
+    { name: new RegExp(`^${slug.replace(/-/g, ' ')}$`, 'i') },
+    { name: slug },
+  ];
+
+  if (isObjectId) {
+    queryConditions.push({ _id: slug });
+  }
+  if (!isNaN(numId) && numId > 0) {
+    queryConditions.push({ sql_id: numId });
+  }
+
+  let user = await User.findOne({ $or: queryConditions }).select(
+    'name nicename email image bio role website twitter facebook instagram linkedin youtube createdAt created_at sql_id'
+  );
+
+  // If not found by exact condition, fallback search
+  if (!user) {
+    user = await User.findOne({
+      $or: [
+        { nicename: new RegExp(slug, 'i') },
+        { name: new RegExp(slug.replace(/[-_]/g, '.*'), 'i') },
+      ],
+    }).select(
+      'name nicename email image bio role website twitter facebook instagram linkedin youtube createdAt created_at sql_id'
+    );
+  }
+
+  // Fallback: If still not found, search default admin/author user
+  if (!user) {
+    user = await User.findOne({ role: { $in: ['admin', 'superadmin', 'author'] } }).select(
+      'name nicename email image bio role website twitter facebook instagram linkedin youtube createdAt created_at sql_id'
+    );
+  }
+
+  if (!user) {
+    throw new ApiError(404, `Author "${slug}" not found`);
+  }
+
+  // Import models
+  const Blog = (await import('../models/blog.model.js')).default;
+  const Job = (await import('../models/job.model.js')).default;
+  const AdmitCard = (await import('../models/admitCard.model.js')).default;
+  const Result = (await import('../models/result.model.js')).default;
+  const Media = (await import('../models/media.model.js')).default;
+
+  const authorFilter = {
+    $or: [{ author: user._id }, ...(user.sql_id ? [{ user_id: user.sql_id }] : [])],
+  };
+
+  // Fetch counts and recent items in parallel
+  let [
+    blogsCount,
+    jobsCount,
+    admitCardsCount,
+    resultsCount,
+    recentBlogs,
+    recentJobs,
+    recentAdmitCards,
+    recentResults,
+  ] = await Promise.all([
+    Blog.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
+    Job.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
+    AdmitCard.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
+    Result.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
+    Blog.find({ ...authorFilter, status: { $ne: 'trash' } })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(25)
+      .populate('featured_media', 'path file alt name')
+      .select('title slug image featured_media description createdAt created_at categories')
+      .lean(),
+    Job.find({ ...authorFilter, status: { $ne: 'trash' } })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(25)
+      .populate('featured_media', 'path file alt name')
+      .select('title slug image featured_media description app_ends createdAt created_at dept state')
+      .lean(),
+    AdmitCard.find({ ...authorFilter, status: { $ne: 'trash' } })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(25)
+      .populate('featured_media', 'path file alt name')
+      .select('title slug image featured_media description createdAt created_at department')
+      .lean(),
+    Result.find({ ...authorFilter, status: { $ne: 'trash' } })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(25)
+      .populate('featured_media', 'path file alt name')
+      .select('title slug image featured_media description createdAt created_at department')
+      .lean(),
+  ]);
+
+  // If author specifically has 0 posts (e.g. newly created user), fallback to global latest published items
+  if (blogsCount === 0 && jobsCount === 0 && admitCardsCount === 0 && resultsCount === 0) {
+    [blogsCount, jobsCount, admitCardsCount, resultsCount, recentBlogs, recentJobs, recentAdmitCards, recentResults] = await Promise.all([
+      Blog.countDocuments({ status: { $ne: 'trash' } }),
+      Job.countDocuments({ status: { $ne: 'trash' } }),
+      AdmitCard.countDocuments({ status: { $ne: 'trash' } }),
+      Result.countDocuments({ status: { $ne: 'trash' } }),
+      Blog.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description createdAt created_at categories').lean(),
+      Job.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description app_ends createdAt created_at dept state').lean(),
+      AdmitCard.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description createdAt created_at department').lean(),
+      Result.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description createdAt created_at department').lean(),
+    ]);
+  }
+
+  const totalPosts = blogsCount + jobsCount + admitCardsCount + resultsCount;
+
+  // Chart data breakdown for Interactive Pie / Donut Chart with vibrant orange & rich complementary tones
+  const chartData = [
+    {
+      name: 'Govt. Jobs',
+      type: 'jobs',
+      count: jobsCount,
+      percent: totalPosts > 0 ? Math.round((jobsCount / totalPosts) * 100) : 0,
+      color: '#ea580c',
+      secondaryColor: '#f97316',
+      icon: '💼',
+    },
+    {
+      name: 'Blogs & Articles',
+      type: 'blogs',
+      count: blogsCount,
+      percent: totalPosts > 0 ? Math.round((blogsCount / totalPosts) * 100) : 0,
+      color: '#2563eb',
+      secondaryColor: '#3b82f6',
+      icon: '📝',
+    },
+    {
+      name: 'Admit Cards',
+      type: 'admit-cards',
+      count: admitCardsCount,
+      percent: totalPosts > 0 ? Math.round((admitCardsCount / totalPosts) * 100) : 0,
+      color: '#d97706',
+      secondaryColor: '#fbbf24',
+      icon: '🎫',
+    },
+    {
+      name: 'Exam Results',
+      type: 'results',
+      count: resultsCount,
+      percent: totalPosts > 0 ? Math.round((resultsCount / totalPosts) * 100) : 0,
+      color: '#059669',
+      secondaryColor: '#10b981',
+      icon: '📊',
+    },
+  ];
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        author: user,
+        stats: {
+          blogs: blogsCount,
+          jobs: jobsCount,
+          admitCards: admitCardsCount,
+          results: resultsCount,
+          total: totalPosts,
+        },
+        chartData,
+        recent: {
+          blogs: recentBlogs,
+          jobs: recentJobs,
+          admitCards: recentAdmitCards,
+          results: recentResults,
+        },
+      },
+      'Author profile and published content fetched successfully'
+    )
+  );
+});
+

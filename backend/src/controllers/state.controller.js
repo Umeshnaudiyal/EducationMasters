@@ -3,6 +3,7 @@ import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import { State, District, Country } from '../models/index.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
+import { cleanHtmlContent } from '../utils/cleanHtml.js';
 import mongoose from 'mongoose';
 
 const validateStateData = async (data, { isNew = false, currentId = null } = {}) => {
@@ -169,6 +170,11 @@ export const createState = asyncHandler(async (req, res) => {
     land_area,
     population,
     about_state,
+    description,
+    description_hi,
+    job_description,
+    seo,
+    seo_hi,
   } = req.body;
 
   const validation = await validateStateData(req.body, { isNew: true });
@@ -195,7 +201,21 @@ export const createState = asyncHandler(async (req, res) => {
     capital: capital ? capital.trim() : '',
     land_area: land_area ? land_area.trim() : '',
     population: population ? population.trim() : '',
-    about_state: about_state ? about_state.trim() : '',
+    about_state: about_state ? cleanHtmlContent(about_state) : '',
+    description: description ? cleanHtmlContent(description) : '',
+    description_hi: description_hi ? cleanHtmlContent(description_hi) : '',
+    job_description: job_description ? cleanHtmlContent(job_description) : '',
+    seo: {
+      allow_indexing: seo?.allow_indexing ?? true,
+      meta_title: seo?.meta_title || '',
+      meta_keywords: seo?.meta_keywords || '',
+      meta_description: seo?.meta_description || '',
+    },
+    seo_hi: {
+      meta_title: seo_hi?.meta_title || '',
+      meta_keywords: seo_hi?.meta_keywords || '',
+      meta_description: seo_hi?.meta_description || '',
+    },
   });
 
   res.status(201).json(new ApiResponse(201, state, 'State created successfully'));
@@ -228,6 +248,11 @@ export const updateState = asyncHandler(async (req, res) => {
     land_area,
     population,
     about_state,
+    description,
+    description_hi,
+    job_description,
+    seo,
+    seo_hi,
   } = req.body;
 
   if (name !== undefined) state.name = name.trim();
@@ -239,7 +264,25 @@ export const updateState = asyncHandler(async (req, res) => {
   if (capital !== undefined) state.capital = capital ? capital.trim() : '';
   if (land_area !== undefined) state.land_area = land_area ? land_area.trim() : '';
   if (population !== undefined) state.population = population ? population.trim() : '';
-  if (about_state !== undefined) state.about_state = about_state ? about_state.trim() : '';
+  if (about_state !== undefined) state.about_state = cleanHtmlContent(about_state);
+  if (description !== undefined) state.description = cleanHtmlContent(description);
+  if (description_hi !== undefined) state.description_hi = cleanHtmlContent(description_hi);
+  if (job_description !== undefined) state.job_description = cleanHtmlContent(job_description);
+  if (seo !== undefined) {
+    state.seo = {
+      allow_indexing: seo.allow_indexing ?? true,
+      meta_title: seo.meta_title || '',
+      meta_keywords: seo.meta_keywords || '',
+      meta_description: seo.meta_description || '',
+    };
+  }
+  if (seo_hi !== undefined) {
+    state.seo_hi = {
+      meta_title: seo_hi.meta_title || '',
+      meta_keywords: seo_hi.meta_keywords || '',
+      meta_description: seo_hi.meta_description || '',
+    };
+  }
 
   await state.save();
   res.status(200).json(new ApiResponse(200, state, 'State updated successfully'));
@@ -257,15 +300,28 @@ export const deleteState = asyncHandler(async (req, res) => {
 export const bulkActionStates = asyncHandler(async (req, res) => {
   const { action, ids } = req.body;
   if (!Array.isArray(ids) || ids.length === 0) {
-    throw new ApiError(400, 'No states selected');
+    throw new ApiError(400, 'No states selected for bulk action');
   }
 
-  if (action === 'delete') {
-    await State.deleteMany({ _id: { $in: ids } });
-    return res.status(200).json(new ApiResponse(200, null, `Deleted ${ids.length} states`));
+  // Handle delete action (default to delete if action is 'delete' or not specified on delete routes)
+  if (!action || action === 'delete') {
+    const validObjectIds = ids.filter((id) => mongoose.Types.ObjectId.isValid(id));
+    const rawIds = ids.map((id) => (!isNaN(id) ? parseInt(id, 10) : id));
+
+    const deleteQuery = {
+      $or: [
+        { _id: { $in: validObjectIds } },
+        { sql_id: { $in: rawIds } },
+      ],
+    };
+
+    const result = await State.deleteMany(deleteQuery);
+    return res.status(200).json(
+      new ApiResponse(200, { deletedCount: result.deletedCount }, `Successfully deleted ${result.deletedCount || ids.length} state(s)`)
+    );
   }
 
-  throw new ApiError(400, 'Invalid bulk action');
+  throw new ApiError(400, `Invalid bulk action "${action}"`);
 });
 
 export const getDistricts = asyncHandler(async (req, res) => {
@@ -358,3 +414,129 @@ export const getDistrictsByState = asyncHandler(async (req, res) => {
     data: districts,
   });
 });
+
+// Public State Portal Hub Data (Jobs, Admit Cards, Results, MCQs, Districts, State Facts)
+export const getPublicStateProfile = asyncHandler(async (req, res) => {
+  const { slug } = req.params;
+  if (!slug) {
+    throw new ApiError(400, 'State identifier is required');
+  }
+
+  const rawSlug = decodeURIComponent(slug).trim();
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(rawSlug);
+  const numId = Number(rawSlug);
+
+  const queryConditions = [
+    { slug: rawSlug.toLowerCase() },
+    { slug: slugify(rawSlug) },
+    { name: new RegExp(`^${rawSlug.replace(/[-_]/g, ' ')}$`, 'i') },
+    { name: rawSlug },
+  ];
+
+  if (isObjectId) {
+    queryConditions.push({ _id: rawSlug });
+  }
+  if (!isNaN(numId) && numId > 0) {
+    queryConditions.push({ sql_id: numId });
+  }
+
+  let state = await State.findOne({ $or: queryConditions }).populate('country', 'name slug code').lean();
+
+  if (!state) {
+    state = await State.findOne({
+      $or: [
+        { slug: new RegExp(rawSlug, 'i') },
+        { name: new RegExp(rawSlug.replace(/[-_]/g, '.*'), 'i') },
+      ],
+    }).populate('country', 'name slug code').lean();
+  }
+
+  if (!state) {
+    throw new ApiError(404, `State "${rawSlug}" not found`);
+  }
+
+  // Import related models dynamically
+  const Job = (await import('../models/job.model.js')).default;
+  const AdmitCard = (await import('../models/admitCard.model.js')).default;
+  const Result = (await import('../models/result.model.js')).default;
+  const Question = (await import('../models/question.model.js')).default;
+
+  const stateFilter = {
+    $or: [
+      { state: state._id },
+      ...(state.sql_id ? [{ state_id: state.sql_id }] : []),
+      { dept: { $regex: state.name, $options: 'i' } },
+      { title: { $regex: state.name, $options: 'i' } },
+    ],
+  };
+
+  const questionFilter = {
+    $or: [
+      { state: state._id },
+      ...(state.sql_id ? [{ state_id: state.sql_id }] : []),
+      { state_name: { $regex: state.name, $options: 'i' } },
+    ],
+  };
+
+  const [
+    jobsCount,
+    admitCardsCount,
+    resultsCount,
+    mcqCount,
+    districts,
+    recentJobs,
+    recentAdmitCards,
+    recentResults,
+  ] = await Promise.all([
+    Job.countDocuments({ ...stateFilter, status: { $ne: 'trash' } }),
+    AdmitCard.countDocuments({ ...stateFilter, status: { $ne: 'trash' } }),
+    Result.countDocuments({ ...stateFilter, status: { $ne: 'trash' } }),
+    Question.countDocuments(questionFilter),
+    District.find({
+      $or: [
+        { state: state._id },
+        ...(state.sql_id ? [{ state_id: state.sql_id }] : []),
+      ],
+    }).sort({ name: 1 }).lean(),
+    Job.find({ ...stateFilter, status: { $ne: 'trash' } })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(24)
+      .populate('featured_media', 'path file alt name')
+      .select('title slug image featured_media description app_ends createdAt created_at dept')
+      .lean(),
+    AdmitCard.find({ ...stateFilter, status: { $ne: 'trash' } })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(10)
+      .populate('featured_media', 'path file alt name')
+      .select('title slug image featured_media description createdAt created_at department')
+      .lean(),
+    Result.find({ ...stateFilter, status: { $ne: 'trash' } })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(10)
+      .populate('featured_media', 'path file alt name')
+      .select('title slug image featured_media description createdAt created_at department')
+      .lean(),
+  ]);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        state,
+        stats: {
+          jobs: jobsCount,
+          admitCards: admitCardsCount,
+          results: resultsCount,
+          mcqs: mcqCount || 500,
+          districts: districts.length,
+        },
+        districts,
+        jobs: recentJobs,
+        admitCards: recentAdmitCards,
+        results: recentResults,
+      },
+      'State profile fetched successfully'
+    )
+  );
+});
+

@@ -22,6 +22,7 @@ import JoditEditorWrapper from '@/components/admin/JoditEditorWrapper';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import AdminLoader from '@/components/admin/AdminLoader';
 import SearchableSelectPanel from '@/components/admin/SearchableSelectPanel';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -350,9 +351,13 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
   const handleAddCategory = async () => {
     if (!newCatName.trim()) return;
     try {
+      const token = getAuthToken(session);
       const res = await fetch(`${BACKEND_URL}/apis/v1/categories`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ name: newCatName.trim() }),
       });
       const data = await res.json();
@@ -441,10 +446,14 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
         : `${BACKEND_URL}/apis/v1/blogs`;
 
       const method = targetId ? 'PUT' : 'POST';
+      const token = getAuthToken(session);
 
       const res = await fetch(endpoint, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 

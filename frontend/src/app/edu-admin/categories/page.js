@@ -35,6 +35,7 @@ import { getImageUrl } from '@/utils/image';
 import AdminLoader from '@/components/admin/AdminLoader';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -103,7 +104,14 @@ export default function CategoriesPage() {
   // Fetch all parent options (for dropdown)
   const fetchParentOptions = async () => {
     try {
-      const res = await fetch(`${BACKEND_URL}/apis/v1/categories?all=true`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/categories?all=true`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
       if (data.success && data.data) {
         setParentOptions(data.data);
@@ -122,7 +130,14 @@ export default function CategoriesPage() {
         limit: '15',
         search: searchVal.trim(),
       });
-      const res = await fetch(`${BACKEND_URL}/apis/v1/categories?${query}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/categories?${query}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -141,11 +156,11 @@ export default function CategoriesPage() {
 
   useEffect(() => {
     fetchParentOptions();
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     fetchCategories(page, searchQuery);
-  }, [page, searchQuery]);
+  }, [page, searchQuery, session]);
 
   // Handle Name Input with auto-slug
   const handleNameChange = (val) => {
@@ -222,10 +237,14 @@ export default function CategoriesPage() {
         ? `${BACKEND_URL}/apis/v1/categories/${editingId}`
         : `${BACKEND_URL}/apis/v1/categories`;
       const method = editingId ? 'PUT' : 'POST';
+      const token = getAuthToken(session);
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
@@ -267,10 +286,16 @@ export default function CategoriesPage() {
   const handleConfirmDelete = async () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
+      const token = getAuthToken(session);
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
       if (deleteModal.isBulk) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/categories/bulk-delete`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ ids: Array.from(selectedIds) }),
         });
         const data = await res.json();
@@ -289,6 +314,7 @@ export default function CategoriesPage() {
       } else if (deleteModal.cat) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/categories/${deleteModal.cat._id}`, {
           method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const data = await res.json();
         if (data.success) {
@@ -300,11 +326,11 @@ export default function CategoriesPage() {
           setMessage({ type: 'error', text: data.message || 'Failed to delete category' });
         }
       }
-      setDeleteModal({ isOpen: false, cat: null, isBulk: false, isLoading: false });
     } catch (err) {
       console.error('Delete error:', err);
-      setMessage({ type: 'error', text: 'Error deleting category' });
-      setDeleteModal((prev) => ({ ...prev, isLoading: false }));
+      setMessage({ type: 'error', text: 'Network error while deleting category' });
+    } finally {
+      setDeleteModal({ isOpen: false, cat: null, isBulk: false, isLoading: false });
     }
   };
 

@@ -1,9 +1,11 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import LiveTicker from '@/components/LiveTicker';
+import StateLink from '@/components/StateLink';
 import { getImageUrl } from '@/utils/image';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1';
@@ -147,7 +149,7 @@ export default function AdmitCardsPage() {
 
             {/* Breadcrumb Aligned with Content */}
             <div className="text-xs text-slate-500 mb-1 flex items-center gap-1.5 font-medium">
-              <a href="/" className="hover:text-blue-600 text-blue-600 underline">Home</a>
+              <Link href="/" className="hover:text-blue-600 text-blue-600 underline">Home</Link>
               <span>›</span>
               <span className="text-slate-800 font-bold">Admit Cards</span>
             </div>
@@ -212,21 +214,29 @@ export default function AdmitCardsPage() {
                       {/* Right Details */}
                       <div className="flex-1 flex flex-col justify-between">
                         <div>
-                          <a href={`/admit-card/${item.slug || item._id}`}>
+                          <Link href={`/admit-card/${item.slug || item._id}`}>
                             <h2 className="text-base sm:text-lg font-semibold text-slate-900 group-hover:text-blue-600 transition-colors leading-snug">
                               {item.title}
                             </h2>
-                          </a>
+                          </Link>
 
                           {/* Meta Information Line - Pure Admit Card Category */}
                           <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 font-medium mt-1.5">
-                            <span>By <strong className="text-slate-700 font-medium">{item.author?.name || 'Mohit'}</strong></span>
+                            <span>
+                              By{' '}
+                              <Link
+                                href={`/author/${item.author?.nicename || item.author?.name || 'DigitalDeepak'}`}
+                                className="text-slate-700 font-medium hover:text-blue-600 hover:underline"
+                              >
+                                {item.author?.name || 'Mohit'}
+                              </Link>
+                            </span>
                             <span>|</span>
                             <span>In <strong className="text-slate-800 font-medium">Admit Card</strong></span>
                             <span>|</span>
                             <span>{formatDate(item.created_at || item.createdAt)}</span>
                             <span>|</span>
-                            <span>{item.state?.name || item.dept || 'All India'}</span>
+                            <StateLink state={item.state} dept={item.dept || item.department?.name} />
                           </div>
 
                           {/* Excerpt Snippet */}
@@ -340,9 +350,9 @@ export default function AdmitCardsPage() {
                         28 Jobs are expiring in 30 Days
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <a href="/jobs" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
+                        <Link href="/jobs" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
                           View All
-                        </a>
+                        </Link>
                         <span className="bg-blue-600 text-white text-[10px] sm:text-[11px] font-normal px-1.5 py-0.5 rounded inline-flex items-center gap-1 leading-none whitespace-nowrap shadow-2xs">
                           <span>📰</span>
                           <span>Jobs</span>
@@ -355,7 +365,7 @@ export default function AdmitCardsPage() {
                         const miniMediaUrl = getImageUrl(item.featured_media || item.image);
 
                         return (
-                          <a
+                          <Link
                             key={item._id}
                             href={`/job/${item.slug || item._id}`}
                             className="py-3.5 first:pt-1 last:pb-1 flex items-start gap-3.5 group transition"
@@ -385,7 +395,7 @@ export default function AdmitCardsPage() {
                                 <span className="text-blue-600 font-semibold">Jobs</span>
                               </div>
                             </div>
-                          </a>
+                          </Link>
                         );
                       })}
                     </div>
@@ -394,12 +404,12 @@ export default function AdmitCardsPage() {
                   <div className="text-sm text-slate-600 py-8 text-center">
                     <p className="font-medium text-slate-800 text-base">1000+ Subject-Wise MCQs</p>
                     <p className="mt-1 text-xs sm:text-sm text-slate-500">Practice History, Polity, GK, and Current Affairs MCQs daily.</p>
-                    <a
+                    <Link
                       href="/mcq-questions"
                       className="inline-block mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded transition"
                     >
                       Explore MCQs &rarr;
-                    </a>
+                    </Link>
                   </div>
                 )}
               </div>

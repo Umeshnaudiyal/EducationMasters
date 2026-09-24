@@ -19,6 +19,7 @@ import {
   ChevronUp,
   Share2,
   CheckCircle2,
+  XCircle,
   Eye,
   EyeOff,
   BookOpen,
@@ -28,6 +29,12 @@ import {
   Briefcase,
   Layers,
   Sparkles,
+  Search,
+  X,
+  RotateCcw,
+  Trophy,
+  Award,
+  HelpCircle,
 } from 'lucide-react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
@@ -80,6 +87,28 @@ export default function McqQuestionPage({
   const [openExams, setOpenExams] = useState(true);
   const [showMoreIntro, setShowMoreIntro] = useState(false);
 
+  const [subjectSearch, setSubjectSearch] = useState('');
+  const [stateSearch, setStateSearch] = useState('');
+  const [examSearch, setExamSearch] = useState('');
+
+  const filteredSubjects = useMemo(() => {
+    if (!subjectSearch.trim()) return SUBJECTS_LIST;
+    const q = subjectSearch.toLowerCase().trim();
+    return SUBJECTS_LIST.filter((s) => s.name.toLowerCase().includes(q));
+  }, [subjectSearch]);
+
+  const filteredStates = useMemo(() => {
+    if (!stateSearch.trim()) return STATES_LIST;
+    const q = stateSearch.toLowerCase().trim();
+    return STATES_LIST.filter((s) => s.name.toLowerCase().includes(q));
+  }, [stateSearch]);
+
+  const filteredExams = useMemo(() => {
+    if (!examSearch.trim()) return EXAMS_LIST;
+    const q = examSearch.toLowerCase().trim();
+    return EXAMS_LIST.filter((e) => e.name.toLowerCase().includes(q));
+  }, [examSearch]);
+
   const [userAnswers, setUserAnswers] = useState({});
   const [revealedAnswers, setRevealedAnswers] = useState({});
   const [shareUrl, setShareUrl] = useState('');
@@ -127,17 +156,26 @@ export default function McqQuestionPage({
         canonical.rel = 'canonical';
         document.head.appendChild(canonical);
       }
-      canonical.setAttribute('href', `https://educationmasters.in/${currentSlug}/mcq-questions/`);
+      const canonicalUrl = taxonomy.type === 'state'
+        ? `https://educationmasters.in/state/${currentSlug}/mcq-questions/`
+        : `https://educationmasters.in/${currentSlug}/mcq-questions/`;
+      canonical.setAttribute('href', canonicalUrl);
     }
   }, [taxonomy, currentSlug, totalQuestions, language]);
 
-  const handleSelectTaxonomy = (targetSlug) => {
+  const handleSelectTaxonomy = (targetSlug, targetType) => {
     if (targetSlug === currentSlug) return;
     setCurrentSlug(targetSlug);
     setPage(1);
     setUserAnswers({});
     setRevealedAnswers({});
-    router.push(`/${targetSlug}/mcq-questions`);
+    const targetTax = getTaxonomyInfo(targetSlug);
+    const type = targetType || targetTax.type;
+    if (type === 'state') {
+      router.push(`/state/${targetSlug}/mcq-questions`);
+    } else {
+      router.push(`/${targetSlug}/mcq-questions`);
+    }
   };
 
   useEffect(() => {
@@ -225,6 +263,11 @@ export default function McqQuestionPage({
       ...prev,
       [questionId]: optionIndex,
     }));
+    // Auto-reveal the answer and explanation for instant feedback
+    setRevealedAnswers((prev) => ({
+      ...prev,
+      [questionId]: true,
+    }));
   };
 
   const toggleViewAnswer = (questionId) => {
@@ -234,8 +277,117 @@ export default function McqQuestionPage({
     }));
   };
 
+  // Live Performance & Stats Calculation (Correct, Incorrect, Percentage, Result)
+  const stats = useMemo(() => {
+    let correct = 0;
+    let incorrect = 0;
+    let attempted = 0;
+
+    questions.forEach((q, idx) => {
+      const qId = q._id || q.sql_id || idx;
+      const selected = userAnswers[qId];
+
+      if (selected !== undefined) {
+        attempted += 1;
+        let correctIndex = -1;
+        if (Array.isArray(q.options)) {
+          correctIndex = q.options.findIndex((opt) => opt.is_correct);
+        }
+        if (correctIndex === -1 && q.correct_answer) {
+          const match = String(q.correct_answer).match(/Option\s*([0-9]+)/i);
+          if (match) correctIndex = parseInt(match[1], 10) - 1;
+          else if (['A', 'B', 'C', 'D'].includes(String(q.correct_answer).trim().toUpperCase())) {
+            correctIndex = String(q.correct_answer).trim().toUpperCase().charCodeAt(0) - 65;
+          }
+        }
+
+        if (selected === correctIndex) {
+          correct += 1;
+        } else {
+          incorrect += 1;
+        }
+      }
+    });
+
+    const total = questions.length;
+    const percentage = attempted > 0 ? Math.round((correct / attempted) * 100) : 0;
+    const progressPercent = total > 0 ? Math.round((attempted / total) * 100) : 0;
+
+    let resultText = 'Ready to Start';
+    let resultColor = 'text-slate-700 bg-slate-50 border-slate-200';
+    let resultBadge = 'bg-slate-200 text-slate-700';
+    let resultIcon = '🎯';
+
+    if (attempted > 0) {
+      if (percentage >= 80) {
+        resultText = 'Excellent (A+)';
+        resultColor = 'text-emerald-800 bg-emerald-50/80 border-emerald-300';
+        resultBadge = 'bg-emerald-600 text-white';
+        resultIcon = '🏆';
+      } else if (percentage >= 60) {
+        resultText = 'Good Job (B)';
+        resultColor = 'text-blue-800 bg-blue-50/80 border-blue-300';
+        resultBadge = 'bg-blue-600 text-white';
+        resultIcon = '⭐';
+      } else if (percentage >= 40) {
+        resultText = 'Average (C)';
+        resultColor = 'text-amber-800 bg-amber-50/80 border-amber-300';
+        resultBadge = 'bg-amber-600 text-white';
+        resultIcon = '📈';
+      } else {
+        resultText = 'Needs Practice';
+        resultColor = 'text-rose-800 bg-rose-50/80 border-rose-300';
+        resultBadge = 'bg-rose-600 text-white';
+        resultIcon = '💪';
+      }
+    }
+
+    return {
+      correct,
+      incorrect,
+      attempted,
+      total,
+      unattempted: total - attempted,
+      percentage,
+      progressPercent,
+      resultText,
+      resultColor,
+      resultBadge,
+      resultIcon,
+    };
+  }, [questions, userAnswers]);
+
+  const allRevealed = useMemo(() => {
+    if (questions.length === 0) return false;
+    return questions.every((q, idx) => {
+      const qId = q._id || q.sql_id || idx;
+      return !!revealedAnswers[qId];
+    });
+  }, [questions, revealedAnswers]);
+
+  const handleToggleAllAnswers = () => {
+    if (allRevealed) {
+      setRevealedAnswers({});
+    } else {
+      const allTrue = {};
+      questions.forEach((q, idx) => {
+        const qId = q._id || q.sql_id || idx;
+        allTrue[qId] = true;
+      });
+      setRevealedAnswers(allTrue);
+    }
+  };
+
+  const handleResetQuiz = () => {
+    setUserAnswers({});
+    setRevealedAnswers({});
+  };
+
   const handleShareClick = (platform) => {
-    const targetUrl = shareUrl || (typeof window !== 'undefined' ? window.location.href : `https://educationmasters.in/${currentSlug}/mcq-questions/`);
+    const fallbackUrl = taxonomy.type === 'state'
+      ? `https://educationmasters.in/state/${currentSlug}/mcq-questions/`
+      : `https://educationmasters.in/${currentSlug}/mcq-questions/`;
+    const targetUrl = shareUrl || (typeof window !== 'undefined' ? window.location.href : fallbackUrl);
     const titleText = `${totalQuestions || 3800}+ ${taxonomy.name} MCQ Questions with Answers | Education Masters`;
 
     let shareLink = '';
@@ -293,171 +445,237 @@ export default function McqQuestionPage({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
           {/* ============================================================== */}
-          {/* LEFT COLUMN: Featured Partner Banner + High-Contrast Sidebar   */}
+          {/* LEFT COLUMN: Sidebar Navigation with Instant Search & Accordions */}
           {/* ============================================================== */}
           <aside className="col-span-1 lg:col-span-3 space-y-3 sticky top-20">
-            {/* Compact Sleek Featured Partner Banner */}
-            <div className="bg-gradient-to-r from-blue-50/90 via-sky-50/60 to-slate-50 border border-blue-200 rounded-lg p-2.5 flex items-center justify-between gap-2.5 shadow-2xs">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-9 h-9 bg-gradient-to-tr from-blue-600 to-cyan-500 text-white rounded-lg flex items-center justify-center text-base shrink-0 shadow-xs">
-                  🎓
-                </div>
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1 text-[9px] text-blue-700 font-bold uppercase tracking-wider leading-none mb-0.5">
-                    <span>Partner</span>
-                    <span className="text-slate-300">•</span>
-                    <span className="text-blue-900 font-extrabold">Education</span>
-                  </div>
-                  <h4 className="font-bold text-slate-900 text-xs truncate leading-tight">
-                    Top Industry Experts
-                  </h4>
-                  <p className="text-[10px] text-slate-500 truncate leading-none mt-0.5">
-                    Placement assistance
-                  </p>
-                </div>
-              </div>
-              <Link
-                href="/jobs"
-                className="bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-extrabold px-3 py-1.5 rounded transition shadow-2xs uppercase shrink-0"
-              >
-                Apply
-              </Link>
-            </div>
 
-            {/* Accordion 1: Subjectwise MCQ (Midnight Navy Theme) */}
-            <div className="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden transition-all">
+            {/* Accordion 1: Subjectwise MCQ (Professional Light Grayish Theme) */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden transition-all">
               <div
                 onClick={() => setOpenSubjects(!openSubjects)}
-                className="bg-gradient-to-r from-[#0f172a] to-[#1e293b] text-white px-3.5 py-2.5 font-bold text-xs sm:text-sm flex items-center justify-between cursor-pointer hover:from-[#1e293b] hover:to-[#334155] transition select-none shadow-2xs"
+                className="bg-slate-100 hover:bg-slate-200/80 text-slate-800 px-3.5 py-2.5 font-bold text-xs sm:text-sm flex items-center justify-between cursor-pointer transition select-none border-b border-slate-200"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-sky-500/20 flex items-center justify-center border border-sky-400/30">
-                    <BookOpen size={13} className="text-sky-300" />
+                  <div className="w-6 h-6 rounded bg-white text-slate-600 flex items-center justify-center border border-slate-300/80 shadow-2xs">
+                    <BookOpen size={13} className="text-slate-600" />
                   </div>
-                  <span className="tracking-wide">Subjectwise MCQ</span>
+                  <span className="tracking-wide text-slate-800 font-bold">Subjectwise MCQ</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black bg-sky-400/20 text-sky-300 border border-sky-400/40 px-1.5 py-0.5 rounded leading-none">
-                    {SUBJECTS_LIST.length}
+                  <span className="text-[10.5px] font-bold bg-white text-slate-700 border border-slate-300 px-2 py-0.5 rounded leading-none shadow-2xs">
+                    {filteredSubjects.length !== SUBJECTS_LIST.length
+                      ? `${filteredSubjects.length}/${SUBJECTS_LIST.length}`
+                      : SUBJECTS_LIST.length}
                   </span>
-                  {openSubjects ? <ChevronUp size={14} className="text-slate-300" /> : <ChevronDown size={14} className="text-slate-300" />}
+                  {openSubjects ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
                 </div>
               </div>
               {openSubjects && (
-                <div className="max-h-[190px] overflow-y-auto divide-y divide-slate-100 text-xs font-semibold bg-slate-50/30">
-                  {SUBJECTS_LIST.map((sub) => {
-                    const isSelected = taxonomy.type === 'subject' && currentSlug === sub.slug;
-                    return (
-                      <Link
-                        key={sub.slug}
-                        href={`/${sub.slug}/mcq-questions`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleSelectTaxonomy(sub.slug);
-                        }}
-                        className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${
-                          isSelected
-                            ? 'bg-sky-50 text-sky-900 font-black border-l-4 border-sky-600 pl-3.5 shadow-2xs'
-                            : 'text-slate-700 hover:bg-sky-50/60 hover:text-sky-700 hover:pl-4 font-medium'
-                        }`}
-                      >
-                        <span>{sub.name}</span>
-                        {isSelected && <ChevronRight size={13} className="text-sky-600 shrink-0" />}
-                      </Link>
-                    );
-                  })}
+                <div className="max-h-[220px] overflow-y-auto divide-y divide-slate-100 text-xs font-semibold bg-slate-50/40 custom-scrollbar">
+                  {/* Search Bar */}
+                  <div className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs p-1.5 border-b border-slate-200">
+                    <div className="relative flex items-center">
+                      <Search size={12} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={subjectSearch}
+                        onChange={(e) => setSubjectSearch(e.target.value)}
+                        placeholder="Search subjects..."
+                        className="w-full pl-7 pr-6 py-1 text-xs bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                      {subjectSearch && (
+                        <button
+                          onClick={() => setSubjectSearch('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                          title="Clear search"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* List items */}
+                  {filteredSubjects.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-slate-500 font-medium">
+                      No subjects found
+                    </div>
+                  ) : (
+                    filteredSubjects.map((sub) => {
+                      const isSelected = taxonomy.type === 'subject' && currentSlug === sub.slug;
+                      return (
+                        <Link
+                          key={sub.slug}
+                          href={`/${sub.slug}/mcq-questions`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSelectTaxonomy(sub.slug);
+                          }}
+                          className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${isSelected
+                              ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
+                              : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
+                            }`}
+                        >
+                          <span>{sub.name}</span>
+                          {isSelected && <ChevronRight size={13} className="text-blue-600 shrink-0" />}
+                        </Link>
+                      );
+                    })
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Accordion 2: Statewise Prepration (Deep Emerald Theme) */}
-            <div className="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden transition-all">
+            {/* Accordion 2: Statewise Preparation (Professional Light Grayish Theme) */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden transition-all">
               <div
                 onClick={() => setOpenStates(!openStates)}
-                className="bg-gradient-to-r from-[#064e3b] to-[#047857] text-white px-3.5 py-2.5 font-bold text-xs sm:text-sm flex items-center justify-between cursor-pointer hover:from-[#047857] hover:to-[#059669] transition select-none shadow-2xs"
+                className="bg-slate-100 hover:bg-slate-200/80 text-slate-800 px-3.5 py-2.5 font-bold text-xs sm:text-sm flex items-center justify-between cursor-pointer transition select-none border-b border-slate-200"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-emerald-400/20 flex items-center justify-center border border-emerald-300/30">
-                    <Layers size={13} className="text-emerald-200" />
+                  <div className="w-6 h-6 rounded bg-white text-slate-600 flex items-center justify-center border border-slate-300/80 shadow-2xs">
+                    <Layers size={13} className="text-slate-600" />
                   </div>
-                  <span className="tracking-wide">Statewise Prepration</span>
+                  <span className="tracking-wide text-slate-800 font-bold">Statewise Preparation</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black bg-emerald-300/20 text-emerald-100 border border-emerald-300/40 px-1.5 py-0.5 rounded leading-none">
-                    {STATES_LIST.length}
+                  <span className="text-[10.5px] font-bold bg-white text-slate-700 border border-slate-300 px-2 py-0.5 rounded leading-none shadow-2xs">
+                    {filteredStates.length !== STATES_LIST.length
+                      ? `${filteredStates.length}/${STATES_LIST.length}`
+                      : STATES_LIST.length}
                   </span>
-                  {openStates ? <ChevronUp size={14} className="text-slate-200" /> : <ChevronDown size={14} className="text-slate-200" />}
+                  {openStates ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
                 </div>
               </div>
               {openStates && (
-                <div className="max-h-[190px] overflow-y-auto divide-y divide-slate-100 text-xs font-semibold bg-slate-50/30">
-                  {STATES_LIST.map((st) => {
-                    const isSelected = taxonomy.type === 'state' && currentSlug === st.slug;
-                    return (
-                      <Link
-                        key={st.slug}
-                        href={`/${st.slug}/mcq-questions`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleSelectTaxonomy(st.slug);
-                        }}
-                        className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${
-                          isSelected
-                            ? 'bg-emerald-50 text-emerald-950 font-black border-l-4 border-emerald-600 pl-3.5 shadow-2xs'
-                            : 'text-slate-700 hover:bg-emerald-50/60 hover:text-emerald-800 hover:pl-4 font-medium'
-                        }`}
-                      >
-                        <span>{st.name}</span>
-                        {isSelected && <ChevronRight size={13} className="text-emerald-600 shrink-0" />}
-                      </Link>
-                    );
-                  })}
+                <div className="max-h-[220px] overflow-y-auto divide-y divide-slate-100 text-xs font-semibold bg-slate-50/40 custom-scrollbar">
+                  {/* Search Bar */}
+                  <div className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs p-1.5 border-b border-slate-200">
+                    <div className="relative flex items-center">
+                      <Search size={12} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={stateSearch}
+                        onChange={(e) => setStateSearch(e.target.value)}
+                        placeholder="Search states..."
+                        className="w-full pl-7 pr-6 py-1 text-xs bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                      {stateSearch && (
+                        <button
+                          onClick={() => setStateSearch('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                          title="Clear search"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* List items */}
+                  {filteredStates.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-slate-500 font-medium">
+                      No states found
+                    </div>
+                  ) : (
+                    filteredStates.map((st) => {
+                      const isSelected = taxonomy.type === 'state' && currentSlug === st.slug;
+                      return (
+                        <Link
+                          key={st.slug}
+                          href={`/state/${st.slug}/mcq-questions`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSelectTaxonomy(st.slug, 'state');
+                          }}
+                          className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${isSelected
+                              ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
+                              : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
+                            }`}
+                        >
+                          <span>{st.name}</span>
+                          {isSelected && <ChevronRight size={13} className="text-blue-600 shrink-0" />}
+                        </Link>
+                      );
+                    })
+                  )}
                 </div>
               )}
             </div>
 
-            {/* Accordion 3: Govt. Examwise MCQ (Royal Violet Theme) */}
-            <div className="bg-white rounded-lg border border-slate-300 shadow-xs overflow-hidden transition-all">
+            {/* Accordion 3: Govt. Examwise MCQ (Professional Light Grayish Theme) */}
+            <div className="bg-white rounded-lg border border-slate-200 shadow-2xs overflow-hidden transition-all">
               <div
                 onClick={() => setOpenExams(!openExams)}
-                className="bg-gradient-to-r from-[#3b0764] to-[#581c87] text-white px-3.5 py-2.5 font-bold text-xs sm:text-sm flex items-center justify-between cursor-pointer hover:from-[#581c87] hover:to-[#6b21a8] transition select-none shadow-2xs"
+                className="bg-slate-100 hover:bg-slate-200/80 text-slate-800 px-3.5 py-2.5 font-bold text-xs sm:text-sm flex items-center justify-between cursor-pointer transition select-none border-b border-slate-200"
               >
                 <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded bg-amber-400/20 flex items-center justify-center border border-amber-300/30">
-                    <Sparkles size={13} className="text-amber-300" />
+                  <div className="w-6 h-6 rounded bg-white text-slate-600 flex items-center justify-center border border-slate-300/80 shadow-2xs">
+                    <Sparkles size={13} className="text-slate-600" />
                   </div>
-                  <span className="tracking-wide">Govt. Examwise MCQ</span>
+                  <span className="tracking-wide text-slate-800 font-bold">Govt. Examwise MCQ</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-black bg-amber-400/20 text-amber-200 border border-amber-400/40 px-1.5 py-0.5 rounded leading-none">
-                    {EXAMS_LIST.length}
+                  <span className="text-[10.5px] font-bold bg-white text-slate-700 border border-slate-300 px-2 py-0.5 rounded leading-none shadow-2xs">
+                    {filteredExams.length !== EXAMS_LIST.length
+                      ? `${filteredExams.length}/${EXAMS_LIST.length}`
+                      : EXAMS_LIST.length}
                   </span>
-                  {openExams ? <ChevronUp size={14} className="text-slate-200" /> : <ChevronDown size={14} className="text-slate-200" />}
+                  {openExams ? <ChevronUp size={14} className="text-slate-500" /> : <ChevronDown size={14} className="text-slate-500" />}
                 </div>
               </div>
               {openExams && (
-                <div className="max-h-[180px] overflow-y-auto divide-y divide-slate-100 text-xs font-semibold bg-slate-50/30">
-                  {EXAMS_LIST.map((ex) => {
-                    const isSelected = taxonomy.type === 'exam' && currentSlug === ex.slug;
-                    return (
-                      <Link
-                        key={ex.slug}
-                        href={`/${ex.slug}/mcq-questions`}
-                        onClick={(e) => {
-                          e.preventDefault();
-                          handleSelectTaxonomy(ex.slug);
-                        }}
-                        className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${
-                          isSelected
-                            ? 'bg-purple-50 text-purple-950 font-black border-l-4 border-purple-600 pl-3.5 shadow-2xs'
-                            : 'text-slate-700 hover:bg-purple-50/60 hover:text-purple-800 hover:pl-4 font-medium'
-                        }`}
-                      >
-                        <span>{ex.name}</span>
-                        {isSelected && <ChevronRight size={13} className="text-purple-600 shrink-0" />}
-                      </Link>
-                    );
-                  })}
+                <div className="max-h-[220px] overflow-y-auto divide-y divide-slate-100 text-xs font-semibold bg-slate-50/40 custom-scrollbar">
+                  {/* Search Bar */}
+                  <div className="sticky top-0 z-10 bg-slate-100/95 backdrop-blur-xs p-1.5 border-b border-slate-200">
+                    <div className="relative flex items-center">
+                      <Search size={12} className="absolute left-2.5 text-slate-400 pointer-events-none" />
+                      <input
+                        type="text"
+                        value={examSearch}
+                        onChange={(e) => setExamSearch(e.target.value)}
+                        placeholder="Search exams..."
+                        className="w-full pl-7 pr-6 py-1 text-xs bg-white text-slate-800 placeholder-slate-400 border border-slate-300 rounded focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+                      />
+                      {examSearch && (
+                        <button
+                          onClick={() => setExamSearch('')}
+                          className="absolute right-2 text-slate-400 hover:text-slate-600 cursor-pointer p-0.5"
+                          title="Clear search"
+                        >
+                          <X size={12} />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* List items */}
+                  {filteredExams.length === 0 ? (
+                    <div className="p-3 text-center text-xs text-slate-500 font-medium">
+                      No exams found
+                    </div>
+                  ) : (
+                    filteredExams.map((ex) => {
+                      const isSelected = taxonomy.type === 'exam' && currentSlug === ex.slug;
+                      return (
+                        <Link
+                          key={ex.slug}
+                          href={`/${ex.slug}/mcq-questions`}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleSelectTaxonomy(ex.slug);
+                          }}
+                          className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${isSelected
+                              ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
+                              : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
+                            }`}
+                        >
+                          <span>{ex.name}</span>
+                          {isSelected && <ChevronRight size={13} className="text-blue-600 shrink-0" />}
+                        </Link>
+                      );
+                    })
+                  )}
                 </div>
               )}
             </div>
@@ -623,11 +841,150 @@ export default function McqQuestionPage({
                 </p>
               </div>
             ) : (
-              /* MCQ Questions List with Dynamic In-Feed Ad Spacing */
+              /* MCQ Questions List with Dynamic Performance Header & In-Feed Ad Spacing */
               <div className="space-y-6">
+
+                {/* ======================================================= */}
+                {/* LIVE MCQ PERFORMANCE SCORECARD & STATS HEADER (Sticky Light Theme) */}
+                {/* ======================================================= */}
+                <div className="sticky top-16 sm:top-[66px] z-30 bg-white/95 backdrop-blur-md rounded-xl border border-slate-200/95 shadow-md p-3.5 sm:p-4 mb-5 transition-all duration-200">
+                  {/* Top Bar with Title & Action Controls */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pb-2.5 sm:pb-3 border-b border-slate-100">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 shadow-2xs shrink-0">
+                        <Sparkles size={15} />
+                      </div>
+                      <div>
+                        <h3 className="text-xs sm:text-sm font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                          <span>Live Practice Scorecard</span>
+                          <span className="text-[10px] sm:text-[11px] font-semibold bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full whitespace-nowrap">
+                            {stats.attempted}/{stats.total} Attempted
+                          </span>
+                        </h3>
+                        <p className="text-[10px] sm:text-[11px] text-slate-500 font-normal hidden sm:block">
+                          Instant accuracy, score evaluation &amp; result analytics
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Reset and Reveal All Quick Controls */}
+                    <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={handleToggleAllAnswers}
+                        className="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-md border border-slate-300/80 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Toggle all question answers"
+                      >
+                        {allRevealed ? <EyeOff size={13} /> : <Eye size={13} />}
+                        <span>{allRevealed ? 'Hide Answers' : 'Reveal All'}</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={handleResetQuiz}
+                        disabled={stats.attempted === 0}
+                        className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold rounded-md border border-rose-200 transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                        title="Reset all selections and restart practice"
+                      >
+                        <RotateCcw size={13} />
+                        <span>Reset</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 4 Professional Metric Cards Grid */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 pt-2.5 sm:pt-3">
+                    {/* 1. Correct Stat Card */}
+                    <div className="bg-emerald-50/70 border border-emerald-200/90 rounded-lg p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:bg-emerald-50 transition">
+                      <div className="flex items-center justify-between text-emerald-800 text-[11px] sm:text-xs font-semibold">
+                        <span>Correct</span>
+                        <CheckCircle2 size={14} className="text-emerald-600" />
+                      </div>
+                      <div className="mt-1 sm:mt-1.5 flex items-baseline gap-1.5">
+                        <span className="text-xl sm:text-2xl font-black text-emerald-700 tracking-tight">
+                          {stats.correct}
+                        </span>
+                        <span className="text-[10px] sm:text-[11px] text-emerald-600 font-medium">answers</span>
+                      </div>
+                      <div className="mt-0.5 text-[9px] sm:text-[10px] text-emerald-700/90 font-medium truncate">
+                        {stats.attempted > 0 ? `${Math.round((stats.correct / stats.total) * 100)}% of total` : '0 answered'}
+                      </div>
+                    </div>
+
+                    {/* 2. Incorrect Stat Card */}
+                    <div className="bg-rose-50/70 border border-rose-200/90 rounded-lg p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:bg-rose-50 transition">
+                      <div className="flex items-center justify-between text-rose-800 text-[11px] sm:text-xs font-semibold">
+                        <span>Incorrect</span>
+                        <XCircle size={14} className="text-rose-600" />
+                      </div>
+                      <div className="mt-1 sm:mt-1.5 flex items-baseline gap-1.5">
+                        <span className="text-xl sm:text-2xl font-black text-rose-700 tracking-tight">
+                          {stats.incorrect}
+                        </span>
+                        <span className="text-[10px] sm:text-[11px] text-rose-600 font-medium">mistakes</span>
+                      </div>
+                      <div className="mt-0.5 text-[9px] sm:text-[10px] text-rose-700/90 font-medium truncate">
+                        {stats.unattempted} remaining
+                      </div>
+                    </div>
+
+                    {/* 3. Accuracy / Percentage Stat Card */}
+                    <div className="bg-blue-50/70 border border-blue-200/90 rounded-lg p-2.5 sm:p-3 flex flex-col justify-between shadow-2xs hover:bg-blue-50 transition">
+                      <div className="flex items-center justify-between text-blue-800 text-[11px] sm:text-xs font-semibold">
+                        <span>Percentage</span>
+                        <span className="text-xs font-extrabold text-blue-700">%</span>
+                      </div>
+                      <div className="mt-1 sm:mt-1.5 flex items-baseline gap-1.5">
+                        <span className="text-xl sm:text-2xl font-black text-blue-700 tracking-tight">
+                          {stats.percentage}%
+                        </span>
+                      </div>
+                      {/* Mini Progress Bar inside Accuracy card */}
+                      <div className="mt-1.5 w-full bg-blue-200/70 rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-blue-600 h-full rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${stats.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* 4. Result / Status Card */}
+                    <div className={`rounded-lg p-2.5 sm:p-3 border flex flex-col justify-between shadow-2xs transition ${stats.resultColor}`}>
+                      <div className="flex items-center justify-between text-[11px] sm:text-xs font-semibold">
+                        <span>Result</span>
+                        <span className="text-sm">{stats.resultIcon}</span>
+                      </div>
+                      <div className="mt-1 sm:mt-1.5">
+                        <span className="text-sm sm:text-base font-black tracking-tight leading-tight block truncate">
+                          {stats.resultText}
+                        </span>
+                      </div>
+                      <div className="mt-0.5 text-[9px] sm:text-[10px] font-medium opacity-90 truncate">
+                        {stats.attempted === 0
+                          ? 'Select option to begin'
+                          : `${stats.correct}/${stats.attempted} score on attempted`}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Overall Test Completion Progress Bar */}
+                  <div className="mt-2.5 pt-2 border-t border-slate-100 flex items-center justify-between gap-3 text-xs text-slate-500">
+                    <div className="flex items-center gap-2 flex-1">
+                      <span className="font-semibold text-slate-700 shrink-0 text-[10px] sm:text-[11px]">Progress:</span>
+                      <div className="w-full bg-slate-100 rounded-full h-1.5 sm:h-2 overflow-hidden border border-slate-200">
+                        <div
+                          className="bg-gradient-to-r from-blue-500 to-indigo-600 h-full rounded-full transition-all duration-500 ease-out"
+                          style={{ width: `${stats.progressPercent}%` }}
+                        />
+                      </div>
+                    </div>
+                    <span className="font-bold text-slate-700 text-[10px] sm:text-xs shrink-0">{stats.progressPercent}% Completed</span>
+                  </div>
+                </div>
+
                 {questions.map((q, idx) => {
                   const qId = q._id || q.sql_id || idx;
-                  const questionNum = totalQuestions > 0 ? totalQuestions - ((page - 1) * pageSize + idx) : idx + 1;
+                  const questionNum = (page - 1) * pageSize + idx + 1;
                   const selectedOpt = userAnswers[qId];
                   const isRevealed = revealedAnswers[qId];
 
@@ -672,27 +1029,40 @@ export default function McqQuestionPage({
                                 <label
                                   key={optIdx}
                                   onClick={() => handleSelectOption(qId, optIdx)}
-                                  className={`flex items-center gap-2.5 p-2.5 rounded-lg border text-xs sm:text-sm cursor-pointer transition select-none ${
-                                    showCorrectHighlight
+                                  className={`flex items-center justify-between gap-2.5 p-2.5 rounded-lg border text-xs sm:text-sm cursor-pointer transition select-none ${showCorrectHighlight
                                       ? 'bg-emerald-50 border-emerald-500 text-emerald-950 font-semibold ring-1 ring-emerald-500'
                                       : showWrongHighlight
-                                      ? 'bg-rose-50 border-rose-400 text-rose-950 font-medium'
-                                      : isChecked
-                                      ? 'bg-blue-50/80 border-blue-600 text-blue-900 font-semibold ring-1 ring-blue-600'
-                                      : 'bg-white border-slate-300 text-slate-800 hover:border-blue-400 hover:bg-slate-50/80 font-normal'
-                                  }`}
+                                        ? 'bg-rose-50 border-rose-400 text-rose-950 font-medium ring-1 ring-rose-400'
+                                        : isChecked
+                                          ? 'bg-blue-50/80 border-blue-600 text-blue-900 font-semibold ring-1 ring-blue-600'
+                                          : 'bg-white border-slate-300 text-slate-800 hover:border-blue-400 hover:bg-slate-50/80 font-normal'
+                                    }`}
                                 >
-                                  <input
-                                    type="radio"
-                                    name={`question-opt-${qId}`}
-                                    checked={isChecked}
-                                    onChange={() => handleSelectOption(qId, optIdx)}
-                                    className="accent-blue-600 w-4 h-4 cursor-pointer shrink-0"
-                                  />
-                                  <span className="min-w-0 break-words leading-tight">
-                                    <strong className="mr-1 text-slate-900 font-bold">{letter}.</strong>
-                                    {opt.text}
-                                  </span>
+                                  <div className="flex items-center gap-2.5 min-w-0">
+                                    <input
+                                      type="radio"
+                                      name={`question-opt-${qId}`}
+                                      checked={isChecked}
+                                      onChange={() => handleSelectOption(qId, optIdx)}
+                                      className="accent-blue-600 w-4 h-4 cursor-pointer shrink-0"
+                                    />
+                                    <span className="min-w-0 break-words leading-tight">
+                                      <strong className="mr-1 text-slate-900 font-bold">{letter}.</strong>
+                                      {opt.text}
+                                    </span>
+                                  </div>
+
+                                  {/* Visual status indicators */}
+                                  {showCorrectHighlight && (
+                                    <span className="shrink-0 text-[11px] font-bold text-emerald-700 flex items-center gap-1 bg-emerald-100/90 px-1.5 py-0.5 rounded">
+                                      ✓ Correct
+                                    </span>
+                                  )}
+                                  {showWrongHighlight && (
+                                    <span className="shrink-0 text-[11px] font-bold text-rose-700 flex items-center gap-1 bg-rose-100/90 px-1.5 py-0.5 rounded">
+                                      ✕ Wrong
+                                    </span>
+                                  )}
                                 </label>
                               );
                             })}
@@ -838,11 +1208,10 @@ export default function McqQuestionPage({
                         key={item}
                         type="button"
                         onClick={() => handlePageChange(item)}
-                        className={`px-3 py-1.5 transition border-r border-slate-200 last:border-r-0 font-medium ${
-                          isCurrent
+                        className={`px-3 py-1.5 transition border-r border-slate-200 last:border-r-0 font-medium ${isCurrent
                             ? 'bg-blue-600 text-white font-semibold'
                             : 'text-blue-600 hover:bg-slate-50'
-                        }`}
+                          }`}
                       >
                         {item}
                       </button>
@@ -873,22 +1242,20 @@ export default function McqQuestionPage({
                 <button
                   type="button"
                   onClick={() => setRightTab('expiring')}
-                  className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap transition ${
-                    rightTab === 'expiring'
+                  className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap transition ${rightTab === 'expiring'
                       ? 'bg-[#f0f2f5] text-slate-900 rounded-tl-lg font-medium'
                       : 'text-blue-600 hover:text-blue-700 font-medium'
-                  }`}
+                    }`}
                 >
                   Jobs Expiring Soon
                 </button>
                 <button
                   type="button"
                   onClick={() => setRightTab('mcq')}
-                  className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap transition ${
-                    rightTab === 'mcq'
+                  className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap transition ${rightTab === 'mcq'
                       ? 'bg-[#f0f2f5] text-slate-900 rounded-tr-lg font-medium'
                       : 'text-blue-600 hover:text-blue-700 font-medium'
-                  }`}
+                    }`}
                 >
                   Discover More
                 </button>

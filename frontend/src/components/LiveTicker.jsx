@@ -1,41 +1,117 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { ChevronRight, Radio, Bell } from 'lucide-react';
 
-const TICKER_ITEMS = [
-  {
-    tag: 'Update',
-    tagStyle: 'bg-blue-50 text-blue-700 border-blue-100',
-    text: 'New 30 MCQs added for General Knowledge & Current Affairs',
-    href: '/general-knowledge/mcq-questions',
-  },
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
+  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
+  : 'http://localhost:5001/apis/v1';
+
+const DEFAULT_TICKER_ITEMS = [
   {
     tag: 'Admit Card',
-    tagStyle: 'bg-cyan-50 text-cyan-700 border-cyan-100',
+    tagStyle: 'bg-cyan-50 text-cyan-700 border-cyan-200',
     text: 'UPSC IAS Prelims official admit card released - download now',
     href: '/admit-cards',
   },
   {
     tag: 'Result',
-    tagStyle: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    tagStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200',
     text: 'SBI PO 2026 Mains result & merit list uploaded',
     href: '/results',
   },
   {
-    tag: 'Dates',
-    tagStyle: 'bg-amber-50 text-amber-800 border-amber-100',
-    text: 'Railway RRB NTPC CBT-2 exam dates & intimation slip live',
+    tag: 'Job',
+    tagStyle: 'bg-blue-50 text-blue-700 border-blue-200',
+    text: 'Railway RRB NTPC CBT-2 exam dates & recruitment notification',
     href: '/jobs',
   },
   {
-    tag: 'Registration',
-    tagStyle: 'bg-rose-50 text-rose-700 border-rose-100',
-    text: 'Indian Army Agniveer 2026 online registration open',
-    href: '/jobs',
-  }
+    tag: 'Update',
+    tagStyle: 'bg-purple-50 text-purple-700 border-purple-200',
+    text: 'New 30 MCQs added for General Knowledge & Current Affairs',
+    href: '/general-knowledge/mcq-questions',
+  },
 ];
 
 export default function LiveTicker() {
+  const [tickerItems, setTickerItems] = useState(DEFAULT_TICKER_ITEMS);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchDynamicUpdates() {
+      try {
+        const [admitRes, resultRes, jobRes] = await Promise.allSettled([
+          fetch(`${API_BASE}/admit-cards?limit=4`).then((r) => r.json()),
+          fetch(`${API_BASE}/results?limit=4`).then((r) => r.json()),
+          fetch(`${API_BASE}/jobs?limit=4`).then((r) => r.json()),
+        ]);
+
+        const admitCards =
+          admitRes.status === 'fulfilled' && admitRes.value?.success && Array.isArray(admitRes.value?.data)
+            ? admitRes.value.data
+            : [];
+
+        const results =
+          resultRes.status === 'fulfilled' && resultRes.value?.success && Array.isArray(resultRes.value?.data)
+            ? resultRes.value.data
+            : [];
+
+        const jobs =
+          jobRes.status === 'fulfilled' && jobRes.value?.success && Array.isArray(jobRes.value?.data)
+            ? jobRes.value.data
+            : [];
+
+        const interleaved = [];
+        const maxLen = Math.max(admitCards.length, results.length, jobs.length);
+
+        for (let i = 0; i < maxLen; i++) {
+          if (admitCards[i]) {
+            interleaved.push({
+              tag: 'Admit Card',
+              tagStyle: 'bg-cyan-50 text-cyan-700 border-cyan-200',
+              text: admitCards[i].title,
+              href: `/admit-card/${admitCards[i].slug || admitCards[i]._id}`,
+            });
+          }
+          if (results[i]) {
+            interleaved.push({
+              tag: 'Result',
+              tagStyle: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+              text: results[i].title,
+              href: `/result/${results[i].slug || results[i]._id}`,
+            });
+          }
+          if (jobs[i]) {
+            interleaved.push({
+              tag: 'Job',
+              tagStyle: 'bg-blue-50 text-blue-700 border-blue-200',
+              text: jobs[i].title,
+              href: `/job/${jobs[i].slug || jobs[i]._id}`,
+            });
+          }
+        }
+
+        if (interleaved.length > 0 && isMounted) {
+          setTickerItems(interleaved);
+        }
+      } catch (err) {
+        console.error('Error fetching live ticker updates:', err);
+      }
+    }
+
+    fetchDynamicUpdates();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Duplicate the items for seamless infinite looping
+  const displayItems = tickerItems.length > 0 ? tickerItems.concat(tickerItems) : [];
+
   return (
     <div className="relative overflow-hidden border-b border-slate-200 bg-white text-slate-800">
       <div className="mx-auto flex max-w-7xl items-center gap-3 pl-4 pr-0 sm:px-6 lg:px-8">
@@ -54,9 +130,9 @@ export default function LiveTicker() {
 
         <div className="ticker-mask flex-1 overflow-hidden py-2.5">
           <div className="ticker-track flex w-max items-center gap-7 whitespace-nowrap">
-            {TICKER_ITEMS.concat(TICKER_ITEMS).map((item, index) => (
-              <a
-                key={index}
+            {displayItems.map((item, index) => (
+              <Link
+                key={`${item.href}-${index}`}
                 href={item.href || '#'}
                 className="group flex items-center gap-2 text-xs font-semibold text-slate-600 transition-colors hover:text-[#0b66c3]"
               >
@@ -65,7 +141,7 @@ export default function LiveTicker() {
                 </span>
                 <span>{item.text}</span>
                 <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-300 transition group-hover:text-[#0b66c3]" />
-              </a>
+              </Link>
             ))}
           </div>
         </div>
@@ -78,7 +154,7 @@ export default function LiveTicker() {
 
       <style>{`
         .ticker-track {
-          animation: ticker-scroll 40s linear infinite;
+          animation: ticker-scroll 45s linear infinite;
         }
         .ticker-mask:hover .ticker-track {
           animation-play-state: paused;

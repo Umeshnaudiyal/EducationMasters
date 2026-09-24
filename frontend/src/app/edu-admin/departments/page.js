@@ -22,6 +22,7 @@ import { getImageUrl } from '@/utils/image';
 import AdminLoader from '@/components/admin/AdminLoader';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -91,7 +92,14 @@ export default function DepartmentsManagementPage() {
         search: search.trim(),
       });
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/departments?${queryParams.toString()}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/departments?${queryParams.toString()}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -105,7 +113,7 @@ export default function DepartmentsManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search]);
+  }, [page, search, session]);
 
   useEffect(() => {
     fetchDepartments();
@@ -200,10 +208,14 @@ export default function DepartmentsManagementPage() {
         ? `${BACKEND_URL}/apis/v1/departments/${editingDept._id}`
         : `${BACKEND_URL}/apis/v1/departments`;
       const method = editingDept ? 'PUT' : 'POST';
+      const token = getAuthToken(session);
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({
           name: formData.name.trim(),
           slug: formData.slug.trim() || slugify(formData.name),
@@ -247,16 +259,24 @@ export default function DepartmentsManagementPage() {
   const handleConfirmDelete = async () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
+      const token = getAuthToken(session);
+      const headers = {
+        'Content-Type': 'application/json',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+      };
+
       if (deleteModal.isBulk) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/departments/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete', ids: selectedIds }),
+          headers,
+          body: JSON.stringify({
+            action: 'delete',
+            ids: selectedIds,
+          }),
         });
-
         const data = await res.json();
         if (data.success) {
-          showToast(data.message || 'Departments deleted successfully');
+          showToast(`Deleted ${selectedIds.length} departments successfully`);
           setSelectedIds([]);
           setBulkAction('');
           fetchDepartments();
@@ -266,12 +286,14 @@ export default function DepartmentsManagementPage() {
       } else if (deleteModal.id) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/departments/${deleteModal.id}`, {
           method: 'DELETE',
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
         });
         const data = await res.json();
-
         if (data.success) {
-          showToast('Department deleted successfully');
-          if (editingDept && editingDept._id === deleteModal.id) resetForm();
+          showToast(`Department "${deleteModal.title}" deleted successfully`);
+          if (editingDept && editingDept._id === deleteModal.id) {
+            resetForm();
+          }
           fetchDepartments();
         } else {
           showToast(data.message || 'Delete failed', 'error');
@@ -279,8 +301,8 @@ export default function DepartmentsManagementPage() {
       }
       setDeleteModal({ isOpen: false, id: null, title: '', isBulk: false, isLoading: false });
     } catch (err) {
-      console.error('Error deleting department:', err);
-      showToast('Error deleting department', 'error');
+      console.error('Delete error:', err);
+      showToast('Failed to delete department', 'error');
       setDeleteModal((prev) => ({ ...prev, isLoading: false }));
     }
   };

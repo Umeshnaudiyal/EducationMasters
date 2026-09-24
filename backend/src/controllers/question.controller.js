@@ -167,7 +167,41 @@ export const getQuestions = asyncHandler(async (req, res) => {
     };
   }
 
-  // Get status counts for badges
+  // Author-specific scoping: If user is an author or writer, only show their own questions
+  const userRole = (req.user?.role || '').toLowerCase();
+  const userId = req.user?._id || req.user?.id;
+  const userSqlId = req.user?.sql_id;
+  const authorParam = req.query.author || '';
+
+  const isAuthor = userRole === 'author' || userRole === 'writer' || userRole === 'contributor';
+
+  let authorCondition = null;
+  if (isAuthor && userId) {
+    const orConds = [{ author: userId }];
+    if (userSqlId) orConds.push({ user_id: userSqlId });
+    if (req.user?.name) orConds.push({ author_name: req.user.name });
+    authorCondition = { $or: orConds };
+  } else if (authorParam) {
+    const isObjectId = /^[0-9a-fA-F]{24}$/.test(String(authorParam).trim());
+    const numId = Number(authorParam);
+    const orConds = [];
+    if (isObjectId) orConds.push({ author: authorParam });
+    if (!isNaN(numId) && numId > 0) orConds.push({ user_id: numId });
+    if (orConds.length > 0) authorCondition = { $or: orConds };
+  }
+
+  if (authorCondition) {
+    if (query.$or) {
+      query.$and = [{ $or: query.$or }, authorCondition];
+      delete query.$or;
+    } else {
+      query.$and = [authorCondition];
+    }
+  }
+
+  const countAuthorFilter = authorCondition ? { ...authorCondition } : {};
+
+  // Get status counts for badges (scoped by author if applicable)
   const [
     allCount,
     publishedCount,
@@ -177,11 +211,11 @@ export const getQuestions = asyncHandler(async (req, res) => {
     questions,
     totalFiltered,
   ] = await Promise.all([
-    Question.countDocuments({ status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
-    Question.countDocuments({ status: { $in: ['publish', 'published', 'Published'] } }),
-    Question.countDocuments({ status: { $in: ['draft', 'Draft'] } }),
-    Question.countDocuments({ status: { $in: ['pending', 'Pending'] } }),
-    Question.countDocuments({ status: { $in: ['trash', 'trashed', 'Trashed'] } }),
+    Question.countDocuments({ ...countAuthorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
+    Question.countDocuments({ ...countAuthorFilter, status: { $in: ['publish', 'published', 'Published'] } }),
+    Question.countDocuments({ ...countAuthorFilter, status: { $in: ['draft', 'Draft'] } }),
+    Question.countDocuments({ ...countAuthorFilter, status: { $in: ['pending', 'Pending'] } }),
+    Question.countDocuments({ ...countAuthorFilter, status: { $in: ['trash', 'trashed', 'Trashed'] } }),
     Question.find(query)
       .populate('author', 'name email')
       .populate('subject', 'name slug')
@@ -234,6 +268,20 @@ export const getQuestionById = asyncHandler(async (req, res) => {
 
   res.status(200).json(new ApiResponse(200, question, 'Question retrieved successfully'));
 });
+
+// Helper to verify if user has authority to modify question
+const checkQuestionOwnership = (question, user) => {
+  if (!user) return false;
+  const userRole = (user.role || '').toLowerCase();
+  if (userRole === 'admin' || userRole === 'superadmin' || userRole === 'editor') {
+    return true;
+  }
+  const userId = user._id || user.id;
+  if (question.author && String(question.author) === String(userId)) return true;
+  if (user.sql_id && question.user_id === user.sql_id) return true;
+  if (user.name && question.author_name === user.name) return true;
+  return false;
+};
 
 export const createQuestion = asyncHandler(async (req, res) => {
   const validation = validateQuestionData(req.body, { isNew: true });
@@ -326,7 +374,8 @@ export const createQuestion = asyncHandler(async (req, res) => {
   const nextSqlId = (highest?.sql_id || 0) + 1;
 
   const authorId = req.user?._id || req.user?.id || null;
-  const authorName = req.user?.name || 'Administrator';
+  const authorName = req.user?.name || req.user?.nicename || 'Author';
+  const authorSqlId = req.user?.sql_id || null;
 
   const newQuestion = await Question.create({
     sql_id: nextSqlId,
@@ -351,6 +400,7 @@ export const createQuestion = asyncHandler(async (req, res) => {
     correct_answer: resolvedCorrect,
     author: authorId,
     author_name: authorName,
+    user_id: authorSqlId,
     status: status || 'Published',
   });
 
@@ -362,6 +412,10 @@ export const updateQuestion = asyncHandler(async (req, res) => {
   const question = await Question.findById(id);
   if (!question) {
     throw new ApiError(404, 'Question not found');
+  }
+
+  if (!checkQuestionOwnership(question, req.user)) {
+    throw new ApiError(403, 'Permission denied: You can only edit your own MCQs.');
   }
 
   const validation = validateQuestionData(req.body, { isNew: false });
@@ -487,6 +541,10 @@ export const deleteQuestion = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Question not found');
   }
 
+  if (!checkQuestionOwnership(question, req.user)) {
+    throw new ApiError(403, 'Permission denied: You can only delete your own MCQs.');
+  }
+
   if (force || question.status === 'trashed' || question.status === 'trash' || question.status === 'Trashed') {
     await Question.findByIdAndDelete(id);
     return res.status(200).json(new ApiResponse(200, null, 'Question permanently deleted'));
@@ -506,6 +564,10 @@ export const restoreQuestion = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Question not found');
   }
 
+  if (!checkQuestionOwnership(question, req.user)) {
+    throw new ApiError(403, 'Permission denied: You can only restore your own MCQs.');
+  }
+
   question.status = 'Published';
   question.deleted_at = null;
   await question.save();
@@ -519,29 +581,41 @@ export const bulkActionQuestions = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'No questions selected');
   }
 
+  const userRole = (req.user?.role || '').toLowerCase();
+  const userId = req.user?._id || req.user?.id;
+  const isAuthor = userRole === 'author' || userRole === 'writer' || userRole === 'contributor';
+
+  let targetQuery = { _id: { $in: ids } };
+  if (isAuthor && userId) {
+    const orConds = [{ author: userId }];
+    if (req.user?.sql_id) orConds.push({ user_id: req.user.sql_id });
+    if (req.user?.name) orConds.push({ author_name: req.user.name });
+    targetQuery = { _id: { $in: ids }, $or: orConds };
+  }
+
   if (action === 'publish' || action === 'Published') {
-    await Question.updateMany({ _id: { $in: ids } }, { $set: { status: 'Published', deleted_at: null } });
-    return res.status(200).json(new ApiResponse(200, null, `Published ${ids.length} questions`));
+    await Question.updateMany(targetQuery, { $set: { status: 'Published', deleted_at: null } });
+    return res.status(200).json(new ApiResponse(200, null, `Published questions`));
   }
 
   if (action === 'draft' || action === 'Draft') {
-    await Question.updateMany({ _id: { $in: ids } }, { $set: { status: 'Draft', deleted_at: null } });
-    return res.status(200).json(new ApiResponse(200, null, `Moved ${ids.length} questions to Draft`));
+    await Question.updateMany(targetQuery, { $set: { status: 'Draft', deleted_at: null } });
+    return res.status(200).json(new ApiResponse(200, null, `Moved questions to Draft`));
   }
 
   if (action === 'trash' || action === 'trashed') {
-    await Question.updateMany({ _id: { $in: ids } }, { $set: { status: 'trashed', deleted_at: new Date() } });
-    return res.status(200).json(new ApiResponse(200, null, `Moved ${ids.length} questions to Trash`));
+    await Question.updateMany(targetQuery, { $set: { status: 'trashed', deleted_at: new Date() } });
+    return res.status(200).json(new ApiResponse(200, null, `Moved questions to Trash`));
   }
 
   if (action === 'restore') {
-    await Question.updateMany({ _id: { $in: ids } }, { $set: { status: 'Published', deleted_at: null } });
-    return res.status(200).json(new ApiResponse(200, null, `Restored ${ids.length} questions`));
+    await Question.updateMany(targetQuery, { $set: { status: 'Published', deleted_at: null } });
+    return res.status(200).json(new ApiResponse(200, null, `Restored questions`));
   }
 
   if (action === 'delete' || action === 'force_delete') {
-    await Question.deleteMany({ _id: { $in: ids } });
-    return res.status(200).json(new ApiResponse(200, null, `Permanently deleted ${ids.length} questions`));
+    await Question.deleteMany(targetQuery);
+    return res.status(200).json(new ApiResponse(200, null, `Permanently deleted questions`));
   }
 
   throw new ApiError(400, 'Invalid bulk action');
@@ -566,7 +640,8 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
   let nextSqlId = (highest?.sql_id || 0) + 1;
 
   const authorId = req.user?._id || req.user?.id || null;
-  const authorName = req.user?.name || 'Excel Importer';
+  const authorName = req.user?.name || req.user?.nicename || 'Excel Importer';
+  const authorSqlId = req.user?.sql_id || null;
 
   // Resolve Batch Defaults if provided
   let batchDefaultState = null;
@@ -781,6 +856,7 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
       correct_answer: rawAnswer || 'A',
       author: authorId,
       author_name: authorName,
+      user_id: authorSqlId,
       status: rawStatus,
     };
 

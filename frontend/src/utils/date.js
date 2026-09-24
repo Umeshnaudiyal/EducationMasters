@@ -1,4 +1,4 @@
-/**
+  /**
  * Format timestamp into human-readable relative time (e.g., "3 hours ago", "2 days ago")
  */
 export function formatTimeAgo(dateInput) {

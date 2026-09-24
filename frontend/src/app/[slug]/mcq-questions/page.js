@@ -6,6 +6,10 @@ export async function generateMetadata({ params }) {
   const { slug } = await params;
   const taxInfo = getTaxonomyInfo(slug);
 
+  const canonicalUrl = taxInfo.type === 'state'
+    ? `https://educationmasters.in/state/${slug}/mcq-questions/`
+    : `https://educationmasters.in/${slug}/mcq-questions/`;
+
   return {
     title: taxInfo.title,
     description: taxInfo.description,
@@ -13,7 +17,7 @@ export async function generateMetadata({ params }) {
     openGraph: {
       title: taxInfo.title,
       description: taxInfo.description,
-      url: `https://educationmasters.in/${slug}/mcq-questions/`,
+      url: canonicalUrl,
       siteName: 'Education Masters',
       type: 'website',
     },
@@ -23,7 +27,7 @@ export async function generateMetadata({ params }) {
       description: taxInfo.description,
     },
     alternates: {
-      canonical: `https://educationmasters.in/${slug}/mcq-questions/`,
+      canonical: canonicalUrl,
     },
   };
 }

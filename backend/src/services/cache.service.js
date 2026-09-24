@@ -89,19 +89,32 @@ class MemoryCacheService {
 
   /**
    * Invalidate all keys matching a wildcard pattern
-   * Example: invalidatePattern('jobs*') or invalidatePattern('/apis/v1/jobs*')
+   * Example: invalidatePattern('exams*') or invalidatePattern('/apis/v1/exams*')
    * @param {string} pattern
    * @returns {number} count of deleted keys
    */
   invalidatePattern(pattern) {
     if (!pattern) return 0;
-    
-    // Convert wildcard pattern 'jobs*' to regex '^jobs.*'
-    const regexStr = '^' + pattern
-      .replace(/[.+^${}()|[\]\\]/g, '\\$&') // Escape special regex chars
-      .replace(/\*/g, '.*'); // Convert * to .*
-    
-    const regex = new RegExp(regexStr, 'i');
+
+    let raw = String(pattern).trim();
+    if (!raw) return 0;
+
+    // Strip leading cache prefix, carets, and leading slashes
+    let clean = raw
+      .replace(/^cache:\*?/i, '')
+      .replace(/^\^/, '')
+      .replace(/^\/+/, '');
+
+    // Normalize api/apis prefixes so /api/v1/exams* and /apis/v1/exams* match both
+    clean = clean.replace(/^apis?\//i, '');
+
+    // Escape regex special chars, convert * to .*
+    const escaped = clean
+      .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+      .replace(/\*/g, '.*');
+
+    // Match anywhere in the key
+    const regex = new RegExp(escaped, 'i');
     let count = 0;
 
     for (const key of this.store.keys()) {

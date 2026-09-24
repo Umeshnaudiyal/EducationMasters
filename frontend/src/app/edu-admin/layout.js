@@ -12,26 +12,76 @@ export default function AdminLayout({ children }) {
   const { data: session, status } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  // Monitor daily midnight (12:00 AM) session expiry
+  // Monitor daily midnight (12:00 AM) session expiry and sync token
   React.useEffect(() => {
     if (!session?.user) return;
 
-    const checkMidnightExpiry = () => {
+    if (session.user.accessToken && typeof window !== 'undefined') {
+      localStorage.setItem('token', session.user.accessToken);
+    }
+
+    const checkSessionExpiry = () => {
       const now = new Date();
-      // If current hour is 0 and minutes are 0 (or if last_session_date is past)
+      const nowTime = now.getTime();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const todayStr = `${year}-${month}-${day}`;
+
+      // 1. Check if session_date is from a previous calendar day
+      if (session.user.session_date && session.user.session_date !== todayStr) {
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+        }
+        signOut({ callbackUrl: '/edu-login?expired=1' });
+        return;
+      }
+
+      // 2. Check if session expires_at is reached or in the past
+      if (session.user.expires_at) {
+        const expiresAtTime = new Date(session.user.expires_at).getTime();
+        if (nowTime >= expiresAtTime) {
+          if (typeof window !== 'undefined') {
+            localStorage.removeItem('token');
+          }
+          signOut({ callbackUrl: '/edu-login?expired=1' });
+          return;
+        }
+      }
+
+      // 3. Check upcoming midnight of the current day
       const midnight = new Date(now);
       midnight.setHours(24, 0, 0, 0);
-      const remainingMs = midnight.getTime() - now.getTime();
+      const remainingMs = midnight.getTime() - nowTime;
 
       if (remainingMs <= 1000) {
-        // Auto-logout and redirect
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('token');
+        }
         signOut({ callbackUrl: '/edu-login?expired=1' });
       }
     };
 
-    const interval = setInterval(checkMidnightExpiry, 5000);
-    return () => clearInterval(interval);
+    // Run check immediately on mount and periodically
+    checkSessionExpiry();
+    const interval = setInterval(checkSessionExpiry, 5000);
+
+    const handleVisibilityOrFocus = () => {
+      if (document.visibilityState === 'visible') {
+        checkSessionExpiry();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityOrFocus);
+    window.addEventListener('focus', handleVisibilityOrFocus);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibilityOrFocus);
+      window.removeEventListener('focus', handleVisibilityOrFocus);
+    };
   }, [session]);
+
 
   // If session is loading
   if (status === 'loading') {

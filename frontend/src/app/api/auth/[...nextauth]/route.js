@@ -5,6 +5,14 @@ import { decode as defaultDecode } from 'next-auth/jwt';
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'educationmasters_nextauth_secret_2026_super_secure_key';
 
+const getTodayDateString = (dateObj = new Date()) => {
+  const d = new Date(dateObj);
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const authOptions = {
   providers: [
     CredentialsProvider({
@@ -85,9 +93,25 @@ export const authOptions = {
         if (session.logout_time) token.logout_time = session.logout_time;
         if (session.login_time) token.login_time = session.login_time;
       }
+
+      // Check if session has expired past 12:00 AM midnight or on next calendar day
+      const now = new Date();
+      const todayStr = getTodayDateString(now);
+
+      const isDateExpired = Boolean(token?.session_date && token.session_date !== todayStr);
+      const isTimeExpired = Boolean(token?.expires_at && now.getTime() >= new Date(token.expires_at).getTime());
+
+      if (isDateExpired || isTimeExpired) {
+        token.isExpired = true;
+      }
+
       return token;
     },
     async session({ session, token }) {
+      if (!token || token.isExpired) {
+        return null;
+      }
+
       if (token) {
         session.user.id = token.id;
         session.user.name = token.name;
@@ -105,6 +129,7 @@ export const authOptions = {
       return session;
     },
   },
+
   pages: {
     signIn: '/edu-login',
   },

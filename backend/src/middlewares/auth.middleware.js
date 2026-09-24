@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import ApiError from '../utils/apiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import User from '../models/user.model.js';
+import { getTodayDateString } from '../utils/session.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_in_production';
 
@@ -25,8 +26,8 @@ export const protect = asyncHandler(async (req, res, next) => {
     token = req.cookies.token;
   }
 
-  // 2. Reject if no token is present
-  if (!token) {
+  // 2. Reject if no token is present or invalid string
+  if (!token || token === 'undefined' || token === 'null' || !token.trim()) {
     throw new ApiError(
       401,
       'Authentication required: Please log in to access this protected resource.'
@@ -35,7 +36,7 @@ export const protect = asyncHandler(async (req, res, next) => {
 
   // 3. Verify JWT signature and expiration
   try {
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token.trim(), JWT_SECRET);
 
     if (!decoded || !decoded.id) {
       throw new ApiError(401, 'Invalid authentication token payload.');
@@ -54,6 +55,12 @@ export const protect = asyncHandler(async (req, res, next) => {
         403,
         'Your account is currently inactive or pending administrator approval.'
       );
+    }
+
+    // 6. Verify daily session validity (12:00 AM midnight reset)
+    const today = getTodayDateString(new Date());
+    if (user.last_session_date && user.last_session_date !== today) {
+      throw new ApiError(401, 'Session expired at 12:00 AM midnight. Please log in again to continue.');
     }
 
     // Attach active user to request
@@ -122,9 +129,9 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
     token = req.cookies.token;
   }
 
-  if (token) {
+  if (token && token !== 'undefined' && token !== 'null' && token.trim() !== '') {
     try {
-      const decoded = jwt.verify(token, JWT_SECRET);
+      const decoded = jwt.verify(token.trim(), JWT_SECRET);
       if (decoded?.id) {
         const user = await User.findById(decoded.id).select('-password');
         if (user && !['inactive', 'blocked', 'deactivated'].includes((user.status || '').toLowerCase())) {

@@ -18,6 +18,7 @@ import { getImageUrl } from '@/utils/image';
 import { formatTimeAgo, formatDate } from '@/utils/date';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -72,8 +73,15 @@ export default function AdmitCardsAdminPage() {
       }
 
       const queryParams = new URLSearchParams(params);
+      const token = getAuthToken(session);
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/admit-cards?${queryParams}`);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/admit-cards?${queryParams}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
 
       if (data.success && data.data) {
@@ -97,7 +105,14 @@ export default function AdmitCardsAdminPage() {
       if (isAuthor && authorId) {
         params.author = authorId;
       }
-      const res = await fetch(`${BACKEND_URL}/apis/v1/admit-cards?${new URLSearchParams(params)}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/admit-cards?${new URLSearchParams(params)}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
       if (data.success && data.statusCounts) {
         setStatusCounts(data.statusCounts);
@@ -127,9 +142,13 @@ export default function AdmitCardsAdminPage() {
     );
 
     try {
+      const token = getAuthToken(session);
       const res = await fetch(`${BACKEND_URL}/apis/v1/admit-cards/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
@@ -186,14 +205,17 @@ export default function AdmitCardsAdminPage() {
   const handleConfirmDelete = async () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
+      const token = getAuthToken(session);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
       if (deleteModal.isBulk) {
         for (const id of selectedIds) {
-          await fetch(`${BACKEND_URL}/apis/v1/admit-cards/${id}`, { method: 'DELETE' });
+          await fetch(`${BACKEND_URL}/apis/v1/admit-cards/${id}`, { method: 'DELETE', headers });
         }
         showToast(`Moved ${selectedIds.length} admit card(s) to trash`, 'success');
         setSelectedIds([]);
       } else if (deleteModal.id) {
-        await fetch(`${BACKEND_URL}/apis/v1/admit-cards/${deleteModal.id}`, { method: 'DELETE' });
+        await fetch(`${BACKEND_URL}/apis/v1/admit-cards/${deleteModal.id}`, { method: 'DELETE', headers });
         showToast(`Moved "${deleteModal.title}" to trash`, 'success');
       }
       setDeleteModal({ isOpen: false, id: null, title: '', isBulk: false, isLoading: false });
@@ -206,6 +228,12 @@ export default function AdmitCardsAdminPage() {
   };
 
   const handleBulkApply = async () => {
+    const token = getAuthToken(session);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
     if (bulkAction === 'trash' && selectedIds.length > 0) {
       setDeleteModal({
         isOpen: true,
@@ -218,7 +246,7 @@ export default function AdmitCardsAdminPage() {
       for (const id of selectedIds) {
         await fetch(`${BACKEND_URL}/apis/v1/admit-cards/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ status: 'publish' }),
         });
       }
@@ -229,7 +257,7 @@ export default function AdmitCardsAdminPage() {
       for (const id of selectedIds) {
         await fetch(`${BACKEND_URL}/apis/v1/admit-cards/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ status: 'draft' }),
         });
       }

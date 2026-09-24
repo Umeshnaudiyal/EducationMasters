@@ -26,9 +26,15 @@ import {
 import { getImageUrl } from '@/utils/image';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import {
+  validateImageFiles,
+  MAX_IMAGE_SIZE_KB,
+  IMAGE_ACCEPT_ATTRIBUTE,
+  formatFileSize,
+} from '@/utils/imageValidation';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
-
+   
 // Consistent unique key helper
 const getMediaKey = (item, idx) => {
   if (item._id) return String(item._id);
@@ -120,6 +126,8 @@ export default function MediaLibraryPage() {
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
+  const [uploadErrors, setUploadErrors] = useState([]);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState(null);
 
   // Bulk Selection
   const [bulkMode, setBulkMode] = useState(false);
@@ -433,16 +441,34 @@ export default function MediaLibraryPage() {
     }
   };
 
-  // Upload Logic
+  // Upload Logic with 300 KB & Image Format Frontend Validation
   const handleFileUpload = async (files) => {
     if (!files || files.length === 0) return;
+
+    setUploadErrors([]);
+    setUploadSuccessMsg(null);
+
+    // 1. Validate files client-side against 300 KB size limit and allowed image extensions
+    const validationResult = validateImageFiles(files, { maxSizeKB: MAX_IMAGE_SIZE_KB });
+
+    if (!validationResult.allValid) {
+      setUploadErrors(validationResult.invalidFiles.map((inv) => inv.reason));
+    }
+
+    // If no valid files remain, do not proceed with network upload
+    if (validationResult.validFiles.length === 0) {
+      return;
+    }
+
     setUploading(true);
     let firstUploaded = null;
+    let successfulUploads = 0;
+    const uploadErrorsOccurred = [];
 
     try {
-      for (let i = 0; i < files.length; i++) {
+      for (const file of validationResult.validFiles) {
         const formData = new FormData();
-        formData.append('image', files[i]);
+        formData.append('image', file);
         const res = await fetch(`${BACKEND_URL}/apis/v1/media/upload`, {
           method: 'POST',
           headers: {
@@ -455,15 +481,33 @@ export default function MediaLibraryPage() {
           if (!firstUploaded) firstUploaded = data.data;
           setMediaList((prev) => [data.data, ...prev]);
           setTotal((prev) => prev + 1);
+          successfulUploads++;
+        } else {
+          uploadErrorsOccurred.push(
+            data.message || `Failed to upload "${file.name}". Please ensure size is under ${MAX_IMAGE_SIZE_KB} KB.`
+          );
         }
       }
-      setShowUploadModal(false);
-      if (firstUploaded) {
-        openMediaDetails(firstUploaded, 0);
+
+      if (uploadErrorsOccurred.length > 0) {
+        setUploadErrors((prev) => [...prev, ...uploadErrorsOccurred]);
+      }
+
+      if (successfulUploads > 0) {
+        setUploadSuccessMsg(
+          `Successfully uploaded ${successfulUploads} image${successfulUploads > 1 ? 's' : ''}!`
+        );
+        if (validationResult.allValid && uploadErrorsOccurred.length === 0) {
+          setShowUploadModal(false);
+          setUploadSuccessMsg(null);
+          if (firstUploaded) {
+            openMediaDetails(firstUploaded, 0);
+          }
+        }
       }
     } catch (err) {
       console.error('Upload error:', err);
-      alert('Failed to upload file(s)');
+      setUploadErrors((prev) => [...prev, 'Network error occurred while uploading. Please try again.']);
     } finally {
       setUploading(false);
     }
@@ -622,37 +666,76 @@ export default function MediaLibraryPage() {
             dragOver ? 'border-[#2271b1] bg-blue-50/50' : 'border-slate-300 hover:border-slate-400'
           }`}
         >
-          <div className="max-w-md mx-auto space-y-2.5">
+          <div className="max-w-md mx-auto space-y-3">
             <UploadCloud size={36} className="mx-auto text-[#2271b1]" />
-            <p className="text-xs font-semibold text-slate-800">
-              Drop files anywhere to upload or click below
-            </p>
-            <p className="text-[11px] text-slate-500">
-              Supports JPG, PNG, WEBP, GIF, SVG, and PDF documents. Max file size: 50MB.
-            </p>
             <div>
-              <label className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-semibold rounded cursor-pointer transition-colors shadow-2xs">
+              <p className="text-xs font-semibold text-slate-800">
+                Drop images anywhere to upload or browse below
+              </p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Maximum allowed image size: <strong className="text-slate-700">{MAX_IMAGE_SIZE_KB} KB</strong>
+              </p>
+            </div>
+
+            {/* Validation Error Alert Box */}
+            {uploadErrors.length > 0 && (
+              <div className="text-left bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-800 space-y-1 animate-in fade-in duration-150">
+                <div className="flex items-center justify-between font-bold text-rose-900">
+                  <div className="flex items-center gap-1.5">
+                    <AlertTriangle size={15} className="text-rose-600 shrink-0" />
+                    <span>Upload Validation Notice</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setUploadErrors([])}
+                    className="text-rose-500 hover:text-rose-800 text-[11px] font-semibold cursor-pointer"
+                  >
+                    Dismiss
+                  </button>
+                </div>
+                <ul className="list-disc list-inside space-y-0.5 text-[11px] text-rose-700 pl-1">
+                  {uploadErrors.map((err, idx) => (
+                    <li key={`media-page-err-${idx}`} className="leading-snug">{err}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Success Alert Box */}
+            {uploadSuccessMsg && (
+              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-xs text-emerald-800 flex items-center justify-center gap-1.5 font-medium animate-in fade-in duration-150">
+                <Check size={14} className="text-emerald-600" />
+                <span>{uploadSuccessMsg}</span>
+              </div>
+            )}
+
+            <div>
+              <label className="inline-flex items-center gap-1.5 px-4 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-semibold rounded cursor-pointer transition-colors shadow-2xs">
                 {uploading ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    <span>Uploading...</span>
+                    <span>Uploading Images...</span>
                   </>
                 ) : (
                   <>
                     <UploadCloud size={14} />
-                    <span>Select Files</span>
+                    <span>Select Image Files</span>
                   </>
                 )}
                 <input
                   type="file"
                   multiple
-                  accept="image/*,.pdf,.doc,.docx"
+                  accept={IMAGE_ACCEPT_ATTRIBUTE}
                   disabled={uploading}
                   className="hidden"
                   onChange={(e) => handleFileUpload(e.target.files)}
                 />
               </label>
             </div>
+
+            <p className="text-[10px] text-slate-400">
+              Supported formats: WebP, JPG, JPEG, PNG, GIF, SVG, AVIF
+            </p>
           </div>
         </div>
       )}

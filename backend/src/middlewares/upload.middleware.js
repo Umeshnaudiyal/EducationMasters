@@ -27,20 +27,26 @@ const storage = multer.diskStorage({
   },
 });
 
-// File filter for images
+// File filter for images (WebP, JPG, JPEG, PNG, GIF, SVG, AVIF)
 const fileFilter = (req, file, cb) => {
-  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+  const allowedExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif', '.svg', '.avif'];
   const ext = path.extname(file.originalname).toLowerCase();
+  const mimeType = (file.mimetype || '').toLowerCase();
 
-  if (allowedExtensions.includes(ext)) {
+  const isExtValid = allowedExtensions.includes(ext);
+  const isMimeValid = mimeType.startsWith('image/') || allowedExtensions.some(e => mimeType.includes(e.replace('.', '')));
+
+  if (isExtValid || isMimeValid) {
     cb(null, true);
   } else {
-    cb(new Error(`Invalid file type. Allowed formats: ${allowedExtensions.join(', ')}`), false);
+    cb(new Error(`Invalid image format "${ext || file.originalname}". Allowed formats: WEBP, JPG, JPEG, PNG, GIF, SVG, AVIF.`), false);
   }
 };
+
+export const MAX_FILE_SIZE_BYTES = 300 * 1024; // 300 KB limit
 
 export const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB limit
+  limits: { fileSize: MAX_FILE_SIZE_BYTES }, // 300 KB limit
 });

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Briefcase, Award, BarChart3, ArrowUpRight } from 'lucide-react';
 import { getImageUrl } from '@/utils/image';
 
@@ -131,11 +132,11 @@ export default function LiveUpdatesFeed() {
                   </div>
 
                   <div className="flex-1 min-w-0 flex flex-col justify-between h-20">
-                    <a href={`/job/${item.slug || item._id}`}>
+                    <Link href={`/job/${item.slug || item._id}`}>
                       <h3 className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
                         {item.title}
                       </h3>
-                    </a>
+                    </Link>
 
                     <div className="text-[11px] text-slate-500 font-normal flex items-center justify-between mt-auto pt-1 border-t border-slate-100">
                       <span>📅 {formatShortDate(item.created_at || item.createdAt)}</span>
@@ -183,7 +184,7 @@ export default function LiveUpdatesFeed() {
 
           <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3 sm:gap-4">
             {SUBJECT_MCQS.map((sub) => (
-              <a
+              <Link
                 key={sub.name}
                 href={sub.href}
                 className="bg-white border border-slate-200/80 hover:border-blue-400 rounded-xl p-3 sm:p-3.5 flex flex-col items-center justify-center text-center shadow-2xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 group no-underline"
@@ -201,7 +202,7 @@ export default function LiveUpdatesFeed() {
                   {sub.prefix}
                   <span className="text-[#e11d48]">{sub.accent}</span>
                 </span>
-              </a>
+              </Link>
             ))}
           </div>
 

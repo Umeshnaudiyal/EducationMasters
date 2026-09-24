@@ -23,7 +23,12 @@ export default function EditInstitutePage() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/${slug}`);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/institutes/${slug}`, {
+        cache: 'no-store',
+        headers: {
+          'x-bypass-cache': '1',
+        },
+      });
       if (!res.ok) {
         throw new Error(res.status === 404 ? 'Institute not found' : `HTTP error ${res.status}`);
       }

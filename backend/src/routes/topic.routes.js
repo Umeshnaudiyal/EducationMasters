@@ -11,7 +11,7 @@ import { cacheResponse, invalidateCache } from '../middlewares/cache.middleware.
 
 const router = express.Router();
 
-const TOPIC_CACHE_PATTERNS = ['/apis/v1/topic*', '/apis/v1/topics*'];
+const TOPIC_CACHE_PATTERNS = ['topic*', 'search*'];
 
 router.post('/bulk', invalidateCache(...TOPIC_CACHE_PATTERNS), bulkActionTopics);
 router.route('/')

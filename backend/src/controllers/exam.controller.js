@@ -53,6 +53,27 @@ export const getExams = asyncHandler(async (req, res) => {
     ];
   }
 
+  // Author-specific scoping
+  const userRole = (req.user?.role || '').toLowerCase();
+  const userId = req.user?._id || req.user?.id;
+  const isAuthor = userRole === 'author' || userRole === 'writer' || userRole === 'contributor';
+  if (isAuthor && userId) {
+    const authorCondition = {
+      $or: [
+        { author: userId },
+        ...(req.user.sql_id ? [{ user_id: req.user.sql_id }] : []),
+        { author: null },
+        { author: { $exists: false } },
+      ],
+    };
+    if (query.$or) {
+      query.$and = [{ $or: query.$or }, authorCondition];
+      delete query.$or;
+    } else {
+      query.$and = [authorCondition];
+    }
+  }
+
   const [exams, total] = await Promise.all([
     Exam.find(query)
       .sort({ sql_id: 1, createdAt: -1 })
@@ -108,6 +129,9 @@ export const createExam = asyncHandler(async (req, res) => {
     slug: cleanSlug,
     image: image ? image.trim() : '',
     description: description || '',
+    author: req.user?._id || null,
+    author_name: req.user?.name || req.user?.nicename || 'Author',
+    user_id: req.user?.sql_id || null,
     seo: {
       allow_indexing: seo?.allow_indexing !== undefined ? Boolean(seo.allow_indexing) : true,
       meta_title: seo?.meta_title || name.trim(),
@@ -124,6 +148,16 @@ export const updateExam = asyncHandler(async (req, res) => {
   const exam = await Exam.findById(id);
   if (!exam) {
     throw new ApiError(404, 'Examination not found');
+  }
+
+  const userRole = (req.user?.role || '').toLowerCase();
+  const userId = req.user?._id || req.user?.id;
+  const isAuthor = userRole === 'author' || userRole === 'writer' || userRole === 'contributor';
+  if (isAuthor && userId) {
+    const isOwner = exam.author && String(exam.author) === String(userId);
+    if (!isOwner) {
+      throw new ApiError(403, 'Permission denied: You can only modify your own examination question papers.');
+    }
   }
 
   const validation = await validateExamData(req.body, { isNew: false, currentId: exam._id });
@@ -157,10 +191,22 @@ export const updateExam = asyncHandler(async (req, res) => {
 
 export const deleteExam = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const exam = await Exam.findByIdAndDelete(id);
+  const exam = await Exam.findById(id);
   if (!exam) {
     throw new ApiError(404, 'Examination not found');
   }
+
+  const userRole = (req.user?.role || '').toLowerCase();
+  const userId = req.user?._id || req.user?.id;
+  const isAuthor = userRole === 'author' || userRole === 'writer' || userRole === 'contributor';
+  if (isAuthor && userId) {
+    const isOwner = exam.author && String(exam.author) === String(userId);
+    if (!isOwner) {
+      throw new ApiError(403, 'Permission denied: You can only delete your own examination question papers.');
+    }
+  }
+
+  await Exam.findByIdAndDelete(id);
   res.status(200).json(new ApiResponse(200, null, 'Examination deleted successfully'));
 });
 
@@ -170,9 +216,18 @@ export const bulkActionExams = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'No examinations selected');
   }
 
+  const userRole = (req.user?.role || '').toLowerCase();
+  const userId = req.user?._id || req.user?.id;
+  const isAuthor = userRole === 'author' || userRole === 'writer' || userRole === 'contributor';
+
+  let targetQuery = { _id: { $in: ids } };
+  if (isAuthor && userId) {
+    targetQuery = { _id: { $in: ids }, author: userId };
+  }
+
   if (action === 'delete') {
-    await Exam.deleteMany({ _id: { $in: ids } });
-    return res.status(200).json(new ApiResponse(200, null, `Deleted ${ids.length} examinations`));
+    await Exam.deleteMany(targetQuery);
+    return res.status(200).json(new ApiResponse(200, null, `Deleted examinations`));
   }
 
   throw new ApiError(400, 'Invalid bulk action');

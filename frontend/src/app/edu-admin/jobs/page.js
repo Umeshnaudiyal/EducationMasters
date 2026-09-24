@@ -18,6 +18,7 @@ import { getImageUrl } from '@/utils/image';
 import { formatTimeAgo, formatDate } from '@/utils/date';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -74,8 +75,15 @@ export default function JobsAdminPage() {
       }
 
       const queryParams = new URLSearchParams(params);
+      const token = getAuthToken(session);
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/jobs?${queryParams}`);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/jobs?${queryParams}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
 
       if (data.success && data.data) {
@@ -99,7 +107,14 @@ export default function JobsAdminPage() {
       if (isAuthor && authorId) {
         params.author = authorId;
       }
-      const res = await fetch(`${BACKEND_URL}/apis/v1/jobs?${new URLSearchParams(params)}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/jobs?${new URLSearchParams(params)}`, {
+        cache: 'no-store',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
       if (data.success && data.statusCounts) {
         setStatusCounts(data.statusCounts);
@@ -129,9 +144,13 @@ export default function JobsAdminPage() {
     );
 
     try {
+      const token = getAuthToken(session);
       const res = await fetch(`${BACKEND_URL}/apis/v1/jobs/${id}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify({ status: newStatus }),
       });
       const data = await res.json();
@@ -188,14 +207,17 @@ export default function JobsAdminPage() {
   const handleConfirmDelete = async () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
+      const token = getAuthToken(session);
+      const headers = token ? { Authorization: `Bearer ${token}` } : {};
+
       if (deleteModal.isBulk) {
         for (const id of selectedIds) {
-          await fetch(`${BACKEND_URL}/apis/v1/jobs/${id}`, { method: 'DELETE' });
+          await fetch(`${BACKEND_URL}/apis/v1/jobs/${id}`, { method: 'DELETE', headers });
         }
         showToast(`Moved ${selectedIds.length} job(s) to trash`, 'success');
         setSelectedIds([]);
       } else if (deleteModal.id) {
-        await fetch(`${BACKEND_URL}/apis/v1/jobs/${deleteModal.id}`, { method: 'DELETE' });
+        await fetch(`${BACKEND_URL}/apis/v1/jobs/${deleteModal.id}`, { method: 'DELETE', headers });
         showToast(`Moved "${deleteModal.title}" to trash`, 'success');
       }
       setDeleteModal({ isOpen: false, id: null, title: '', isBulk: false, isLoading: false });
@@ -208,6 +230,12 @@ export default function JobsAdminPage() {
   };
 
   const handleBulkApply = async () => {
+    const token = getAuthToken(session);
+    const headers = {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    };
+
     if (bulkAction === 'trash' && selectedIds.length > 0) {
       setDeleteModal({
         isOpen: true,
@@ -220,7 +248,7 @@ export default function JobsAdminPage() {
       for (const id of selectedIds) {
         await fetch(`${BACKEND_URL}/apis/v1/jobs/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ status: 'publish' }),
         });
       }
@@ -231,7 +259,7 @@ export default function JobsAdminPage() {
       for (const id of selectedIds) {
         await fetch(`${BACKEND_URL}/apis/v1/jobs/${id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({ status: 'draft' }),
         });
       }

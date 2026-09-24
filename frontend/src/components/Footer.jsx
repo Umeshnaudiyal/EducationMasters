@@ -93,9 +93,9 @@ export default function Footer() {
             {/* Official DMCA Protected Badge Graphic (Matching Screenshot 2) */}
             <div className="pt-2">
               <Link
-                href="/terms-of-service#intellectual-property"
+                href="/disclaimer"
                 className="inline-flex items-center cursor-pointer hover:opacity-95 transition no-underline"
-                title="DMCA & Intellectual Property Protection"
+                title="DMCA & Copyright Protection Policy"
               >
                 {/* Circle Lock Container */}
                 <div className="w-11 h-11 rounded-full border-[4px] border-[#65a30d] bg-white flex items-center justify-center shrink-0 z-10 -mr-2.5 shadow-2xs">
@@ -138,12 +138,13 @@ export default function Footer() {
 
             <ul className="space-y-3 text-base sm:text-lg font-semibold">
               <li><Link href="/" className="text-blue-600 hover:text-blue-800 hover:underline transition">Home</Link></li>
-              <li><Link href="/terms-of-service#disclaimer" className="text-blue-600 hover:text-blue-800 hover:underline transition">Disclaimer</Link></li>
+              <li><Link href="/disclaimer" className="text-blue-600 hover:text-blue-800 hover:underline transition">Disclaimer</Link></li>
               <li><Link href="/terms-of-service#contact" className="text-blue-600 hover:text-blue-800 hover:underline transition">Contact Us</Link></li>
               <li><Link href="/syllabus" className="text-blue-600 hover:text-blue-800 hover:underline transition">Syllabus</Link></li>
               <li><Link href="/terms-of-service" className="text-blue-600 hover:text-blue-800 hover:underline transition">Terms of Service</Link></li>
             </ul>
           </div>
+
 
           {/* Column 4: Our Partners & Authentic Payment Logos */}
           <div className="space-y-5">

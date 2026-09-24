@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import { useSession } from 'next-auth/react';
 import {
   Upload,
   X,
@@ -12,10 +13,19 @@ import {
   Image as ImageIcon,
   FileText,
   Loader2,
+  AlertCircle,
+  AlertTriangle,
 } from 'lucide-react';
 import { getImageUrl } from '@/utils/image';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
+import {
+  validateImageFiles,
+  MAX_IMAGE_SIZE_KB,
+  IMAGE_ACCEPT_ATTRIBUTE,
+  formatFileSize,
+} from '@/utils/imageValidation';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -33,6 +43,8 @@ export default function MediaLibraryModal({
   const [loadingMore, setLoadingMore] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [selectedMedia, setSelectedMedia] = useState(null);
+  const [uploadErrors, setUploadErrors] = useState([]);
+  const [uploadSuccessMsg, setUploadSuccessMsg] = useState(null);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -56,6 +68,8 @@ export default function MediaLibraryModal({
   const [isDragging, setIsDragging] = useState(false);
   const saveTimeoutRef = useRef(null);
 
+  const { data: session } = useSession();
+
   // Fetch Media List
   const fetchMedia = async (pageNum = 1, append = false) => {
     try {
@@ -73,7 +87,13 @@ export default function MediaLibraryModal({
         date: dateFilter !== 'all' ? dateFilter : '',
       });
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/media?${queryParams}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/media?${queryParams}`, {
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          'x-bypass-cache': '1',
+        },
+      });
       const data = await res.json();
 
       if (data.success && data.data) {
@@ -124,9 +144,13 @@ export default function MediaLibraryModal({
     saveTimeoutRef.current = setTimeout(async () => {
       try {
         setSavingDetails(true);
+        const token = getAuthToken(session);
         await fetch(`${BACKEND_URL}/apis/v1/media/${selectedMedia._id}`, {
           method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify(updatedFields),
         });
       } catch (err) {
@@ -157,20 +181,42 @@ export default function MediaLibraryModal({
     triggerSaveMetadata({ description: val });
   };
 
-  // Upload Logic
+  // Upload Logic with 300 KB & Image Format Frontend Validation
   const processFiles = async (files) => {
     if (!files || files.length === 0) return;
 
+    setUploadErrors([]);
+    setUploadSuccessMsg(null);
+
+    // 1. Run client-side validation against 300 KB limit and allowed image formats
+    const validationResult = validateImageFiles(files, { maxSizeKB: MAX_IMAGE_SIZE_KB });
+
+    if (!validationResult.allValid) {
+      const errorList = validationResult.invalidFiles.map((inv) => inv.reason);
+      setUploadErrors(errorList);
+    }
+
+    // If no valid files remain, abort upload
+    if (validationResult.validFiles.length === 0) {
+      return;
+    }
+
     setUploading(true);
     let lastUploaded = null;
+    let successfulUploads = 0;
+    const uploadErrorsOccurred = [];
+    const token = getAuthToken(session);
 
-    for (const file of files) {
+    for (const file of validationResult.validFiles) {
       const formData = new FormData();
       formData.append('image', file);
 
       try {
         const res = await fetch(`${BACKEND_URL}/apis/v1/media/upload`, {
           method: 'POST',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: formData,
         });
         const data = await res.json();
@@ -178,16 +224,38 @@ export default function MediaLibraryModal({
           lastUploaded = data.data;
           setMediaList((prev) => [data.data, ...prev]);
           setTotal((prev) => prev + 1);
+          successfulUploads++;
+        } else {
+          uploadErrorsOccurred.push(
+            data.message || `Failed to upload "${file.name}". Please ensure size is under ${MAX_IMAGE_SIZE_KB} KB.`
+          );
         }
       } catch (err) {
         console.error('Upload failed:', err);
+        uploadErrorsOccurred.push(`Network error uploading "${file.name}". Please try again.`);
       }
     }
 
+    if (uploadErrorsOccurred.length > 0) {
+      setUploadErrors((prev) => [...prev, ...uploadErrorsOccurred]);
+    }
+
     setUploading(false);
-    if (lastUploaded) {
-      handleSelect(lastUploaded);
-      setActiveTab('library');
+
+    if (successfulUploads > 0) {
+      setUploadSuccessMsg(
+        `Successfully uploaded ${successfulUploads} image${successfulUploads > 1 ? 's' : ''}!`
+      );
+      if (lastUploaded) {
+        handleSelect(lastUploaded);
+      }
+      // If there were no validation errors at all, switch to library tab smoothly
+      if (validationResult.allValid && uploadErrorsOccurred.length === 0) {
+        setTimeout(() => {
+          setActiveTab('library');
+          setUploadSuccessMsg(null);
+        }, 600);
+      }
     }
   };
 
@@ -229,8 +297,12 @@ export default function MediaLibraryModal({
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
       const deleteId = deleteModal.item._id || deleteModal.item.sql_id;
+      const token = getAuthToken(session);
       await fetch(`${BACKEND_URL}/apis/v1/media/${deleteId}`, {
         method: 'DELETE',
+        headers: {
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       });
       setMediaList((prev) => prev.filter((m) => (m._id || m.sql_id) !== deleteId));
       setTotal((prev) => Math.max(0, prev - 1));
@@ -259,6 +331,7 @@ export default function MediaLibraryModal({
     if (onSelect) {
       onSelect({
         ...selectedMedia,
+        url: getImageUrl(selectedMedia),
         alt: altText || selectedMedia.alt,
         caption: captionText || selectedMedia.caption,
         name: titleText || selectedMedia.name,
@@ -323,37 +396,80 @@ export default function MediaLibraryModal({
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
-              className={`flex-1 flex flex-col items-center justify-center p-8 transition-colors ${
+              className={`flex-1 flex flex-col items-center justify-center p-6 sm:p-8 transition-colors overflow-y-auto ${
                 isDragging ? 'bg-blue-50/70 border-2 border-dashed border-[#2271b1]' : 'bg-[#fcfcfc]'
               }`}
             >
-              <div className="border-2 border-dashed border-slate-300 rounded-lg p-12 max-w-lg w-full text-center bg-white shadow-2xs hover:border-[#2271b1] transition-colors">
-                <Upload size={44} className="mx-auto text-slate-400 mb-3" />
-                <h3 className="text-base font-semibold text-slate-800 mb-1">
-                  Drop files anywhere to upload
-                </h3>
-                <p className="text-xs text-slate-500 mb-4">or</p>
-                <label className="inline-flex items-center gap-2 px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-bold rounded cursor-pointer transition-colors shadow-2xs active:scale-95">
-                  {uploading ? (
-                    <>
-                      <Loader2 size={14} className="animate-spin" />
-                      <span>Uploading Media...</span>
-                    </>
-                  ) : (
-                    <span>Select Files</span>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*,.pdf,.doc,.docx"
-                    multiple
-                    onChange={handleFileInputChange}
-                    disabled={uploading}
-                    className="hidden"
-                  />
-                </label>
-                <p className="text-[11px] text-slate-400 mt-4">
-                  Maximum upload file size: 50 MB.
-                </p>
+              <div className="border-2 border-dashed border-slate-300 rounded-lg p-8 sm:p-10 max-w-lg w-full text-center bg-white shadow-2xs hover:border-[#2271b1] transition-colors space-y-3">
+                <Upload size={40} className="mx-auto text-slate-400" />
+                <div>
+                  <h3 className="text-base font-semibold text-slate-800">
+                    Drop images anywhere to upload
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">or browse from your device</p>
+                </div>
+
+                {/* Validation Error Alert Box */}
+                {uploadErrors.length > 0 && (
+                  <div className="text-left bg-rose-50 border border-rose-200 rounded-lg p-3 text-xs text-rose-800 space-y-1 animate-in fade-in duration-150">
+                    <div className="flex items-center justify-between font-bold text-rose-900">
+                      <div className="flex items-center gap-1.5">
+                        <AlertCircle size={15} className="text-rose-600 shrink-0" />
+                        <span>Upload Validation Notice</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setUploadErrors([])}
+                        className="text-rose-500 hover:text-rose-800 text-[11px] font-semibold cursor-pointer"
+                      >
+                        Dismiss
+                      </button>
+                    </div>
+                    <ul className="list-disc list-inside space-y-0.5 text-[11px] text-rose-700 pl-1">
+                      {uploadErrors.map((err, idx) => (
+                        <li key={`upload-err-${idx}`} className="leading-snug">{err}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Success Alert Box */}
+                {uploadSuccessMsg && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 text-xs text-emerald-800 flex items-center justify-center gap-1.5 font-medium animate-in fade-in duration-150">
+                    <Check size={14} className="text-emerald-600" />
+                    <span>{uploadSuccessMsg}</span>
+                  </div>
+                )}
+
+                <div>
+                  <label className="inline-flex items-center gap-2 px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-bold rounded cursor-pointer transition-colors shadow-2xs active:scale-95">
+                    {uploading ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Uploading Images...</span>
+                      </>
+                    ) : (
+                      <span>Select Image Files</span>
+                    )}
+                    <input
+                      type="file"
+                      accept={IMAGE_ACCEPT_ATTRIBUTE}
+                      multiple
+                      onChange={handleFileInputChange}
+                      disabled={uploading}
+                      className="hidden"
+                    />
+                  </label>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 space-y-1">
+                  <p className="text-[11px] font-medium text-slate-600">
+                    Maximum image size: <span className="font-bold text-slate-800">{MAX_IMAGE_SIZE_KB} KB</span>
+                  </p>
+                  <p className="text-[10px] text-slate-400">
+                    Supported formats: WebP, JPG, JPEG, PNG, GIF, SVG, AVIF
+                  </p>
+                </div>
               </div>
             </div>
           ) : (

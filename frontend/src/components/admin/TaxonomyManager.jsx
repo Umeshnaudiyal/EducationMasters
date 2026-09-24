@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { useSession } from 'next-auth/react';
 import Image from 'next/image';
 import {
   Search,
@@ -22,6 +23,7 @@ import {
 import MediaLibraryModal from './MediaLibraryModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import { getImageUrl } from '@/utils/image';
+import { getAuthToken } from '@/utils/auth';
 
 function TaxonomyThumbnail({ src, alt, size = 14, className = 'w-9 h-9' }) {
   const [hasError, setHasError] = useState(false);
@@ -59,6 +61,13 @@ export default function TaxonomyManager({
   showSeo = true,
   stateDataModalRenderer = null,
 }) {
+  const { data: session } = useSession();
+
+  // Helper to reliably get valid JWT token
+  const getActiveToken = useCallback(() => {
+    return getAuthToken(session);
+  }, [session]);
+
   // Data state
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -122,7 +131,16 @@ export default function TaxonomyManager({
         search: activeSearch,
       });
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}?${query}`);
+      const token = getActiveToken();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}?${query}`, {
+        cache: 'no-store',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache',
+          'x-bypass-cache': '1',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -138,7 +156,7 @@ export default function TaxonomyManager({
     } finally {
       setLoading(false);
     }
-  }, [apiEndpoint, page, limit, activeSearch]);
+  }, [apiEndpoint, page, limit, activeSearch, getActiveToken]);
 
   useEffect(() => {
     fetchItems();
@@ -250,11 +268,13 @@ export default function TaxonomyManager({
         : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}`;
 
       const method = editingId ? 'PUT' : 'POST';
+      const token = getActiveToken();
 
       const res = await fetch(url, {
         method,
         headers: {
           'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
         body: JSON.stringify(formData),
       });
@@ -301,9 +321,15 @@ export default function TaxonomyManager({
     if (!itemToDelete) return;
     try {
       setDeleting(true);
+      const token = getActiveToken();
       const res = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}/${itemToDelete._id}`,
-        { method: 'DELETE' }
+        {
+          method: 'DELETE',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+        }
       );
       const data = await res.json();
       if (res.ok && data.success) {
@@ -353,11 +379,15 @@ export default function TaxonomyManager({
 
       try {
         setBulkLoading(true);
+        const token = getActiveToken();
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}/bulk-action`,
           {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({ action: 'delete', ids: selectedIds }),
           }
         );

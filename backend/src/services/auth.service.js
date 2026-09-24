@@ -86,16 +86,44 @@ class AuthService {
 
     // Session logic:
     // If the user already logged in today (same day session), PRESERVE the initial login_time.
-    // If it is a new day or first login, set login_time to now.
+    // If it is a new day or first login, auto-close previous day's log, set login_time to now, and reset logout_time to null.
     const isSameDayLogin = user.last_session_date === today && user.login_time;
 
     if (isSameDayLogin) {
       // Same day login: login_time remains the initial login time of today!
       user.last_login_time = now;
+      // If user had logged out earlier today and logged back in, reactivate session
+      user.logout_time = null;
     } else {
-      // First login of the day or after midnight expiry:
+      // Auto-close previous day's open session if returning on a new day
+      if (user.last_session_date && user.last_session_date !== today) {
+        try {
+          const previousActiveLog = await UserLog.findOne({
+            user: user._id,
+            session_date: user.last_session_date,
+            status: 'active',
+          });
+
+          if (previousActiveLog) {
+            const prevLogin = previousActiveLog.login_time || user.login_time || now;
+            const prevLogout = previousActiveLog.expires_at || new Date(`${user.last_session_date}T23:59:59.999Z`);
+            const prevDurationSec = Math.max(0, Math.floor((new Date(prevLogout).getTime() - new Date(prevLogin).getTime()) / 1000));
+
+            previousActiveLog.logout_time = prevLogout;
+            previousActiveLog.duration_seconds = prevDurationSec;
+            previousActiveLog.duration_formatted = formatDuration(prevDurationSec);
+            previousActiveLog.status = 'completed';
+            await previousActiveLog.save();
+          }
+        } catch (prevErr) {
+          console.warn('[AuthService] Error auto-closing previous day session:', prevErr.message);
+        }
+      }
+
+      // First login of the new day:
       user.login_time = now;
       user.last_login_time = now;
+      user.logout_time = null;
       user.last_session_date = today;
     }
 
@@ -123,6 +151,9 @@ class AuthService {
         existingLog.role = user.role;
         existingLog.action = 'login';
         existingLog.status = 'active';
+        existingLog.logout_time = null;
+        existingLog.duration_seconds = 0;
+        existingLog.duration_formatted = 'Active';
         existingLog.ip_address = ipAddress;
         existingLog.user_agent = userAgent;
         existingLog.device = device;
@@ -132,7 +163,7 @@ class AuthService {
         }
         await existingLog.save();
       } else {
-        // Create single daily log
+        // Create single daily log for today
         await UserLog.create({
           user: user._id,
           user_name: user.name,
@@ -151,6 +182,7 @@ class AuthService {
     } catch (logErr) {
       console.error('[AuthService] Error creating/updating UserLog on login:', logErr);
     }
+
 
     return {
       user: {
@@ -258,8 +290,40 @@ class AuthService {
     }
 
     const now = new Date();
-    const midnight = getMidnightDate();
-    const secondsRemaining = Math.max(0, Math.floor((midnight.getTime() - now.getTime()) / 1000));
+    const today = getTodayDateString(now);
+    const sessionDate = user.last_session_date;
+
+    // Check if session belongs to today
+    const isTodaySession = Boolean(sessionDate && sessionDate === today);
+    const sessionExpiresAt = user.session_expires_at
+      ? new Date(user.session_expires_at)
+      : (sessionDate ? getMidnightDate(new Date(sessionDate)) : getMidnightDate(now));
+
+    const isExpired = !isTodaySession || now.getTime() >= sessionExpiresAt.getTime();
+    const secondsRemaining = isExpired ? 0 : Math.max(0, Math.floor((sessionExpiresAt.getTime() - now.getTime()) / 1000));
+
+    // If session from previous day is found to be active in UserLog, auto-complete it
+    if (isExpired && sessionDate && sessionDate !== today) {
+      try {
+        const prevLog = await UserLog.findOne({
+          user: user._id,
+          session_date: sessionDate,
+          status: 'active',
+        });
+        if (prevLog) {
+          const prevLogin = prevLog.login_time || user.login_time || now;
+          const prevLogout = prevLog.expires_at || sessionExpiresAt;
+          const prevDurationSec = Math.max(0, Math.floor((new Date(prevLogout).getTime() - new Date(prevLogin).getTime()) / 1000));
+          prevLog.logout_time = prevLogout;
+          prevLog.duration_seconds = prevDurationSec;
+          prevLog.duration_formatted = formatDuration(prevDurationSec);
+          prevLog.status = 'completed';
+          await prevLog.save();
+        }
+      } catch (logErr) {
+        console.warn('[AuthService] Error closing expired session log:', logErr.message);
+      }
+    }
 
     return {
       user: {
@@ -268,15 +332,15 @@ class AuthService {
         nicename: user.nicename,
         email: user.email,
         role: user.role,
-        login_time: user.login_time,
-        logout_time: user.logout_time,
+        login_time: isTodaySession ? user.login_time : null,
+        logout_time: isTodaySession ? user.logout_time : null,
         last_login_time: user.last_login_time,
         session_date: user.last_session_date,
-        expires_at: user.session_expires_at || midnight,
+        expires_at: user.session_expires_at || sessionExpiresAt,
       },
       secondsRemaining,
-      isExpired: secondsRemaining <= 0,
-      formattedTimeRemaining: formatDuration(secondsRemaining),
+      isExpired,
+      formattedTimeRemaining: isExpired ? 'Expired' : formatDuration(secondsRemaining),
     };
   }
 
@@ -331,9 +395,14 @@ class AuthService {
    */
   async getDailyDashboardLogs({ date = '', search = '', role = '', currentUser = null }) {
     const today = date || getTodayDateString(new Date());
+
+    // Auto-close any lingering active sessions from previous days
+    await this.autoClosePastSessions();
+
     const isSuperOrAdmin =
       currentUser &&
       (currentUser.role === 'admin' || currentUser.role === 'superadmin');
+
 
     // 1. Build User query: Match non-deleted users (handles null, empty string, or non-existent deleted_at)
     const userQuery = {
@@ -697,6 +766,38 @@ class AuthService {
       calendarDays,
     };
   }
+
+  /**
+   * Auto-closes any dangling past sessions across all users (where session_date < today and status === 'active')
+   */
+  async autoClosePastSessions() {
+    try {
+      const today = getTodayDateString(new Date());
+      const pastActiveLogs = await UserLog.find({
+        session_date: { $lt: today },
+        status: 'active',
+      });
+
+      for (const log of pastActiveLogs) {
+        const logLogin = log.login_time || new Date(`${log.session_date}T09:00:00.000Z`);
+        const logLogout = log.expires_at || new Date(`${log.session_date}T23:59:59.999Z`);
+        const durSec = Math.max(0, Math.floor((new Date(logLogout).getTime() - new Date(logLogin).getTime()) / 1000));
+
+        log.logout_time = logLogout;
+        log.duration_seconds = durSec;
+        log.duration_formatted = formatDuration(durSec);
+        log.status = 'completed';
+        await log.save();
+      }
+
+      if (pastActiveLogs.length > 0) {
+        console.log(`[AuthService] Auto-closed ${pastActiveLogs.length} past dangling session(s).`);
+      }
+    } catch (err) {
+      console.warn('[AuthService] Error in autoClosePastSessions:', err.message);
+    }
+  }
 }
 
 export default new AuthService();
+

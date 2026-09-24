@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import {
   Plus,
   Search,
@@ -17,6 +18,7 @@ import {
 } from 'lucide-react';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { getAuthToken } from '@/utils/auth';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -30,6 +32,7 @@ const slugify = (text) => {
 };
 
 export default function FacilitiesManagementPage() {
+  const { data: session } = useSession();
   // Facility List & Pagination
   const [facilities, setFacilities] = useState([]);
   const [total, setTotal] = useState(10);
@@ -70,7 +73,15 @@ export default function FacilitiesManagementPage() {
         search: search.trim(),
       });
 
-      const res = await fetch(`${BACKEND_URL}/apis/v1/facilities?${queryParams}`);
+      const token = getAuthToken(session);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/facilities?${queryParams}`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'x-bypass-cache': '1',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      });
       const data = await res.json();
 
       if (data.success) {
@@ -83,7 +94,7 @@ export default function FacilitiesManagementPage() {
     } finally {
       setLoading(false);
     }
-  }, [search]);
+  }, [search, session]);
 
   useEffect(() => {
     fetchFacilities();
@@ -125,6 +136,7 @@ export default function FacilitiesManagementPage() {
 
     try {
       setSubmitting(true);
+      const token = getAuthToken(session);
       const payload = {
         name: facilityName.trim(),
         slug: facilitySlug.trim() || slugify(facilityName),
@@ -139,7 +151,10 @@ export default function FacilitiesManagementPage() {
 
       const res = await fetch(url, {
         method,
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
         body: JSON.stringify(payload),
       });
 
@@ -190,10 +205,14 @@ export default function FacilitiesManagementPage() {
   const handleConfirmDelete = async () => {
     setDeleteModal((prev) => ({ ...prev, isLoading: true }));
     try {
+      const token = getAuthToken(session);
       if (deleteModal.isBulk) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/facilities/bulk`, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
           body: JSON.stringify({ action: 'delete', ids: selectedIds }),
         });
 
@@ -209,6 +228,9 @@ export default function FacilitiesManagementPage() {
       } else if (deleteModal.id) {
         const res = await fetch(`${BACKEND_URL}/apis/v1/facilities/${deleteModal.id}`, {
           method: 'DELETE',
+          headers: {
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
         });
         const data = await res.json();
 

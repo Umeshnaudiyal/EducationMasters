@@ -13,6 +13,7 @@ import {
   Building, Clock, FileText, HelpCircle, CheckCircle2,
   Share, BookmarkCheck
 } from 'lucide-react';
+import StateLink from '@/components/StateLink';
 import { getImageUrl } from '@/utils/image';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1';
@@ -421,6 +422,7 @@ export default function SingleArticlePage() {
 
     // Extract authentic Author details
     let authorName = 'Vikash Sharma';
+    let authorSlug = 'DigitalDeepak';
     let authorImage = 'https://educationmasters.in/assets/img/users/admin_1777271474.png';
     let authorBio = 'Vikash Sharma is an education expert and digital learning strategist with over 10 years of experience in the Indian education ecosystem. As the founder of EducationMasters.in, he is dedicated to helping students and job aspirants stay updated with the latest government exams, results, and career guidance.';
 
@@ -428,6 +430,7 @@ export default function SingleArticlePage() {
       if (typeof raw.author === 'object') {
         const rawName = raw.author.name?.trim() || '';
         const rawNice = raw.author.nicename?.trim() || '';
+        authorSlug = rawNice || raw.author.slug || rawName || 'DigitalDeepak';
 
         if (rawName.toLowerCase() === 'admin' && rawNice) {
           authorName = rawNice;
@@ -450,13 +453,21 @@ export default function SingleArticlePage() {
         }
       } else if (typeof raw.author === 'string') {
         authorName = raw.author;
+        authorSlug = raw.author;
       }
     }
 
     const authorObj = {
       name: authorName,
+      slug: authorSlug,
       image: authorImage,
-      bio: authorBio
+      bio: authorBio,
+      nicename: typeof raw.author === 'object' ? raw.author.nicename : '',
+      website: typeof raw.author === 'object' ? raw.author.website : '',
+      twitter: typeof raw.author === 'object' ? raw.author.twitter : '',
+      facebook: typeof raw.author === 'object' ? raw.author.facebook : '',
+      linkedin: typeof raw.author === 'object' ? raw.author.linkedin : '',
+      instagram: typeof raw.author === 'object' ? raw.author.instagram : '',
     };
 
     const pubDate = formatDate(raw.created_at || raw.createdAt || raw.exam_rdate || raw.result_date);
@@ -538,6 +549,8 @@ export default function SingleArticlePage() {
       lastDate: isJob ? formatDate(raw.app_ends || raw.dates?.last_date) : (isResult ? 'Result Declared' : 'Download Available'),
       image: getImageUrl(raw.featured_media, 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80'),
       content: descriptionHtml,
+      state: raw.state,
+      dept: deptNameVal,
       isJob,
       isResult,
       isAdmitCard,
@@ -792,7 +805,17 @@ export default function SingleArticlePage() {
                 {/* 3. Byline Meta: Author, Category, Posted Date & Status */}
                 <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-slate-700 font-normal">
                   <span>
-                    By <span className="font-bold text-slate-900">{typeof article.author === 'object' ? article.author.name : article.author}</span>
+                    By{' '}
+                    <Link
+                      href={`/author/${encodeURIComponent(
+                        (typeof article.author === 'object'
+                          ? article.author.slug || article.author.nicename || article.author.name
+                          : article.author) || 'DigitalDeepak'
+                      )}`}
+                      className="font-bold text-slate-900 hover:text-blue-600 hover:underline transition"
+                    >
+                      {typeof article.author === 'object' ? article.author.name : article.author}
+                    </Link>
                   </span>
                   <span className="text-slate-300">|</span>
                   <span>
@@ -1200,7 +1223,9 @@ export default function SingleArticlePage() {
                               </tr>
                               <tr className="hover:bg-slate-50">
                                 <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Job Location</th>
-                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.jobLocation}</td>
+                                <td className="p-3 font-normal text-slate-900">
+                                  <StateLink state={article.state || article.jobDetails.jobLocation} dept={article.dept} fallback={article.jobDetails.jobLocation} />
+                                </td>
                               </tr>
                               <tr className="hover:bg-slate-50">
                                 <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Date</th>
@@ -1458,11 +1483,19 @@ export default function SingleArticlePage() {
                 {article.author && !article.content?.includes('class="author') && (
                   <div className="my-8 p-5 bg-[#f8f9fa] border border-slate-200/90 rounded-md flex flex-col sm:flex-row items-start gap-4">
                     {/* Left Square Avatar Frame */}
-                    <div className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border border-slate-200 rounded p-1 shadow-2xs overflow-hidden">
+                    <Link
+                      href={`/author/${encodeURIComponent(
+                        (typeof article.author === 'object'
+                          ? article.author.slug || article.author.nicename || article.author.name
+                          : article.author) || 'DigitalDeepak'
+                      )}`}
+                      className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border border-slate-200 rounded p-1 shadow-2xs overflow-hidden block group hover:border-blue-400 transition"
+                      title="View Author Profile"
+                    >
                       <img
                         src={typeof article.author === 'object' ? article.author.image : 'https://educationmasters.in/assets/img/defaults/user.png'}
                         alt={typeof article.author === 'object' ? article.author.name : article.author}
-                        className="w-full h-full object-cover rounded-xs"
+                        className="w-full h-full object-cover rounded-xs group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           if (!e.currentTarget.dataset.fallback) {
                             e.currentTarget.dataset.fallback = 'true';
@@ -1472,23 +1505,38 @@ export default function SingleArticlePage() {
                           }
                         }}
                       />
-                    </div>
+                    </Link>
 
                     {/* Right Bio Content */}
                     <div className="flex-1 space-y-2">
-                      <h3 className="text-lg font-bold text-slate-800 leading-none">
+                      <Link
+                        href={`/author/${encodeURIComponent(
+                          (typeof article.author === 'object'
+                            ? article.author.slug || article.author.nicename || article.author.name
+                            : article.author) || 'DigitalDeepak'
+                        )}`}
+                        className="text-lg font-bold text-slate-800 hover:text-blue-600 hover:underline leading-none inline-block transition"
+                      >
                         {typeof article.author === 'object' ? article.author.name : article.author}
-                      </h3>
+                      </Link>
                       <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
                         {typeof article.author === 'object' && article.author.bio ? article.author.bio : 'Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content covering government jobs, entrance exams, admissions, results, and career guidance.'}
                       </p>
 
                       {/* Social Links Row */}
                       <div className="flex items-center space-x-2.5 pt-1 text-slate-400">
-                        <a href="#" className="hover:text-blue-600 transition" title="Website"><Globe className="w-3.5 h-3.5" /></a>
-                        <a href="#" className="hover:text-blue-600 transition" title="Facebook"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg></a>
-                        <a href="#" className="hover:text-sky-500 transition" title="Twitter"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg></a>
-                        <a href="#" className="hover:text-blue-700 transition" title="LinkedIn"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg></a>
+                        {typeof article.author === 'object' && article.author.website && (
+                          <a href={article.author.website.startsWith('http') ? article.author.website : `https://${article.author.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition" title="Website"><Globe className="w-3.5 h-3.5" /></a>
+                        )}
+                        {typeof article.author === 'object' && article.author.facebook && (
+                          <a href={article.author.facebook.startsWith('http') ? article.author.facebook : `https://facebook.com/${article.author.facebook}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition" title="Facebook"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg></a>
+                        )}
+                        {typeof article.author === 'object' && article.author.twitter && (
+                          <a href={article.author.twitter.startsWith('http') ? article.author.twitter : `https://twitter.com/${article.author.twitter}`} target="_blank" rel="noopener noreferrer" className="hover:text-sky-500 transition" title="Twitter"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg></a>
+                        )}
+                        {typeof article.author === 'object' && article.author.linkedin && (
+                          <a href={article.author.linkedin.startsWith('http') ? article.author.linkedin : `https://linkedin.com/in/${article.author.linkedin}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700 transition" title="LinkedIn"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg></a>
+                        )}
                       </div>
                     </div>
                   </div>
