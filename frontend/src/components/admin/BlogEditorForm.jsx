@@ -218,6 +218,25 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
       .catch((err) => console.error('Error fetching states:', err));
   }, []);
 
+  // Ensure selectedState is converted from ObjectId or SQL ID to state Name
+  useEffect(() => {
+    if (selectedState && stateList.length > 0) {
+      const isObjectId = /^[0-9a-fA-F]{24}$/.test(String(selectedState));
+      const isNum = /^\d+$/.test(String(selectedState));
+      if (isObjectId) {
+        const found = stateList.find((s) => String(s._id) === String(selectedState));
+        if (found?.name) {
+          setSelectedState(found.name);
+        }
+      } else if (isNum) {
+        const found = stateList.find((s) => s.sql_id === Number(selectedState));
+        if (found?.name) {
+          setSelectedState(found.name);
+        }
+      }
+    }
+  }, [stateList, selectedState]);
+
   // Search Categories with debounce
   useEffect(() => {
     const term = categorySearch.trim();
@@ -281,7 +300,12 @@ export default function BlogEditorForm({ slugOrId = null, isEdit = false }) {
             }
 
             if (p.state) {
-              setSelectedState(p.state);
+              const sName = typeof p.state === 'object' ? p.state.name : p.state;
+              setSelectedState(sName || '-- All India --');
+            } else if (p.state_id) {
+              setSelectedState(String(p.state_id));
+            } else {
+              setSelectedState('-- All India --');
             }
 
             if (p.categories && p.categories.length > 0) {

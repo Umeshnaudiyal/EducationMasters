@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
+import gsap from 'gsap';
 import Link from 'next/link';
 import { Briefcase, Award, BarChart3, ArrowUpRight } from 'lucide-react';
 import { getImageUrl } from '@/utils/image';
@@ -31,9 +32,77 @@ export default function LiveUpdatesFeed() {
   const [jobs, setJobs] = useState([]);
   const [allJobs, setAllJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const feedRef = useRef(null);
 
   useEffect(() => {
     fetchJobsData();
+  }, []);
+
+  useEffect(() => {
+    if (!loading && allJobs.length > 0) {
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              gsap.fromTo(
+                '.job-feed-item',
+                { y: 25, opacity: 0 },
+                {
+                  y: 0,
+                  opacity: 1,
+                  stagger: 0.05,
+                  duration: 0.45,
+                  ease: 'power3.out',
+                  clearProps: 'transform,opacity',
+                }
+              );
+              observer.disconnect();
+            }
+          });
+        },
+        { threshold: 0.1 }
+      );
+
+      if (feedRef.current) {
+        observer.observe(feedRef.current);
+      }
+
+      return () => observer.disconnect();
+    }
+  }, [loading, allJobs]);
+
+  useEffect(() => {
+    // Observer for Subject MCQs
+    const mcqObserver = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            gsap.fromTo(
+              '.mcq-item-card',
+              { y: 30, opacity: 0, scale: 0.92 },
+              {
+                y: 0,
+                opacity: 1,
+                scale: 1,
+                stagger: 0.03,
+                duration: 0.45,
+                ease: 'back.out(1.3)',
+                clearProps: 'transform,opacity',
+              }
+            );
+            mcqObserver.disconnect();
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    const mcqContainer = document.querySelector('#subject-mcqs-container');
+    if (mcqContainer) {
+      mcqObserver.observe(mcqContainer);
+    }
+
+    return () => mcqObserver.disconnect();
   }, []);
 
   const fetchJobsData = async () => {
@@ -63,12 +132,11 @@ export default function LiveUpdatesFeed() {
   };
 
   return (
-    <section id="updates" className="pt-8 pb-4 bg-white relative">
+    <section ref={feedRef} id="updates" className="pt-8 pb-4 bg-white relative">
       <div className="max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
 
-
         {/* ==================================================== */}
-        {/* LEADERBOARD AD BANNER 1 (Image 2) */}
+        {/* LEADERBOARD AD BANNER 1 */}
         {/* ==================================================== */}
         <div className="w-full bg-gradient-to-r from-purple-900 via-indigo-900 to-slate-900 text-white rounded-lg p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-md border border-purple-800">
           <div className="flex items-center gap-4">
@@ -91,9 +159,8 @@ export default function LiveUpdatesFeed() {
           </a>
         </div>
 
-
         {/* ==================================================== */}
-        {/* SECTION 2: Latest Sarkaari Naukri (Govt. Jobs) 2026 (Image 2) */}
+        {/* SECTION 2: Latest Sarkaari Naukri (Govt. Jobs) 2026 */}
         {/* ==================================================== */}
         <div className="space-y-6 pt-2">
 
@@ -113,7 +180,7 @@ export default function LiveUpdatesFeed() {
               return (
                 <article
                   key={item._id}
-                  className="bg-white border-b border-slate-200 pb-3 flex items-start gap-3.5 group hover:bg-slate-50/60 p-2 rounded transition"
+                  className="job-feed-item bg-white border-b border-slate-200 pb-3 flex items-start gap-3.5 group hover:bg-slate-50/80 p-2.5 rounded-xl transition-all duration-300 hover:shadow-md hover:-translate-y-0.5"
                 >
                   <div className="w-28 sm:w-32 h-20 bg-slate-100 rounded border border-slate-200 overflow-hidden shrink-0 relative">
                     <img
@@ -150,28 +217,26 @@ export default function LiveUpdatesFeed() {
 
         </div>
 
-
         {/* ==================================================== */}
-        {/* LEADERBOARD AD BANNER 2 (Image 3) */}
+        {/* LEADERBOARD AD BANNER 2 */}
         {/* ==================================================== */}
-        <div className="w-full bg-[#e7f9ee] border border-[#a3e6be] rounded border-dashed p-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-center sm:text-left">
-          <div className="flex items-center gap-3">
-            <span className="bg-emerald-600 text-white font-extrabold text-xs px-2.5 py-1 rounded">SPONSORED</span>
+        <div className="w-full bg-[#e7f9ee] border border-[#a3e6be] rounded-xl border-dashed p-3.5 sm:p-4 flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4 text-center sm:text-left overflow-hidden">
+          <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-3">
+            <span className="bg-emerald-600 text-white font-extrabold text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 sm:py-1 rounded shrink-0">SPONSORED</span>
             <div>
-              <h4 className="font-bold text-slate-900 text-sm sm:text-base">BOOK A HELICOPTER IN GREECE</h4>
-              <p className="text-xs text-slate-600">Luxury charters & private flight tours available online across Greek Islands.</p>
+              <h4 className="font-bold text-slate-900 text-xs sm:text-base">BOOK A HELICOPTER IN GREECE</h4>
+              <p className="text-[11px] sm:text-xs text-slate-600">Luxury charters & private flight tours available online across Greek Islands.</p>
             </div>
           </div>
-          <button className="bg-black hover:bg-zinc-800 text-white text-xs font-bold px-5 py-2 rounded transition uppercase shrink-0">
+          <button className="bg-black hover:bg-zinc-800 text-white text-xs font-bold px-4 sm:px-5 py-1.5 sm:py-2 rounded-lg transition uppercase shrink-0 cursor-pointer">
             Book Now
           </button>
         </div>
 
-
         {/* ==================================================== */}
-        {/* SECTION 3: Subject Wise MCQ General Knowledge (Image 3) */}
+        {/* SECTION 3: Subject Wise MCQ General Knowledge */}
         {/* ==================================================== */}
-        <div className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs">
+        <div id="subject-mcqs-container" className="bg-white border border-slate-200/90 rounded-2xl p-6 sm:p-8 shadow-xs">
 
           <div className="text-center space-y-1.5 mb-8">
             <h3 className="text-2xl sm:text-3xl font-extrabold text-[#1a4a75] tracking-tight">
@@ -187,10 +252,10 @@ export default function LiveUpdatesFeed() {
               <Link
                 key={sub.name}
                 href={sub.href}
-                className="bg-white border border-slate-200/80 hover:border-blue-400 rounded-xl p-3 sm:p-3.5 flex flex-col items-center justify-center text-center shadow-2xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-1 group no-underline"
+                className="mcq-item-card bg-white border border-slate-200/80 hover:border-blue-400 rounded-xl p-3 sm:p-3.5 flex flex-col items-center justify-center text-center shadow-2xs hover:shadow-md transition-all duration-300 transform hover:-translate-y-1.5 hover:scale-105 group no-underline"
               >
                 {/* Circular image avatar */}
-                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden flex items-center justify-center bg-slate-50 border border-slate-200/70 shadow-2xs mb-2.5 group-hover:scale-105 transition-transform duration-300">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-full overflow-hidden flex items-center justify-center bg-slate-50 border border-slate-200/70 shadow-2xs mb-2.5 group-hover:scale-110 transition-transform duration-300">
                   <img
                     src={sub.image}
                     alt={sub.name}

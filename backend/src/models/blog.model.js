@@ -24,6 +24,9 @@ const blogSchema = new mongoose.Schema(
     tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
     tag_ids: [Number],
     
+    state: { type: mongoose.Schema.Types.ObjectId, ref: 'State' },
+    state_id: { type: Number, default: 0 },
+
     featured_media: { type: mongoose.Schema.Types.ObjectId, ref: 'Media' },
     media_id: Number,
 

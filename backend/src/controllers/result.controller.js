@@ -122,7 +122,7 @@ export const getResultBySlug = async (req, res, next) => {
     const resultDoc = await Result.findOne(
       isId ? { _id: req.params.slug } : { slug: req.params.slug }
     )
-      .populate('author', 'name nicename email image bio')
+      .populate('author', 'name nicename email image bio website twitter facebook instagram linkedin youtube phone role')
       .populate('featured_media', 'path file alt name')
       .populate('country', 'name slug code')
       .populate('state', 'name slug')

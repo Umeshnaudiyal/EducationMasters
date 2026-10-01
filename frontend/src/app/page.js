@@ -7,6 +7,7 @@ import HeroSection from '@/components/HeroSection';
 import CategoriesSection from '@/components/CategoriesSection';
 import LiveUpdatesFeed from '@/components/LiveUpdatesFeed';
 import AboutSection from '@/components/AboutSection';
+import SubscriptionBanner from '@/components/SubscriptionBanner';
 import Footer from '@/components/Footer';
 import { TypingTestModal, MockTestModal } from '@/components/Modals';
 
@@ -15,7 +16,7 @@ export default function Home() {
   const [isMockModalOpen, setIsMockModalOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white w-full max-w-full overflow-x-hidden">
       
       {/* 1. Glass Nav Header with Predictive Search */}
       <Header 
@@ -26,7 +27,7 @@ export default function Home() {
       <LiveTicker />
 
       {/* 3. Main Content Sections */}
-      <main className="flex-1">
+      <main className="flex-1 w-full max-w-full overflow-x-hidden">
         
         {/* Hero section */}
         <HeroSection />
@@ -37,8 +38,11 @@ export default function Home() {
         {/* Leaderboard Ad + Latest Sarkari Naukri + Subject MCQs */}
         <LiveUpdatesFeed />
 
-        {/* About EducationMasters Section */}
+        {/* About EducationMasters Section & Products */}
         <AboutSection />
+
+        {/* Reusable Compact Updates & Newsletter Subscription Banner */}
+        <SubscriptionBanner />
 
       </main>
 

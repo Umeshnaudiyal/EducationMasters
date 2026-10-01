@@ -148,9 +148,87 @@ export default function PostsManagementPage() {
         </span>
       </div>
 
-      {/* Posts Table */}
+      {/* Posts Table Container: Mobile Cards (block md:hidden) + Desktop Table (hidden md:block) */}
       <div className="bg-white border border-slate-200 rounded-xl shadow-xs overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile View: Touch-Friendly Post Cards */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="py-12 text-center text-slate-400">
+              <div className="flex flex-col items-center justify-center gap-2">
+                <div className="w-7 h-7 border-2 border-blue-500/30 border-t-blue-600 rounded-full animate-spin"></div>
+                <span className="text-xs">Loading posts...</span>
+              </div>
+            </div>
+          ) : posts.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              No posts found for the selected filter.
+            </div>
+          ) : (
+            posts.map((p) => (
+              <div key={p._id} className="p-3.5 space-y-2 bg-white text-xs">
+                <div>
+                  <Link
+                    href={`/${p.slug || p._id}`}
+                    target="_blank"
+                    title="Preview Content"
+                    className="font-bold text-slate-800 hover:text-blue-600 line-clamp-2 leading-snug"
+                  >
+                    {p.title}
+                  </Link>
+                  <div className="text-[11px] text-slate-400 font-mono mt-0.5 truncate">
+                    /{p.slug}
+                  </div>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                  <span className="font-medium text-slate-700">
+                    {p.author?.name || p.author?.nicename || 'Admin'}
+                  </span>
+                  <span>•</span>
+                  <span className="px-2 py-0.5 bg-blue-50 text-blue-700 rounded border border-blue-200 text-[10px] font-semibold">
+                    {p.categories?.[0]?.name || 'Articles'}
+                  </span>
+                  <span>•</span>
+                  <span className="font-mono text-[10.5px]">
+                    {p.created_at ? p.created_at.slice(0, 10) : '2026-08-08'}
+                  </span>
+                </div>
+
+                <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                  <span
+                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${getStatusBadge(
+                      p.status
+                    )}`}
+                  >
+                    {p.status || 'Published'}
+                  </span>
+
+                  <div className="flex items-center gap-1.5">
+                    <Link
+                      href={`/${p.slug}`}
+                      target="_blank"
+                      title="View Live"
+                      className="p-1.5 text-slate-500 hover:text-blue-600 bg-slate-50 hover:bg-blue-50 border border-slate-200 rounded transition-colors"
+                    >
+                      <ExternalLink size={13} />
+                    </Link>
+                    <Link
+                      href={`/edu-admin/posts/create?type=${contentType}&id=${p._id}`}
+                      title="Edit Post"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00a0d2] hover:bg-[#008ebb] text-white rounded text-xs font-semibold shadow-2xs transition-colors"
+                    >
+                      <Edit size={11} />
+                      <span>Edit</span>
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop Table: 100% Exact Desktop Layout (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600">
             <thead className="bg-slate-50 border-b border-slate-200 text-[11px] font-bold text-slate-700 uppercase tracking-wider">
               <tr>

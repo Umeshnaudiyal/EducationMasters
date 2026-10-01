@@ -727,8 +727,103 @@ export default function TaxonomyManager({
               </div>
             </div>
 
-            {/* Table Content */}
-            <div className="overflow-x-auto">
+            {/* Mobile View: Touch-Friendly Clean Cards */}
+            <div className="block md:hidden divide-y divide-slate-200">
+              {loading ? (
+                <div className="py-8 px-3 text-center text-slate-400">
+                  <div className="flex items-center justify-center gap-2">
+                    <Loader2 size={15} className="animate-spin text-[#2271b1]" />
+                    <span>Loading {title.toLowerCase()}...</span>
+                  </div>
+                </div>
+              ) : items.length === 0 ? (
+                <div className="py-8 px-3 text-center text-slate-400 space-y-1">
+                  <p className="font-semibold text-slate-600">No {title.toLowerCase()} found</p>
+                  <p className="text-[11px] text-slate-400">
+                    {activeSearch ? 'Try a different search query' : `Add your first ${singularTitle.toLowerCase()} using the form`}
+                  </p>
+                </div>
+              ) : (
+                items.map((item) => {
+                  const isSelected = selectedIds.includes(item._id);
+                  const isEditing = editingId === item._id;
+
+                  return (
+                    <div
+                      key={item._id}
+                      className={`p-3 space-y-2 bg-white text-xs ${
+                        isEditing ? 'bg-blue-50/50' : isSelected ? 'bg-amber-50/40' : ''
+                      }`}
+                    >
+                      <div className="flex items-start gap-2.5">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={() => toggleSelect(item._id)}
+                          className="rounded border-slate-300 text-[#2271b1] focus:ring-[#2271b1] mt-1 shrink-0"
+                        />
+                        <TaxonomyThumbnail
+                          src={item.image}
+                          alt={item.name}
+                          size={16}
+                          className="w-12 h-12 rounded"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div
+                            className="font-bold text-[#0073aa] hover:underline cursor-pointer text-xs leading-snug"
+                            onClick={() => handleEdit(item)}
+                          >
+                            {item.name}
+                          </div>
+                          <div className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
+                            Slug: {item.slug}
+                          </div>
+                          {item.description && (
+                            <p className="text-[11px] text-slate-600 line-clamp-2 mt-1">
+                              {item.description}
+                            </p>
+                          )}
+                          {columns.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-2 text-[11px] text-slate-600">
+                              {columns.map((col, idx) => (
+                                <div key={idx} className="flex items-center gap-1">
+                                  <span className="font-semibold text-slate-500">{col.header}:</span>
+                                  <span>{col.render ? col.render(item) : item[col.accessor]}</span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Bottom action buttons */}
+                      <div className="flex items-center justify-end gap-1.5 pt-1.5 border-t border-slate-100">
+                        <button
+                          type="button"
+                          onClick={() => handleEdit(item)}
+                          title={`Edit ${singularTitle}`}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-medium transition-colors shadow-2xs cursor-pointer"
+                        >
+                          <Edit2 size={11} />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => confirmDelete(item)}
+                          title={`Delete ${singularTitle}`}
+                          className="p-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs transition-colors shadow-2xs cursor-pointer"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Desktop Table: 100% Exact Desktop Layout (hidden on mobile) */}
+            <div className="hidden md:block overflow-x-auto">
               <table className="w-full text-left text-xs text-slate-700 border-collapse">
                 <thead className="bg-[#f6f7f7] border-b border-slate-300 text-xs font-semibold text-slate-800">
                   <tr>

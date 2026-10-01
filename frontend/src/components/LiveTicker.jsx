@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Radio, Bell } from 'lucide-react';
+import { ChevronRight } from 'lucide-react';
+import { AnimatedRadio, AnimatedBell } from './AnimatedIcons';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
   ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
@@ -115,15 +116,15 @@ export default function LiveTicker() {
   return (
     <div className="relative overflow-hidden border-b border-slate-200 bg-white text-slate-800">
       <div className="mx-auto flex max-w-7xl items-center gap-3 pl-4 pr-0 sm:px-6 lg:px-8">
-        <div className="flex shrink-0 items-center gap-2 border-r border-slate-200 py-2.5 pr-3 sm:pr-4">
-          <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600">
+        <div className="group flex shrink-0 items-center gap-2 border-r border-slate-200 py-2.5 pr-3 sm:pr-4 cursor-pointer select-none">
+          <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600 transition-colors group-hover:bg-rose-100">
             <span className="live-ping absolute h-2.5 w-2.5 rounded-full bg-rose-400 opacity-70" />
-            <Radio className="relative h-3.5 w-3.5" />
+            <AnimatedRadio size={14} className="relative text-rose-600 group-hover:scale-110" />
           </span>
-          <span className="hidden text-xs font-extrabold text-slate-900 sm:inline">
+          <span className="hidden text-xs font-extrabold text-slate-900 group-hover:text-rose-600 sm:inline transition-colors">
             Live Updates
           </span>
-          <span className="text-xs font-extrabold text-slate-900 sm:hidden">
+          <span className="text-xs font-extrabold text-slate-900 group-hover:text-rose-600 sm:hidden transition-colors">
             Live
           </span>
         </div>
@@ -146,8 +147,8 @@ export default function LiveTicker() {
           </div>
         </div>
 
-        <div className="hidden shrink-0 items-center gap-2 border-l border-slate-200 py-2.5 pl-4 text-xs font-bold text-slate-500 lg:flex">
-          <Bell className="h-3.5 w-3.5 text-[#0b66c3]" />
+        <div className="group hidden shrink-0 items-center gap-2 border-l border-slate-200 py-2.5 pl-4 text-xs font-bold text-slate-500 hover:text-[#0b66c3] lg:flex cursor-pointer transition-colors">
+          <AnimatedBell size={15} className="text-[#0b66c3]" />
           <span>Verified notices</span>
         </div>
       </div>

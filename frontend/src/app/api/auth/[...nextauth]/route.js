@@ -1,5 +1,6 @@
 import NextAuth from 'next-auth';
 import CredentialsProvider from 'next-auth/providers/credentials';
+import GoogleProvider from 'next-auth/providers/google';
 import { decode as defaultDecode } from 'next-auth/jwt';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
@@ -15,13 +16,105 @@ const getTodayDateString = (dateObj = new Date()) => {
 
 export const authOptions = {
   providers: [
+    ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
+      ? [
+        GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+        }),
+      ]
+      : []),
     CredentialsProvider({
       name: 'Credentials',
       credentials: {
-        email: { label: 'Email', type: 'email' },
+        email: { label: 'Email', type: 'text' },
         password: { label: 'Password', type: 'password' },
+        authType: { label: 'AuthType', type: 'text' },
+        userId: { label: 'UserId', type: 'text' },
+        otp: { label: 'OTP', type: 'text' },
+        phone: { label: 'Phone', type: 'text' },
+        rawToken: { label: 'RawToken', type: 'text' },
       },
       async authorize(credentials) {
+        // Mode 1: OTP Verification sign-in
+        if (credentials?.authType === 'otp-verify') {
+          if (!credentials.otp || (!credentials.userId && !credentials.phone && !credentials.email)) {
+            throw new Error('Please enter OTP and phone or user identifier');
+          }
+
+          try {
+            const res = await fetch(`${BACKEND_URL}/apis/v1/auth/verify-otp`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                userId: credentials.userId,
+                otp: credentials.otp,
+                phone: credentials.phone,
+                email: credentials.email,
+              }),
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success && data.data?.token) {
+              return {
+                id: data.data.user.id,
+                name: data.data.user.name,
+                nicename: data.data.user.nicename,
+                email: data.data.user.email,
+                role: data.data.user.role,
+                permissions: data.data.user.permissions || [],
+                institute_id: data.data.user.institute_id || null,
+                login_time: data.data.user.login_time || null,
+                logout_time: data.data.user.logout_time || null,
+                last_login_time: data.data.user.last_login_time || null,
+                session_date: data.data.user.session_date || null,
+                expires_at: data.data.user.expires_at || null,
+                accessToken: data.data.token,
+              };
+            } else {
+              throw new Error(data.message || 'OTP verification failed');
+            }
+          } catch (error) {
+            throw new Error(error.message || 'OTP authentication failed');
+          }
+        }
+
+        // Mode 2: Direct session token injection (e.g. from Google login or direct token)
+        if (credentials?.authType === 'session-token' && credentials?.rawToken) {
+          try {
+            const res = await fetch(`${BACKEND_URL}/apis/v1/auth/me`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${credentials.rawToken}`,
+              },
+            });
+            const data = await res.json();
+            if (res.ok && data.success && data.data?.user) {
+              return {
+                id: data.data.user.id,
+                name: data.data.user.name,
+                nicename: data.data.user.nicename,
+                email: data.data.user.email,
+                role: data.data.user.role,
+                permissions: data.data.user.permissions || [],
+                institute_id: data.data.user.institute_id || null,
+                login_time: data.data.user.login_time || null,
+                logout_time: data.data.user.logout_time || null,
+                last_login_time: data.data.user.last_login_time || null,
+                session_date: data.data.user.session_date || null,
+                expires_at: data.data.user.expires_at || null,
+                accessToken: credentials.rawToken,
+              };
+            } else {
+              throw new Error(data.message || 'Session token invalid or expired');
+            }
+          } catch (error) {
+            throw new Error(error.message || 'Token session failed');
+          }
+        }
+
+        // Mode 3: Standard Email + Password
         if (!credentials?.email || !credentials?.password) {
           throw new Error('Please enter your email and password');
         }
@@ -68,7 +161,7 @@ export const authOptions = {
       try {
         return await defaultDecode(params);
       } catch {
-        // Gracefully handle any stale / old encrypted cookies without logging JWE error
+
         return null;
       }
     },
@@ -135,7 +228,7 @@ export const authOptions = {
   },
   session: {
     strategy: 'jwt',
-    maxAge: 24 * 60 * 60, // 24 hours (with client midnight check)
+    maxAge: 24 * 60 * 60,
   },
   secret: NEXTAUTH_SECRET,
 };

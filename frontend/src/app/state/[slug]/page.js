@@ -691,7 +691,7 @@ export default function StateProfilePage() {
                         </span>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <Link
-                            href="/jobs"
+                            href="/jobs-expiring-in-30-days"
                             className="text-blue-600 font-semibold hover:underline whitespace-nowrap text-[11px] sm:text-xs"
                           >
                             View All

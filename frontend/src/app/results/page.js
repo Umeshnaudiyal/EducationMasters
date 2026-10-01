@@ -350,7 +350,7 @@ export default function ResultsPage() {
                         28 Jobs are expiring in 30 Days
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Link href="/jobs" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
+                        <Link href="/jobs-expiring-in-30-days" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
                           View All
                         </Link>
                         <span className="bg-blue-600 text-white text-[10px] sm:text-[11px] font-normal px-1.5 py-0.5 rounded inline-flex items-center gap-1 leading-none whitespace-nowrap shadow-2xs">

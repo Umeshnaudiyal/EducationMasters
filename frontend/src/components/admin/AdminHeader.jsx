@@ -8,22 +8,27 @@ import {
   ExternalLink,
   ChevronDown,
   ShieldAlert,
-  FileText,
-  Briefcase,
-  Landmark,
-  FileQuestion,
-  Users,
-  LogOut,
-  User,
-  Clock,
-  LogIn,
-  Activity,
-  History,
   Loader2,
   AlertCircle,
 } from 'lucide-react';
+import {
+  AnimatedLogIn,
+  AnimatedLogOut,
+  AnimatedClock,
+  AnimatedUser,
+  AnimatedHistory,
+  AnimatedUsers,
+  AnimatedShield,
+  AnimatedSettings,
+  AnimatedPlus,
+  AnimatedFileText,
+  AnimatedBriefcase,
+  AnimatedLandmark,
+  AnimatedCheckSquare,
+  AnimatedMenu,
+} from '@/components/AnimatedIcons';
 
-export default function AdminHeader({ session }) {
+export default function AdminHeader({ session, onToggleMobileSidebar }) {
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSessionDetail, setShowSessionDetail] = useState(false);
@@ -220,15 +225,26 @@ export default function AdminHeader({ session }) {
   };
 
   return (
-    <header className="h-11 bg-[#1d2327] text-white flex items-center justify-between px-3 sm:px-4 select-none shrink-0 z-40 border-b border-[#2c3338] shadow-2xs">
-      {/* Left: Brand + Quick + New */}
-      <div className="flex items-center gap-2 sm:gap-3">
+    <header className="h-11 bg-[#1d2327] text-white flex items-center justify-between px-2.5 sm:px-4 select-none shrink-0 z-40 border-b border-[#2c3338] shadow-2xs">
+      {/* Left: Hamburger (Mobile) + Brand + Quick + New */}
+      <div className="flex items-center gap-1.5 sm:gap-3">
+        {/* Mobile Hamburger Drawer Trigger */}
+        <button
+          type="button"
+          onClick={onToggleMobileSidebar}
+          className="md:hidden p-1.5 -ml-1 text-[#c3c4c7] hover:text-white hover:bg-[#2c3338] rounded-md transition-colors cursor-pointer"
+          title="Toggle Navigation Menu"
+          aria-label="Toggle navigation menu"
+        >
+          <AnimatedMenu size={18} />
+        </button>
+
         {/* Education Masters Brand Item */}
         <Link
           href="/edu-admin"
           className="flex items-center gap-2 text-xs font-semibold text-[#f0f0f1] hover:text-[#72aee6] transition-colors"
         >
-          <div className="w-5 h-5 rounded-full overflow-hidden bg-amber-400/20 border border-amber-400 flex items-center justify-center p-0.5">
+          <div className="w-5 h-5 rounded-full overflow-hidden bg-amber-400/20 border border-amber-400 flex items-center justify-center p-0.5 shrink-0">
             <img
               src="/logo.webp"
               alt="Education Masters"
@@ -252,9 +268,9 @@ export default function AdminHeader({ session }) {
               setShowProfileMenu(false);
               setShowSessionDetail(false);
             }}
-            className="flex items-center gap-1 px-2 py-1 text-xs text-[#c3c4c7] hover:text-[#72aee6] hover:bg-[#2c3338] rounded-md transition-all cursor-pointer"
+            className="group flex items-center gap-1 px-1.5 sm:px-2 py-1 text-xs text-[#c3c4c7] hover:text-[#72aee6] hover:bg-[#2c3338] rounded-md transition-all cursor-pointer"
           >
-            <Plus size={13} className="text-[#a7aaad]" />
+            <AnimatedPlus size={13} className="text-[#a7aaad] group-hover:text-[#72aee6]" />
             <span className="text-[11px]">New</span>
             <ChevronDown size={11} className="text-[#a7aaad]" />
           </button>
@@ -264,35 +280,35 @@ export default function AdminHeader({ session }) {
               <Link
                 href="/edu-admin/blog/create"
                 onClick={() => setShowNewMenu(false)}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
+                className="group flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
               >
-                <FileText size={13} className="text-blue-400" />
+                <AnimatedFileText size={13} className="text-blue-400" />
                 <span>Post / Article</span>
               </Link>
               <Link
                 href="/edu-admin/posts/create?type=job"
                 onClick={() => setShowNewMenu(false)}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
+                className="group flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
               >
-                <Briefcase size={13} className="text-emerald-400" />
+                <AnimatedBriefcase size={13} className="text-emerald-400" />
                 <span>Job Post</span>
               </Link>
               {isAdmin && (
                 <Link
                   href="/edu-admin/institutes/create"
                   onClick={() => setShowNewMenu(false)}
-                  className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
+                  className="group flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
                 >
-                  <Landmark size={13} className="text-cyan-400" />
+                  <AnimatedLandmark size={13} className="text-cyan-400" />
                   <span>Institute</span>
                 </Link>
               )}
               <Link
                 href="/edu-admin/mcqs/create"
                 onClick={() => setShowNewMenu(false)}
-                className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
+                className="group flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
               >
-                <FileQuestion size={13} className="text-pink-400" />
+                <AnimatedCheckSquare size={13} className="text-pink-400" />
                 <span>MCQ Question</span>
               </Link>
               {isAdmin && (
@@ -301,9 +317,9 @@ export default function AdminHeader({ session }) {
                   <Link
                     href="/edu-admin/users/create"
                     onClick={() => setShowNewMenu(false)}
-                    className="flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
+                    className="group flex items-center gap-2 px-3 py-1.5 hover:bg-[#1d2327] hover:text-[#72aee6] transition-colors"
                   >
-                    <Users size={13} className="text-amber-400" />
+                    <AnimatedUsers size={13} className="text-amber-400" />
                     <span>User</span>
                   </Link>
                 </>
@@ -325,7 +341,7 @@ export default function AdminHeader({ session }) {
       </div>
 
       {/* Middle/Right: Session Time Widget (Interactive Animated Badges with Hover Tooltips) */}
-      <div className="flex items-center gap-2 sm:gap-3">
+      <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Session Time Status Badges Capsule */}
         <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 bg-[#2c3338]/60 border border-[#3c434a] rounded-lg shadow-2xs">
           {/* 1. Login "In" Badge with Smooth Hover Animation & Tooltip */}
@@ -333,14 +349,14 @@ export default function AdminHeader({ session }) {
             <button
               type="button"
               onClick={() => setShowSessionDetail(!showSessionDetail)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#1d2327]/80 hover:bg-emerald-950/50 border border-emerald-500/25 hover:border-emerald-400/60 text-emerald-400 text-[11px] font-medium transition-all duration-200 shadow-2xs hover:shadow-emerald-950/40 hover:scale-[1.02] cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-[#1d2327]/80 hover:bg-emerald-950/50 border border-emerald-500/25 hover:border-emerald-400/60 text-emerald-400 text-[10px] sm:text-[11px] font-medium transition-all duration-200 shadow-2xs hover:shadow-emerald-950/40 hover:scale-[1.02] cursor-pointer"
             >
-              <span className="relative flex h-2 w-2">
+              <span className="relative flex h-1.5 w-1.5 sm:h-2 sm:w-2 shrink-0">
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                <span className="relative inline-flex rounded-full h-1.5 w-1.5 sm:h-2 sm:w-2 bg-emerald-500"></span>
               </span>
-              <span className="text-emerald-300/80 text-[10px] uppercase font-bold tracking-wider">In:</span>
-              <span className="font-bold text-white text-[11px] tracking-tight">
+              <span className="text-emerald-300/80 text-[9px] sm:text-[10px] uppercase font-bold tracking-wider hidden xs:inline">In:</span>
+              <span className="font-bold text-white text-[10px] sm:text-[11px] tracking-tight whitespace-nowrap">
                 {loginTimeDisplay || 'Active'}
               </span>
             </button>
@@ -349,7 +365,7 @@ export default function AdminHeader({ session }) {
             <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transform group-hover:translate-y-0 translate-y-1 transition-all duration-200">
               <div className="bg-[#23282d] border border-emerald-500/30 rounded-xl shadow-2xl p-2.5 w-52 text-[11px] text-slate-200 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-emerald-400 font-bold border-b border-slate-700/60 pb-1 mb-1.5">
-                  <LogIn size={12} />
+                  <AnimatedLogIn size={12} />
                   <span>First Login Today</span>
                 </div>
                 <p className="text-white font-semibold">
@@ -370,11 +386,11 @@ export default function AdminHeader({ session }) {
             <button
               type="button"
               onClick={() => setShowSessionDetail(!showSessionDetail)}
-              className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#1d2327]/80 hover:bg-rose-950/50 border border-rose-500/25 hover:border-rose-400/60 text-rose-300 text-[11px] font-medium transition-all duration-200 shadow-2xs hover:shadow-rose-950/40 hover:scale-[1.02] cursor-pointer"
+              className="flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-md bg-[#1d2327]/80 hover:bg-rose-950/50 border border-rose-500/25 hover:border-rose-400/60 text-rose-300 text-[10px] sm:text-[11px] font-medium transition-all duration-200 shadow-2xs hover:shadow-rose-950/40 hover:scale-[1.02] cursor-pointer"
             >
-              <LogOut size={11} className="text-rose-400" />
-              <span className="text-rose-300/80 text-[10px] uppercase font-bold tracking-wider">Out:</span>
-              <span className="font-semibold text-slate-200 text-[11px]">
+              <AnimatedLogOut size={11} className="text-rose-400 shrink-0" />
+              <span className="text-rose-300/80 text-[9px] sm:text-[10px] uppercase font-bold tracking-wider hidden xs:inline">Out:</span>
+              <span className="font-semibold text-slate-200 text-[10px] sm:text-[11px] whitespace-nowrap">
                 {logoutTimeDisplay || '—'}
               </span>
             </button>
@@ -383,7 +399,7 @@ export default function AdminHeader({ session }) {
             <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transform group-hover:translate-y-0 translate-y-1 transition-all duration-200">
               <div className="bg-[#23282d] border border-rose-500/30 rounded-xl shadow-2xl p-2.5 w-52 text-[11px] text-slate-200 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-rose-400 font-bold border-b border-slate-700/60 pb-1 mb-1.5">
-                  <LogOut size={12} />
+                  <AnimatedLogOut size={12} />
                   <span>Latest Logout Time</span>
                 </div>
                 <p className="text-white font-semibold">
@@ -402,7 +418,7 @@ export default function AdminHeader({ session }) {
               onClick={() => setShowSessionDetail(!showSessionDetail)}
               className="flex items-center gap-1 px-2 py-1 bg-amber-400/10 hover:bg-amber-400/20 border border-amber-400/25 hover:border-amber-400/50 rounded-md text-[10px] text-amber-300 font-semibold transition-all duration-200 shadow-2xs hover:scale-[1.02] cursor-pointer"
             >
-              <Clock size={10} className="text-amber-300" />
+              <AnimatedClock size={10} className="text-amber-300" />
               <span>{countdownText} left (12 AM)</span>
             </div>
 
@@ -410,7 +426,7 @@ export default function AdminHeader({ session }) {
             <div className="absolute top-full right-0 pt-2 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transform group-hover:translate-y-0 translate-y-1 transition-all duration-200">
               <div className="bg-[#23282d] border border-amber-500/30 rounded-xl shadow-2xl p-2.5 w-52 text-[11px] text-slate-200 backdrop-blur-md">
                 <div className="flex items-center gap-1.5 text-amber-300 font-bold border-b border-slate-700/60 pb-1 mb-1.5">
-                  <Clock size={12} />
+                  <AnimatedClock size={12} />
                   <span>Daily 12:00 AM Reset</span>
                 </div>
                 <p className="text-white font-medium">
@@ -429,13 +445,13 @@ export default function AdminHeader({ session }) {
               setShowNewMenu(false);
               setShowSessionDetail(false);
             }}
-            className="flex items-center gap-1.5 sm:gap-2 px-2 py-1 text-xs text-[#c3c4c7] hover:text-[#72aee6] hover:bg-[#2c3338] rounded transition-colors cursor-pointer"
+            className="group flex items-center gap-1.5 sm:gap-2 px-1.5 sm:px-2 py-1 text-xs text-[#c3c4c7] hover:text-[#72aee6] hover:bg-[#2c3338] rounded transition-colors cursor-pointer"
           >
-            <span className="text-[12px] font-medium text-slate-200 max-w-[120px] truncate">
+            <span className="text-[11px] sm:text-[12px] font-medium text-slate-200 max-w-[80px] sm:max-w-[120px] truncate hidden xxs:inline">
               Hi, {user.name || user.nicename || 'Admin'}
             </span>
-            <div className="w-6 h-6 rounded bg-[#2c3338] border border-[#3c434a] flex items-center justify-center text-[10px] text-white font-bold overflow-hidden shadow-2xs">
-              <User size={14} className="text-[#72aee6]" />
+            <div className="w-6 h-6 rounded bg-[#2c3338] border border-[#3c434a] flex items-center justify-center text-[10px] text-white font-bold overflow-hidden shadow-2xs shrink-0">
+              <AnimatedUser size={14} className="text-[#72aee6]" />
             </div>
           </button>
 
@@ -464,15 +480,15 @@ export default function AdminHeader({ session }) {
               {/* Session Timings Card in Dropdown */}
               <div className="mx-2 mb-2 p-2.5 bg-[#1d2327] border border-[#3c434a] rounded space-y-1.5 text-[11px]">
                 <div className="flex items-center justify-between text-slate-300 font-bold border-b border-[#2c3338] pb-1">
-                  <span className="flex items-center gap-1 text-[10px] uppercase text-[#72aee6]">
-                    <Clock size={11} /> Today's Session
+                  <span className="flex items-center gap-1.5 text-[10px] uppercase text-[#72aee6] font-bold">
+                    <AnimatedClock size={12} className="text-[#72aee6]" /> Today&apos;s Session
                   </span>
-                  <span className="text-[10px] text-amber-300">12:00 AM Reset</span>
+                  <span className="text-[10px] text-amber-300 font-bold">12:00 AM Reset</span>
                 </div>
 
                 <div className="flex items-center justify-between text-slate-400 pt-0.5">
-                  <span className="flex items-center gap-1 text-emerald-400 font-medium">
-                    <LogIn size={11} /> Login:
+                  <span className="flex items-center gap-1.5 text-emerald-400 font-medium">
+                    <AnimatedLogIn size={12} className="text-emerald-400" /> Login:
                   </span>
                   <span className="text-white font-semibold">
                     {formatFullDateTime(sessionData.loginTime || user.login_time)}
@@ -480,8 +496,8 @@ export default function AdminHeader({ session }) {
                 </div>
 
                 <div className="flex items-center justify-between text-slate-400">
-                  <span className="flex items-center gap-1 text-rose-400 font-medium">
-                    <LogOut size={11} /> Last Logout:
+                  <span className="flex items-center gap-1.5 text-rose-400 font-medium">
+                    <AnimatedLogOut size={12} className="text-rose-400" /> Last Logout:
                   </span>
                   <span className="text-slate-200 font-semibold">
                     {formatFullDateTime(sessionData.logoutTime || user.logout_time)}
@@ -489,14 +505,14 @@ export default function AdminHeader({ session }) {
                 </div>
               </div>
 
-              {/* Menu Links */}
+              {/* Menu Links with Lucide-Animated Icons */}
               <div className="space-y-0.5 px-1">
                 <Link
                   href="/edu-admin/profile"
                   onClick={() => setShowProfileMenu(false)}
-                  className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
+                  className="group flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
                 >
-                  <User size={14} className="text-[#72aee6]" />
+                  <AnimatedUser size={14} className="text-[#72aee6]" />
                   <span>User Profile</span>
                 </Link>
 
@@ -504,10 +520,10 @@ export default function AdminHeader({ session }) {
                   <Link
                     href="/edu-admin/users/logs"
                     onClick={() => setShowProfileMenu(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
+                    className="group flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
                   >
-                    <History size={14} className="text-emerald-400" />
-                    <span>Login & Logout Logs</span>
+                    <AnimatedHistory size={14} className="text-emerald-400" />
+                    <span>Login &amp; Logout Logs</span>
                   </Link>
                 )}
 
@@ -515,9 +531,9 @@ export default function AdminHeader({ session }) {
                   <Link
                     href="/edu-admin/users"
                     onClick={() => setShowProfileMenu(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
+                    className="group flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
                   >
-                    <Users size={14} className="text-blue-400" />
+                    <AnimatedUsers size={14} className="text-blue-400" />
                     <span>Manage Users</span>
                   </Link>
                 )}
@@ -526,9 +542,9 @@ export default function AdminHeader({ session }) {
                   <Link
                     href="/edu-admin/settings"
                     onClick={() => setShowProfileMenu(false)}
-                    className="flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
+                    className="group flex items-center gap-2.5 px-3 py-2 hover:bg-[#1d2327] hover:text-[#72aee6] rounded text-xs transition-colors font-medium"
                   >
-                    <ShieldAlert size={14} className="text-purple-400" />
+                    <AnimatedShield size={14} className="text-purple-400" />
                     <span>Settings</span>
                   </Link>
                 )}
@@ -541,7 +557,7 @@ export default function AdminHeader({ session }) {
                   type="button"
                   disabled={isLoggingOut}
                   onClick={handleLogout}
-                  className="w-full flex items-center gap-2.5 px-3 py-2 text-rose-400 hover:bg-[#1d2327] hover:text-rose-300 rounded transition-colors text-left font-medium cursor-pointer disabled:opacity-50"
+                  className="group w-full flex items-center gap-2.5 px-3 py-2 text-rose-400 hover:bg-[#1d2327] hover:text-rose-300 rounded transition-colors text-left font-medium cursor-pointer disabled:opacity-50"
                 >
                   {isLoggingOut ? (
                     <>
@@ -550,8 +566,8 @@ export default function AdminHeader({ session }) {
                     </>
                   ) : (
                     <>
-                      <LogOut size={14} />
-                      <span>Log Out & Save Time</span>
+                      <AnimatedLogOut size={14} className="text-rose-400" />
+                      <span>Log Out &amp; Save Time</span>
                     </>
                   )}
                 </button>

@@ -15,6 +15,8 @@ import {
   FileText,
   Award,
   Globe,
+  Mail,
+  Phone,
   Calendar,
   Share2,
   CheckCircle2,
@@ -27,13 +29,27 @@ import {
   PieChart as PieChartIcon,
   ChevronDown,
   ChevronUp,
+  HelpCircle,
+  GraduationCap,
+  Check,
+  Eye,
+  EyeOff,
+  BookCheck,
 } from 'lucide-react';
+import {
+  AnimatedBriefcase,
+  AnimatedBookOpen,
+  AnimatedHelpCircle,
+  AnimatedAward,
+  AnimatedFileText,
+  AnimatedGraduationCap,
+} from '@/components/AnimatedIcons';
 
 const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
   ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
   : 'http://localhost:5001/apis/v1';
 
-// Theme configuration for content categories (Vibrant Sunset Orange, Royal Blue, Amber Gold, Emerald Green)
+// Theme configuration for content categories
 const CATEGORY_THEMES = {
   jobs: {
     name: 'Govt. Jobs',
@@ -46,7 +62,7 @@ const CATEGORY_THEMES = {
     hoverBorder: 'hover:border-orange-400',
     iconBg: 'bg-orange-100 text-orange-600',
     glow: 'rgba(234, 88, 12, 0.45)',
-    icon: Briefcase,
+    icon: AnimatedBriefcase,
   },
   blogs: {
     name: 'Blogs & Articles',
@@ -59,7 +75,20 @@ const CATEGORY_THEMES = {
     hoverBorder: 'hover:border-blue-400',
     iconBg: 'bg-blue-100 text-blue-600',
     glow: 'rgba(37, 99, 235, 0.45)',
-    icon: BookOpen,
+    icon: AnimatedBookOpen,
+  },
+  questions: {
+    name: 'MCQ Questions',
+    color: '#7c3aed',
+    gradientFrom: '#8b5cf6',
+    gradientTo: '#6d28d9',
+    bg: 'bg-purple-50/80',
+    text: 'text-purple-700',
+    border: 'border-purple-200/80',
+    hoverBorder: 'hover:border-purple-400',
+    iconBg: 'bg-purple-100 text-purple-600',
+    glow: 'rgba(124, 58, 237, 0.45)',
+    icon: AnimatedHelpCircle,
   },
   'admit-cards': {
     name: 'Admit Cards',
@@ -72,7 +101,7 @@ const CATEGORY_THEMES = {
     hoverBorder: 'hover:border-amber-400',
     iconBg: 'bg-amber-100 text-amber-700',
     glow: 'rgba(217, 119, 6, 0.45)',
-    icon: Award,
+    icon: AnimatedAward,
   },
   results: {
     name: 'Exam Results',
@@ -85,8 +114,30 @@ const CATEGORY_THEMES = {
     hoverBorder: 'hover:border-emerald-400',
     iconBg: 'bg-emerald-100 text-emerald-600',
     glow: 'rgba(5, 150, 105, 0.45)',
-    icon: FileText,
+    icon: AnimatedFileText,
   },
+  exams: {
+    name: 'Examinations',
+    color: '#0891b2',
+    gradientFrom: '#06b6d4',
+    gradientTo: '#0e7490',
+    bg: 'bg-cyan-50/80',
+    text: 'text-cyan-700',
+    border: 'border-cyan-200/80',
+    hoverBorder: 'hover:border-cyan-400',
+    iconBg: 'bg-cyan-100 text-cyan-600',
+    glow: 'rgba(8, 145, 178, 0.45)',
+    icon: AnimatedGraduationCap,
+  },
+};
+
+const getInitials = (name = '') => {
+  if (!name) return 'EM';
+  const parts = name.trim().split(/\s+/);
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.slice(0, 2).toUpperCase();
 };
 
 export default function AuthorPage() {
@@ -102,11 +153,23 @@ export default function AuthorPage() {
   const [expiringJobs, setExpiringJobs] = useState([]);
   const [isChartAnimated, setIsChartAnimated] = useState(false);
 
-  // Pagination / Load More states (5 initial items)
+  // Pagination / Load More states
   const [blogLimit, setBlogLimit] = useState(5);
   const [jobLimit, setJobLimit] = useState(5);
   const [admitLimit, setAdmitLimit] = useState(5);
   const [resultLimit, setResultLimit] = useState(5);
+  const [questionLimit, setQuestionLimit] = useState(5);
+  const [examLimit, setExamLimit] = useState(5);
+
+  // Revealed Answers state for interactive MCQ questions
+  const [revealedAnswers, setRevealedAnswers] = useState({});
+
+  const toggleAnswer = (questionId) => {
+    setRevealedAnswers((prev) => ({
+      ...prev,
+      [questionId]: !prev[questionId],
+    }));
+  };
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -156,9 +219,24 @@ export default function AuthorPage() {
   }, [slug]);
 
   const author = data?.author || {};
-  const stats = data?.stats || { blogs: 0, jobs: 0, admitCards: 0, results: 0, total: 0 };
+  const stats = data?.stats || {
+    blogs: 0,
+    jobs: 0,
+    admitCards: 0,
+    results: 0,
+    questions: 0,
+    exams: 0,
+    total: 0,
+  };
   const rawChartData = data?.chartData || [];
-  const recent = data?.recent || { blogs: [], jobs: [], admitCards: [], results: [] };
+  const recent = data?.recent || {
+    blogs: [],
+    jobs: [],
+    admitCards: [],
+    results: [],
+    questions: [],
+    exams: [],
+  };
 
   const formatDate = (dateStr) => {
     if (!dateStr) return 'Recent';
@@ -234,20 +312,35 @@ export default function AuthorPage() {
     });
   }, [chartItems, circumference]);
 
-  const activeHudItem = hoveredSlice
-    ? pieSegments.find((s) => s.type === hoveredSlice) || pieSegments[0]
-    : pieSegments[0] || {
-        name: 'Govt. Jobs',
-        count: stats.jobs || stats.total,
-        percent: stats.total > 0 ? Math.round(((stats.jobs || stats.total) / stats.total) * 100) : 100,
-        proportion: stats.total > 0 ? Math.round(((stats.jobs || stats.total) / stats.total) * 100) : 100,
-        color: '#ea580c',
-        gradientFrom: '#f97316',
-        gradientTo: '#ea580c',
-        bg: 'bg-orange-50',
-        text: 'text-orange-700',
-        border: 'border-orange-200',
-      };
+  const activeHudItem = useMemo(() => {
+    if (hoveredSlice) {
+      const found = pieSegments.find((s) => s.type === hoveredSlice);
+      if (found) return found;
+    }
+    if (pieSegments.length > 0) {
+      return pieSegments[0];
+    }
+    return {
+      name: 'Contributions',
+      count: stats.total || 0,
+      percent: 100,
+      proportion: 100,
+      color: '#7c3aed',
+      gradientFrom: '#8b5cf6',
+      gradientTo: '#6d28d9',
+      bg: 'bg-purple-50',
+      text: 'text-purple-700',
+      border: 'border-purple-200',
+    };
+  }, [hoveredSlice, pieSegments, stats.total]);
+
+  const hasAnyContent = stats.total > 0;
+  const hasOnlyQuestions =
+    stats.questions > 0 &&
+    stats.blogs === 0 &&
+    stats.jobs === 0 &&
+    stats.admitCards === 0 &&
+    stats.results === 0;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#f8fafc] text-slate-900 font-sans selection:bg-blue-600 selection:text-white">
@@ -263,7 +356,8 @@ export default function AuthorPage() {
           }
         }
         @keyframes floatSlow {
-          0%, 100% {
+          0%,
+          100% {
             transform: translateY(0px);
           }
           50% {
@@ -279,13 +373,12 @@ export default function AuthorPage() {
       <Header />
       <LiveTicker />
 
-      {/* 2. Main Page Container with 3-Column Grid on Extra Large screens */}
+      {/* 2. Main Page Container */}
       <div className="max-w-[1600px] mx-auto px-3 sm:px-6 lg:px-8 py-5 flex-1 w-full">
         {loading ? (
-          /* Global High-End Branded Loader */
           <GlobalLoader
             text="Loading Author Profile..."
-            subtext={`Fetching @${slug}'s publications, distribution stats, and exam updates`}
+            subtext={`Fetching @${slug}'s published contributions, statistics, and educational content`}
             minHeight="min-h-[480px]"
           />
         ) : error ? (
@@ -298,16 +391,16 @@ export default function AuthorPage() {
               The author profile you are looking for may have been updated or moved.
             </p>
             <Link
-              href="/"
+              href="/authors"
               className="inline-flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs sm:text-sm rounded-lg transition shadow-xs"
             >
-              <span>Back to Home</span>
+              <span>Browse All Authors</span>
             </Link>
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 xl:grid-cols-12 gap-5 items-start">
             {/* ============================================================== */}
-            {/* LEFT COLUMN: AD BANNER & SPONSORED HIGHLIGHT (xl:col-span-2) */}
+            {/* LEFT COLUMN: SPONSORED HIGHLIGHT (xl:col-span-2) */}
             {/* ============================================================== */}
             <aside className="hidden xl:block xl:col-span-2 sticky top-20">
               <div className="bg-[#e7f9ee] border border-[#a3e6be] rounded border-dashed p-4 min-h-[600px] flex flex-col items-center justify-between text-center relative overflow-hidden group">
@@ -315,7 +408,7 @@ export default function AuthorPage() {
                   <span>Available at</span>
                   <span className="font-extrabold text-xs">GoDaddy</span>
                 </div>
-                
+
                 <div className="my-auto space-y-4">
                   <div className="w-16 h-16 bg-emerald-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto shadow-md">
                     Go
@@ -334,38 +427,51 @@ export default function AuthorPage() {
             </aside>
 
             {/* ============================================================== */}
-            {/* CENTER COLUMN: AUTHOR HERO, PIE CHART & CONTENT STREAM (7/12) */}
+            {/* CENTER COLUMN: AUTHOR HERO, STATS, CHART & CONTENT STREAM (7/12) */}
             {/* ============================================================== */}
             <main className="col-span-12 lg:col-span-8 xl:col-span-7 space-y-4">
-              {/* Breadcrumb at Middle (Directly above Center Content) */}
+              {/* Breadcrumb */}
               <div className="text-xs text-slate-500 flex items-center gap-1.5 font-medium overflow-x-auto whitespace-nowrap pb-1">
                 <Link href="/" className="hover:text-blue-600 text-blue-600 underline">
                   Home
                 </Link>
                 <span>›</span>
-                <span className="text-slate-500">Authors</span>
+                <Link href="/authors" className="hover:text-blue-600 text-blue-600 underline">
+                  Authors
+                </Link>
                 <span>›</span>
-                <span className="text-slate-900 font-bold">{author.name || slug || 'Author Profile'}</span>
+                <span className="text-slate-900 font-bold">
+                  {author.name || slug || 'Author Profile'}
+                </span>
               </div>
 
-              {/* AUTHOR HERO CARD - CLEAN & SEAMLESS */}
+              {/* AUTHOR HERO CARD */}
               <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 relative overflow-hidden transition hover:shadow-sm">
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5">
                   {/* Author Avatar with verified badge */}
                   <div className="relative shrink-0 group">
                     <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-orange-500 via-amber-500 to-blue-600 p-0.5 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                      <div className="w-full h-full bg-white rounded-[14px] overflow-hidden flex items-center justify-center">
-                        <img
-                          src={getImageUrl(author.image, '/user-avatar.png')}
-                          alt={author.name}
-                          className="w-full h-full object-cover"
-                          onError={(e) => {
-                            if (!e.currentTarget.dataset.fallback) {
-                              e.currentTarget.dataset.fallback = 'true';
-                              e.currentTarget.src = '/user-avatar.png';
-                            }
-                          }}
-                        />
+                      <div className="w-full h-full bg-white rounded-[14px] overflow-hidden flex items-center justify-center relative">
+                        {author.image ? (
+                          <img
+                            src={getImageUrl(author.image, '/user-avatar.png')}
+                            alt={author.name}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                              e.currentTarget.style.display = 'none';
+                              if (e.currentTarget.nextSibling) {
+                                e.currentTarget.nextSibling.style.display = 'flex';
+                              }
+                            }}
+                          />
+                        ) : null}
+                        <div
+                          className={`w-full h-full rounded-[14px] bg-gradient-to-tr from-blue-600 to-indigo-700 text-white font-black text-xl flex items-center justify-center ${
+                            author.image ? 'hidden' : 'flex'
+                          }`}
+                        >
+                          {getInitials(author.name)}
+                        </div>
                       </div>
                     </div>
                     <div
@@ -386,34 +492,62 @@ export default function AuthorPage() {
                         {author.role || 'Author'}
                       </span>
                       {author.nicename && (
-                        <span className="text-xs text-slate-500 font-medium">@{author.nicename}</span>
+                        <span className="text-xs text-slate-500 font-medium">
+                          @{author.nicename}
+                        </span>
                       )}
                     </div>
 
                     <p className="text-xs sm:text-sm text-slate-600 leading-relaxed font-normal">
                       {author.bio ||
-                        `I am ${author.name}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic and career decisions.`}
+                        `Education specialist and verified contributor at Education Masters, contributing practice questions, academic resources, and career updates.`}
                     </p>
 
-                    {/* Social Media Links */}
+                    {/* Social Media & Contact Links */}
                     <div className="flex items-center gap-2.5 pt-1 text-slate-500 flex-wrap">
                       {author.website && (
                         <a
-                          href={author.website.startsWith('http') ? author.website : `https://${author.website}`}
+                          href={
+                            author.website.startsWith('http')
+                              ? author.website
+                              : `https://${author.website}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-orange-50 text-slate-600 hover:text-orange-600 border border-slate-200/70 flex items-center justify-center transition hover:scale-105"
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-orange-50 text-slate-600 hover:text-orange-600 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
                           title="Official Website"
                         >
                           <Globe size={13} />
                         </a>
                       )}
+                      {author.email && (
+                        <a
+                          href={`mailto:${author.email}`}
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-emerald-50 text-slate-600 hover:text-emerald-600 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
+                          title={`Email: ${author.email}`}
+                        >
+                          <Mail size={13} />
+                        </a>
+                      )}
+                      {author.phone && (
+                        <a
+                          href={`tel:${author.phone}`}
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-orange-50 text-slate-600 hover:text-orange-600 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
+                          title={`Phone: ${author.phone}`}
+                        >
+                          <Phone size={13} />
+                        </a>
+                      )}
                       {author.twitter && (
                         <a
-                          href={author.twitter.startsWith('http') ? author.twitter : `https://twitter.com/${author.twitter}`}
+                          href={
+                            author.twitter.startsWith('http')
+                              ? author.twitter
+                              : `https://twitter.com/${author.twitter.replace('@', '')}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-sky-50 text-slate-600 hover:text-sky-500 border border-slate-200/70 flex items-center justify-center transition hover:scale-105"
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-sky-50 text-slate-600 hover:text-sky-500 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
                           title="Twitter / X"
                         >
                           <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
@@ -423,10 +557,14 @@ export default function AuthorPage() {
                       )}
                       {author.facebook && (
                         <a
-                          href={author.facebook.startsWith('http') ? author.facebook : `https://facebook.com/${author.facebook}`}
+                          href={
+                            author.facebook.startsWith('http')
+                              ? author.facebook
+                              : `https://facebook.com/${author.facebook}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200/70 flex items-center justify-center transition hover:scale-105"
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-blue-50 text-slate-600 hover:text-blue-700 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
                           title="Facebook"
                         >
                           <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
@@ -434,25 +572,16 @@ export default function AuthorPage() {
                           </svg>
                         </a>
                       )}
-                      {author.linkedin && (
-                        <a
-                          href={author.linkedin.startsWith('http') ? author.linkedin : `https://linkedin.com/in/${author.linkedin}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-blue-50 text-slate-600 hover:text-blue-800 border border-slate-200/70 flex items-center justify-center transition hover:scale-105"
-                          title="LinkedIn"
-                        >
-                          <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
-                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
-                          </svg>
-                        </a>
-                      )}
                       {author.instagram && (
                         <a
-                          href={author.instagram.startsWith('http') ? author.instagram : `https://instagram.com/${author.instagram}`}
+                          href={
+                            author.instagram.startsWith('http')
+                              ? author.instagram
+                              : `https://instagram.com/${author.instagram.replace('@', '')}`
+                          }
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-pink-50 text-slate-600 hover:text-pink-600 border border-slate-200/70 flex items-center justify-center transition hover:scale-105"
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-pink-50 text-slate-600 hover:text-pink-600 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
                           title="Instagram"
                         >
                           <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
@@ -460,230 +589,504 @@ export default function AuthorPage() {
                           </svg>
                         </a>
                       )}
+                      {author.youtube && (
+                        <a
+                          href={
+                            author.youtube.startsWith('http')
+                              ? author.youtube
+                              : `https://youtube.com/${author.youtube.startsWith('@') ? author.youtube : `@${author.youtube}`}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-rose-50 text-slate-600 hover:text-rose-600 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
+                          title="YouTube"
+                        >
+                          <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                            <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                          </svg>
+                        </a>
+                      )}
+                      {author.linkedin && (
+                        <a
+                          href={
+                            author.linkedin.startsWith('http')
+                              ? author.linkedin
+                              : `https://linkedin.com/in/${author.linkedin}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="w-7 h-7 rounded-lg bg-slate-100/80 hover:bg-blue-50 text-slate-600 hover:text-blue-800 border border-slate-200/70 flex items-center justify-center transition hover:scale-105 shadow-2xs"
+                          title="LinkedIn"
+                        >
+                          <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                            <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                          </svg>
+                        </a>
+                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* 5 Distinct Metric Chips */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 mt-5 pt-4 border-t border-slate-100">
+                {/* 6 Real Metric Chips (Total, Jobs, Blogs, MCQs, Admit Cards, Results) */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2 mt-5 pt-4 border-t border-slate-100">
                   <div className="bg-slate-50/90 border border-slate-200/80 rounded-xl p-2.5 text-center">
-                    <span className="text-[10.5px] text-slate-500 font-semibold block">Total Published</span>
-                    <span className="text-lg sm:text-xl font-black text-slate-900 mt-0.5 block">{stats.total}</span>
+                    <span className="text-[10px] text-slate-500 font-semibold block">
+                      Total Published
+                    </span>
+                    <span className="text-lg font-black text-slate-900 mt-0.5 block">
+                      {stats.total}
+                    </span>
                   </div>
                   <div className="bg-orange-50/80 border border-orange-200/80 rounded-xl p-2.5 text-center">
-                    <span className="text-[10.5px] text-orange-700 font-semibold block">Govt. Jobs</span>
-                    <span className="text-lg sm:text-xl font-black text-orange-700 mt-0.5 block">{stats.jobs}</span>
+                    <span className="text-[10px] text-orange-700 font-semibold block">
+                      Govt. Jobs
+                    </span>
+                    <span className="text-lg font-black text-orange-700 mt-0.5 block">
+                      {stats.jobs}
+                    </span>
                   </div>
                   <div className="bg-blue-50/80 border border-blue-200/80 rounded-xl p-2.5 text-center">
-                    <span className="text-[10.5px] text-blue-700 font-semibold block">Blogs &amp; Articles</span>
-                    <span className="text-lg sm:text-xl font-black text-blue-700 mt-0.5 block">{stats.blogs}</span>
+                    <span className="text-[10px] text-blue-700 font-semibold block">
+                      Blogs &amp; Articles
+                    </span>
+                    <span className="text-lg font-black text-blue-700 mt-0.5 block">
+                      {stats.blogs}
+                    </span>
+                  </div>
+                  <div className="bg-purple-50/80 border border-purple-200/80 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] text-purple-700 font-semibold block">
+                      MCQ Questions
+                    </span>
+                    <span className="text-lg font-black text-purple-700 mt-0.5 block">
+                      {stats.questions || 0}
+                    </span>
                   </div>
                   <div className="bg-amber-50/80 border border-amber-200/80 rounded-xl p-2.5 text-center">
-                    <span className="text-[10.5px] text-amber-800 font-semibold block">Admit Cards</span>
-                    <span className="text-lg sm:text-xl font-black text-amber-800 mt-0.5 block">{stats.admitCards}</span>
+                    <span className="text-[10px] text-amber-800 font-semibold block">
+                      Admit Cards
+                    </span>
+                    <span className="text-lg font-black text-amber-800 mt-0.5 block">
+                      {stats.admitCards}
+                    </span>
                   </div>
-                  <div className="col-span-2 sm:col-span-1 bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-2.5 text-center">
-                    <span className="text-[10.5px] text-emerald-700 font-semibold block">Exam Results</span>
-                    <span className="text-lg sm:text-xl font-black text-emerald-700 mt-0.5 block">{stats.results}</span>
+                  <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-2.5 text-center">
+                    <span className="text-[10px] text-emerald-700 font-semibold block">
+                      Exam Results
+                    </span>
+                    <span className="text-lg font-black text-emerald-700 mt-0.5 block">
+                      {stats.results}
+                    </span>
                   </div>
                 </div>
               </div>
 
               {/* ======================================================= */}
-              {/* HARMONIOUS ANIMATED PIE / DONUT CHART SECTION */}
+              {/* INTERACTIVE DONUT CHART & DISTRIBUTION */}
               {/* ======================================================= */}
-              <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shadow-2xs">
-                      <PieChartIcon size={15} />
+              {hasAnyContent ? (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-5 sm:p-6 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 pb-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-7 h-7 rounded-lg bg-orange-50 border border-orange-200 flex items-center justify-center text-orange-600 shadow-2xs">
+                        <PieChartIcon size={15} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
+                          Content Publishing Distribution
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          Breakdown of author&apos;s verified contributions across all sections
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <h3 className="text-sm sm:text-base font-bold text-slate-900 tracking-tight">
-                        Content Publishing Distribution
-                      </h3>
-                      <p className="text-[11px] text-slate-500">
-                        Visual breakdown of articles, recruitment notices &amp; exam updates
-                      </p>
-                    </div>
+                    <span className="text-[11px] font-bold text-orange-700 bg-orange-50 border border-orange-200/70 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
+                      {stats.total} Total Contributions
+                    </span>
                   </div>
-                  <span className="text-[11px] font-bold text-orange-700 bg-orange-50 border border-orange-200/70 px-2.5 py-0.5 rounded-full self-start sm:self-auto">
-                    {stats.total} Total Contributions
-                  </span>
-                </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
-                  {/* Left: Dynamic Animated Donut Chart */}
-                  <div className="col-span-1 md:col-span-5 flex flex-col items-center justify-center relative py-1">
-                    <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
-                      <svg
-                        viewBox="0 0 140 140"
-                        className="w-full h-full -rotate-90 transform transition-transform duration-700"
-                      >
-                        {/* Defined Linear Gradients with Vibrant Orange & Complementary Hues */}
-                        <defs>
-                          <linearGradient id="grad-jobs" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#f97316" />
-                            <stop offset="100%" stopColor="#ea580c" />
-                          </linearGradient>
-                          <linearGradient id="grad-blogs" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#3b82f6" />
-                            <stop offset="100%" stopColor="#1d4ed8" />
-                          </linearGradient>
-                          <linearGradient id="grad-admit-cards" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#fbbf24" />
-                            <stop offset="100%" stopColor="#d97706" />
-                          </linearGradient>
-                          <linearGradient id="grad-results" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="#10b981" />
-                            <stop offset="100%" stopColor="#059669" />
-                          </linearGradient>
-                        </defs>
+                  <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+                    {/* Left: Dynamic Animated Donut Chart */}
+                    <div className="col-span-1 md:col-span-5 flex flex-col items-center justify-center relative py-1">
+                      <div className="relative w-44 h-44 sm:w-48 sm:h-48 flex items-center justify-center">
+                        <svg
+                          viewBox="0 0 140 140"
+                          className="w-full h-full -rotate-90 transform transition-transform duration-700"
+                        >
+                          {/* Gradients */}
+                          <defs>
+                            <linearGradient id="grad-jobs" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#f97316" />
+                              <stop offset="100%" stopColor="#ea580c" />
+                            </linearGradient>
+                            <linearGradient id="grad-blogs" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#3b82f6" />
+                              <stop offset="100%" stopColor="#1d4ed8" />
+                            </linearGradient>
+                            <linearGradient id="grad-questions" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#8b5cf6" />
+                              <stop offset="100%" stopColor="#6d28d9" />
+                            </linearGradient>
+                            <linearGradient
+                              id="grad-admit-cards"
+                              x1="0%"
+                              y1="0%"
+                              x2="100%"
+                              y2="100%"
+                            >
+                              <stop offset="0%" stopColor="#fbbf24" />
+                              <stop offset="100%" stopColor="#d97706" />
+                            </linearGradient>
+                            <linearGradient id="grad-results" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#10b981" />
+                              <stop offset="100%" stopColor="#059669" />
+                            </linearGradient>
+                            <linearGradient id="grad-exams" x1="0%" y1="0%" x2="100%" y2="100%">
+                              <stop offset="0%" stopColor="#06b6d4" />
+                              <stop offset="100%" stopColor="#0e7490" />
+                            </linearGradient>
+                          </defs>
 
-                        {/* Background Track Circle */}
-                        <circle
-                          cx="70"
-                          cy="70"
-                          r={radius}
-                          fill="transparent"
-                          stroke="#f1f5f9"
-                          strokeWidth="13"
-                        />
-
-                        {/* Animated Category Slices */}
-                        {pieSegments.length > 0 ? (
-                          pieSegments.map((segment) => {
-                            const isHovered = hoveredSlice === segment.type;
-                            return (
-                              <circle
-                                key={segment.type}
-                                cx="70"
-                                cy="70"
-                                r={radius}
-                                fill="transparent"
-                                stroke={`url(#grad-${segment.type})`}
-                                strokeWidth={isHovered ? '18' : '13.5'}
-                                strokeDasharray={segment.strokeDasharray}
-                                strokeDashoffset={segment.strokeDashoffset}
-                                strokeLinecap="round"
-                                className="cursor-pointer transition-all duration-500 ease-out animate-chart-draw"
-                                style={{
-                                  filter: isHovered ? `drop-shadow(0 0 8px ${segment.glow || segment.color})` : 'none',
-                                }}
-                                onMouseEnter={() => setHoveredSlice(segment.type)}
-                                onMouseLeave={() => setHoveredSlice(null)}
-                              />
-                            );
-                          })
-                        ) : (
+                          {/* Background Track Circle */}
                           <circle
                             cx="70"
                             cy="70"
                             r={radius}
                             fill="transparent"
-                            stroke="url(#grad-jobs)"
-                            strokeWidth="13.5"
-                            strokeDasharray={`${circumference} 0`}
+                            stroke="#f1f5f9"
+                            strokeWidth="13"
                           />
-                        )}
-                      </svg>
 
-                      {/* Interactive Center HUD Display with floating animation */}
-                      <div
-                        className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none p-3 transition-all duration-300"
-                        style={{ animation: 'floatSlow 4s ease-in-out infinite' }}
-                      >
-                        <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none transition-all duration-300">
-                          {activeHudItem.count}
-                        </span>
-                        <span className="text-[11px] font-bold text-slate-600 mt-1 truncate max-w-[105px]">
-                          {activeHudItem.name}
-                        </span>
-                        <span
-                          className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full mt-1 border transition-all duration-300 ${
-                            activeHudItem.bg || 'bg-orange-50'
-                          } ${activeHudItem.text || 'text-orange-700'} ${activeHudItem.border || 'border-orange-200'}`}
+                          {/* Animated Category Slices */}
+                          {pieSegments.length > 0 ? (
+                            pieSegments.map((segment) => {
+                              const isHovered = hoveredSlice === segment.type;
+                              return (
+                                <circle
+                                  key={segment.type}
+                                  cx="70"
+                                  cy="70"
+                                  r={radius}
+                                  fill="transparent"
+                                  stroke={`url(#grad-${segment.type})`}
+                                  strokeWidth={isHovered ? '18' : '13.5'}
+                                  strokeDasharray={segment.strokeDasharray}
+                                  strokeDashoffset={segment.strokeDashoffset}
+                                  strokeLinecap="round"
+                                  className="cursor-pointer transition-all duration-500 ease-out animate-chart-draw"
+                                  style={{
+                                    filter: isHovered
+                                      ? `drop-shadow(0 0 8px ${segment.glow || segment.color})`
+                                      : 'none',
+                                  }}
+                                  onMouseEnter={() => setHoveredSlice(segment.type)}
+                                  onMouseLeave={() => setHoveredSlice(null)}
+                                />
+                              );
+                            })
+                          ) : (
+                            <circle
+                              cx="70"
+                              cy="70"
+                              r={radius}
+                              fill="transparent"
+                              stroke="url(#grad-questions)"
+                              strokeWidth="13.5"
+                              strokeDasharray={`${circumference} 0`}
+                            />
+                          )}
+                        </svg>
+
+                        {/* Interactive Center HUD Display */}
+                        <div
+                          className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none p-3 transition-all duration-300"
+                          style={{ animation: 'floatSlow 4s ease-in-out infinite' }}
                         >
-                          {activeHudItem.proportion || activeHudItem.percent || 100}%
-                        </span>
+                          <span className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight leading-none transition-all duration-300">
+                            {activeHudItem.count}
+                          </span>
+                          <span className="text-[11px] font-bold text-slate-600 mt-1 truncate max-w-[105px]">
+                            {activeHudItem.name}
+                          </span>
+                          <span
+                            className={`text-[10px] font-extrabold px-2 py-0.5 rounded-full mt-1 border transition-all duration-300 ${
+                              activeHudItem.bg || 'bg-purple-50'
+                            } ${activeHudItem.text || 'text-purple-700'} ${
+                              activeHudItem.border || 'border-purple-200'
+                            }`}
+                          >
+                            {activeHudItem.proportion || activeHudItem.percent || 100}%
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Right: Legend Breakdown with Cohesive Cards */}
-                  <div className="col-span-1 md:col-span-7 space-y-2.5">
-                    {chartItems.map((item) => {
-                      const isHovered = hoveredSlice === item.type;
+                    {/* Right: Legend Breakdown */}
+                    <div className="col-span-1 md:col-span-7 space-y-2.5">
+                      {chartItems.map((item) => {
+                        const isHovered = hoveredSlice === item.type;
 
-                      return (
-                        <div
-                          key={item.type}
-                          onMouseEnter={() => setHoveredSlice(item.type)}
-                          onMouseLeave={() => setHoveredSlice(null)}
-                          className={`p-3 rounded-xl border transition-all duration-300 cursor-pointer flex items-center justify-between ${
-                            isHovered
-                              ? `${item.bg} ${item.border} shadow-xs scale-[1.015]`
-                              : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/50'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <div
-                              className="w-3 h-3 rounded-full shrink-0 shadow-2xs"
-                              style={{ backgroundColor: item.color }}
-                            />
-                            <div>
-                              <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
-                                {item.name}
-                              </h4>
-                              <span className="text-[11px] text-slate-500 font-normal">
-                                {item.count} Published Entries
+                        return (
+                          <div
+                            key={item.type}
+                            onMouseEnter={() => setHoveredSlice(item.type)}
+                            onMouseLeave={() => setHoveredSlice(null)}
+                            className={`p-3 rounded-xl border transition-all duration-300 cursor-pointer flex items-center justify-between ${
+                              isHovered
+                                ? `${item.bg} ${item.border} shadow-xs scale-[1.015]`
+                                : 'bg-white border-slate-200/80 hover:border-slate-300 hover:bg-slate-50/50'
+                            }`}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-3 h-3 rounded-full shrink-0 shadow-2xs"
+                                style={{ backgroundColor: item.color }}
+                              />
+                              <div>
+                                <h4 className="text-xs sm:text-sm font-bold text-slate-900 leading-tight">
+                                  {item.name}
+                                </h4>
+                                <span className="text-[11px] text-slate-500 font-normal">
+                                  {item.count} Published Entries
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="text-xs sm:text-sm font-black text-slate-900 block">
+                                {item.percent}%
                               </span>
+                              <div className="w-16 sm:w-20 bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
+                                <div
+                                  className="h-full rounded-full transition-all duration-700 ease-out"
+                                  style={{
+                                    width: `${item.percent}%`,
+                                    background: `linear-gradient(to right, ${item.gradientFrom}, ${item.gradientTo})`,
+                                  }}
+                                />
+                              </div>
                             </div>
                           </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs p-8 text-center space-y-3">
+                  <div className="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center mx-auto text-xl">
+                    📁
+                  </div>
+                  <h3 className="text-base font-bold text-slate-900">
+                    No Contributions Published Yet
+                  </h3>
+                  <p className="text-xs text-slate-500 max-w-md mx-auto">
+                    This author has not published any public articles, questions, or updates yet.
+                    Check back soon for new content.
+                  </p>
+                </div>
+              )}
 
-                          <div className="text-right">
-                            <span className="text-xs sm:text-sm font-black text-slate-900 block">
-                              {item.percent}%
-                            </span>
-                            <div className="w-16 sm:w-20 bg-slate-100 rounded-full h-1.5 mt-1 overflow-hidden">
-                              <div
-                                className="h-full rounded-full transition-all duration-700 ease-out"
-                                style={{
-                                  width: `${item.percent}%`,
-                                  background: `linear-gradient(to right, ${item.gradientFrom}, ${item.gradientTo})`,
-                                }}
-                              />
+              {/* ======================================================= */}
+              {/* CONTENT STREAM: MCQ QUESTIONS (IF AUTHOR HAS QUESTIONS) */}
+              {/* ======================================================= */}
+              {recent.questions && recent.questions.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden">
+                  <div className="p-4 bg-purple-50/70 border-b border-purple-100/80 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <span className="w-7 h-7 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center text-sm">
+                        ❓
+                      </span>
+                      <div>
+                        <h3 className="font-bold text-slate-900 text-sm sm:text-base">
+                          MCQ &amp; Practice Questions
+                        </h3>
+                        <p className="text-[11px] text-slate-500">
+                          Objective practice questions authored by {author.name}
+                        </p>
+                      </div>
+                    </div>
+                    <span className="text-xs font-bold text-purple-700 bg-purple-100/80 border border-purple-200 px-3 py-1 rounded-full">
+                      {stats.questions} MCQs
+                    </span>
+                  </div>
+
+                  {/* Question Cards List */}
+                  <div className="divide-y divide-slate-100 p-4 space-y-4">
+                    {recent.questions.slice(0, questionLimit).map((q, idx) => {
+                      const isRevealed = revealedAnswers[q._id];
+                      return (
+                        <div
+                          key={q._id || idx}
+                          className="pt-4 first:pt-0 pb-2 space-y-3 transition hover:bg-slate-50/40 p-3 rounded-xl border border-transparent hover:border-slate-100"
+                        >
+                          {/* Tags & Metadata */}
+                          <div className="flex items-center justify-between gap-2 flex-wrap text-[11px]">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="bg-purple-100 text-purple-800 font-bold px-2.5 py-0.5 rounded-md text-[10.5px]">
+                                Q{idx + 1}
+                              </span>
+                              {q.subject_name && (
+                                <span className="bg-blue-50 text-blue-700 font-semibold px-2 py-0.5 rounded-md border border-blue-200/60">
+                                  {q.subject_name}
+                                </span>
+                              )}
+                              {q.level?.name && (
+                                <span className="bg-slate-100 text-slate-600 font-medium px-2 py-0.5 rounded-md">
+                                  {q.level.name}
+                                </span>
+                              )}
+                              {q.marks !== undefined && (
+                                <span className="bg-emerald-50 text-emerald-700 font-medium px-2 py-0.5 rounded-md border border-emerald-200/60">
+                                  {q.marks} Mark{q.marks > 1 ? 's' : ''}
+                                </span>
+                              )}
                             </div>
+                            <span className="text-slate-400 text-[10.5px]">
+                              📅 {formatDate(q.createdAt || q.created_at)}
+                            </span>
+                          </div>
+
+                          {/* Question Content */}
+                          <h4 className="text-sm sm:text-base font-bold text-slate-900 leading-snug">
+                            {q.content}
+                          </h4>
+
+                          {/* Options Grid */}
+                          {Array.isArray(q.options) && q.options.length > 0 && (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                              {q.options.map((opt, optIdx) => {
+                                const optLetter = String.fromCharCode(65 + optIdx);
+                                const isCorrect = opt.is_correct || opt.isCorrect;
+                                const showAsCorrect = isRevealed && isCorrect;
+
+                                return (
+                                  <div
+                                    key={optIdx}
+                                    className={`p-2.5 rounded-xl border text-xs sm:text-sm font-medium flex items-center gap-2.5 transition ${
+                                      showAsCorrect
+                                        ? 'bg-emerald-50 border-emerald-300 text-emerald-900 font-bold shadow-2xs'
+                                        : 'bg-slate-50/80 border-slate-200/80 text-slate-700'
+                                    }`}
+                                  >
+                                    <span
+                                      className={`w-6 h-6 rounded-lg text-xs font-bold flex items-center justify-center shrink-0 ${
+                                        showAsCorrect
+                                          ? 'bg-emerald-600 text-white'
+                                          : 'bg-white border border-slate-200 text-slate-600'
+                                      }`}
+                                    >
+                                      {optLetter}
+                                    </span>
+                                    <span className="flex-1">{opt.text}</span>
+                                    {showAsCorrect && (
+                                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+
+                          {/* Target Examinations Tags */}
+                          {Array.isArray(q.examination_names) &&
+                            q.examination_names.length > 0 && (
+                              <div className="flex items-center gap-1.5 flex-wrap pt-1 text-[10.5px]">
+                                <span className="text-slate-400 font-medium">Relevant Exams:</span>
+                                {q.examination_names.map((examName, i) => (
+                                  <span
+                                    key={i}
+                                    className="bg-slate-100 text-slate-600 px-1.5 py-0.5 rounded text-[10px]"
+                                  >
+                                    {examName}
+                                  </span>
+                                ))}
+                              </div>
+                            )}
+
+                          {/* Interactive Reveal Button */}
+                          <div className="flex items-center justify-between pt-1">
+                            <button
+                              type="button"
+                              onClick={() => toggleAnswer(q._id)}
+                              className={`inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1.5 rounded-lg transition cursor-pointer shadow-2xs ${
+                                isRevealed
+                                  ? 'bg-slate-100 text-slate-700 hover:bg-slate-200'
+                                  : 'bg-purple-600 hover:bg-purple-700 text-white'
+                              }`}
+                            >
+                              {isRevealed ? (
+                                <>
+                                  <EyeOff size={13} />
+                                  <span>Hide Answer</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Eye size={13} />
+                                  <span>View Answer &amp; Solution</span>
+                                </>
+                              )}
+                            </button>
+
+                            {isRevealed && (
+                              <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-md border border-emerald-200">
+                                Answer: {q.correct_answer || 'Verified'}
+                              </span>
+                            )}
                           </div>
                         </div>
                       );
                     })}
                   </div>
-                </div>
-              </div>
 
-              {/* ======================================================= */}
-              {/* CONTENT SHOWCASE (DUAL-STREAM WITH 5 ITEMS & LOAD MORE) */}
-              {/* ======================================================= */}
-              <div className="space-y-5">
-                {/* Dual Column Stream: Blogs & Jobs */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-                  {/* 1. RECENT BLOGS POSTED */}
-                  <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
-                    <div className="p-3.5 bg-blue-50/60 border-b border-blue-100/80 flex items-center justify-between">
-                      <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                        <span className="text-blue-600">📝</span>
-                        <span>Recent Blogs Posted</span>
-                      </h3>
-                      <span className="text-[11px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200">
-                        {stats.blogs} Blogs
-                      </span>
+                  {/* Load More Button for MCQs */}
+                  {recent.questions.length > 5 && (
+                    <div className="p-3 bg-slate-50/50 border-t border-slate-100 text-center">
+                      {questionLimit < recent.questions.length ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setQuestionLimit((prev) => Math.min(prev + 5, recent.questions.length))
+                          }
+                          className="inline-flex items-center gap-1 text-xs font-bold text-purple-600 hover:text-purple-700 py-1.5 px-4 rounded-lg hover:bg-purple-50 transition cursor-pointer"
+                        >
+                          <span>Load More ({recent.questions.length - questionLimit} More)</span>
+                          <ChevronDown size={14} />
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => setQuestionLimit(5)}
+                          className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-700 py-1.5 px-4 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                        >
+                          <span>Show Less</span>
+                          <ChevronUp size={14} />
+                        </button>
+                      )}
                     </div>
+                  )}
+                </div>
+              )}
 
-                    {/* Scrollable Container */}
-                    <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
-                      {recent.blogs && recent.blogs.length > 0 ? (
-                        recent.blogs.slice(0, blogLimit).map((blog) => (
+              {/* ======================================================= */}
+              {/* CONTENT SHOWCASE: BLOGS & JOBS (IF AVAILABLE) */}
+              {/* ======================================================= */}
+              {(recent.blogs?.length > 0 || recent.jobs?.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                  {/* RECENT BLOGS POSTED */}
+                  {recent.blogs?.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                      <div className="p-3.5 bg-blue-50/60 border-b border-blue-100/80 flex items-center justify-between">
+                        <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                          <span className="text-blue-600">📝</span>
+                          <span>Recent Blogs Posted</span>
+                        </h3>
+                        <span className="text-[11px] font-bold text-blue-700 bg-blue-100/80 px-2 py-0.5 rounded-full border border-blue-200">
+                          {stats.blogs} Blogs
+                        </span>
+                      </div>
+
+                      <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
+                        {recent.blogs.slice(0, blogLimit).map((blog) => (
                           <Link
                             key={blog._id}
                             href={`/${blog.slug || blog._id}`}
@@ -712,54 +1115,52 @@ export default function AuthorPage() {
                               </div>
                             </div>
                           </Link>
-                        ))
-                      ) : (
-                        <div className="py-10 text-center text-xs text-slate-500">No blogs posted yet</div>
+                        ))}
+                      </div>
+
+                      {recent.blogs.length > 5 && (
+                        <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
+                          {blogLimit < recent.blogs.length ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setBlogLimit((prev) => Math.min(prev + 5, recent.blogs.length))
+                              }
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 py-1 px-3 rounded-lg hover:bg-blue-50 transition cursor-pointer"
+                            >
+                              <span>Load More ({recent.blogs.length - blogLimit} More)</span>
+                              <ChevronDown size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setBlogLimit(5)}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                            >
+                              <span>Show Less</span>
+                              <ChevronUp size={13} />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
+                  )}
 
-                    {/* Load More Button for Blogs */}
-                    {recent.blogs && recent.blogs.length > 5 && (
-                      <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
-                        {blogLimit < recent.blogs.length ? (
-                          <button
-                            type="button"
-                            onClick={() => setBlogLimit((prev) => Math.min(prev + 5, recent.blogs.length))}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-blue-600 hover:text-blue-700 py-1 px-3 rounded-lg hover:bg-blue-50 transition cursor-pointer"
-                          >
-                            <span>Load More ({recent.blogs.length - blogLimit} More)</span>
-                            <ChevronDown size={13} />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setBlogLimit(5)}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                          >
-                            <span>Show Less</span>
-                            <ChevronUp size={13} />
-                          </button>
-                        )}
+                  {/* RECENT JOBS POSTED */}
+                  {recent.jobs?.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                      <div className="p-3.5 bg-orange-50/60 border-b border-orange-100/80 flex items-center justify-between">
+                        <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                          <span className="text-orange-600">💼</span>
+                          <span>Recent Jobs Posted</span>
+                        </h3>
+                        <span className="text-[11px] font-bold text-orange-700 bg-orange-100/80 px-2 py-0.5 rounded-full border border-orange-200">
+                          {stats.jobs} Jobs
+                        </span>
                       </div>
-                    )}
-                  </div>
 
-                  {/* 2. RECENT JOBS POSTED */}
-                  <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
-                    <div className="p-3.5 bg-orange-50/60 border-b border-orange-100/80 flex items-center justify-between">
-                      <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                        <span className="text-orange-600">💼</span>
-                        <span>Recent Jobs Posted</span>
-                      </h3>
-                      <span className="text-[11px] font-bold text-orange-700 bg-orange-100/80 px-2 py-0.5 rounded-full border border-orange-200">
-                        {stats.jobs} Jobs
-                      </span>
-                    </div>
-
-                    {/* Scrollable Container */}
-                    <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
-                      {recent.jobs && recent.jobs.length > 0 ? (
-                        recent.jobs.slice(0, jobLimit).map((job) => (
+                      <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
+                        {recent.jobs.slice(0, jobLimit).map((job) => (
                           <Link
                             key={job._id}
                             href={`/job/${job.slug || job._id}`}
@@ -788,186 +1189,195 @@ export default function AuthorPage() {
                               </div>
                             </div>
                           </Link>
-                        ))
-                      ) : (
-                        <div className="py-10 text-center text-xs text-slate-500">No jobs posted yet</div>
+                        ))}
+                      </div>
+
+                      {recent.jobs.length > 5 && (
+                        <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
+                          {jobLimit < recent.jobs.length ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setJobLimit((prev) => Math.min(prev + 5, recent.jobs.length))
+                              }
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 py-1 px-3 rounded-lg hover:bg-orange-50 transition cursor-pointer"
+                            >
+                              <span>Load More ({recent.jobs.length - jobLimit} More)</span>
+                              <ChevronDown size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setJobLimit(5)}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                            >
+                              <span>Show Less</span>
+                              <ChevronUp size={13} />
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
-
-                    {/* Load More Button for Jobs */}
-                    {recent.jobs && recent.jobs.length > 5 && (
-                      <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
-                        {jobLimit < recent.jobs.length ? (
-                          <button
-                            type="button"
-                            onClick={() => setJobLimit((prev) => Math.min(prev + 5, recent.jobs.length))}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 py-1 px-3 rounded-lg hover:bg-orange-50 transition cursor-pointer"
-                          >
-                            <span>Load More ({recent.jobs.length - jobLimit} More)</span>
-                            <ChevronDown size={13} />
-                          </button>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => setJobLimit(5)}
-                            className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                          >
-                            <span>Show Less</span>
-                            <ChevronUp size={13} />
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
+                  )}
                 </div>
+              )}
 
-                {/* Optional Row 2: Admit Cards & Results (if available) */}
-                {(recent.admitCards?.length > 0 || recent.results?.length > 0) && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
-                    {/* Admit Cards */}
-                    {recent.admitCards?.length > 0 && (
-                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
-                        <div className="p-3.5 bg-amber-50/60 border-b border-amber-100/80 flex items-center justify-between">
-                          <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                            <span className="text-amber-600">🎫</span>
-                            <span>Recent Admit Cards</span>
-                          </h3>
-                          <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
-                            {stats.admitCards} Admit Cards
-                          </span>
-                        </div>
-                        <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
-                          {recent.admitCards.slice(0, admitLimit).map((item) => (
-                            <Link
-                              key={item._id}
-                              href={`/admit-card/${item.slug || item._id}`}
-                              className="p-2.5 flex items-start gap-2.5 hover:bg-slate-50/80 rounded-xl transition group"
-                            >
-                              <div className="w-18 h-13 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative">
-                                <img
-                                  src={getImageUrl(item.featured_media || item.image)}
-                                  alt={item.title}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                                  onError={(e) => {
-                                    if (!e.currentTarget.dataset.fallback) {
-                                      e.currentTarget.dataset.fallback = 'true';
-                                      e.currentTarget.src = '/job-search.png';
-                                    }
-                                  }}
-                                />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-xs font-semibold text-slate-900 group-hover:text-amber-700 transition-colors line-clamp-2 leading-snug">
-                                  {item.title}
-                                </h4>
-                                <div className="flex items-center justify-between text-[10.5px] text-slate-500 mt-1 font-normal">
-                                  <span>📅 {formatDate(item.createdAt || item.created_at)}</span>
-                                  <span className="text-amber-700 font-medium">Admit Card</span>
-                                </div>
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-
-                        {recent.admitCards.length > 5 && (
-                          <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
-                            {admitLimit < recent.admitCards.length ? (
-                              <button
-                                type="button"
-                                onClick={() => setAdmitLimit((prev) => Math.min(prev + 5, recent.admitCards.length))}
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-800 py-1 px-3 rounded-lg hover:bg-amber-50 transition cursor-pointer"
-                              >
-                                <span>Load More ({recent.admitCards.length - admitLimit} More)</span>
-                                <ChevronDown size={13} />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setAdmitLimit(5)}
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                              >
-                                <span>Show Less</span>
-                                <ChevronUp size={13} />
-                              </button>
-                            )}
-                          </div>
-                        )}
+              {/* RECENT ADMIT CARDS & RESULTS (IF AVAILABLE) */}
+              {(recent.admitCards?.length > 0 || recent.results?.length > 0) && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-start">
+                  {recent.admitCards?.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                      <div className="p-3.5 bg-amber-50/60 border-b border-amber-100/80 flex items-center justify-between">
+                        <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                          <span className="text-amber-600">🎫</span>
+                          <span>Recent Admit Cards</span>
+                        </h3>
+                        <span className="text-[11px] font-bold text-amber-800 bg-amber-100/80 px-2 py-0.5 rounded-full border border-amber-200">
+                          {stats.admitCards} Admit Cards
+                        </span>
                       </div>
-                    )}
-
-                    {/* Results */}
-                    {recent.results?.length > 0 && (
-                      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
-                        <div className="p-3.5 bg-emerald-50/60 border-b border-emerald-100/80 flex items-center justify-between">
-                          <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
-                            <span className="text-emerald-600">📊</span>
-                            <span>Recent Results</span>
-                          </h3>
-                          <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
-                            {stats.results} Results
-                          </span>
-                        </div>
-                        <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
-                          {recent.results.slice(0, resultLimit).map((item) => (
-                            <Link
-                              key={item._id}
-                              href={`/result/${item.slug || item._id}`}
-                              className="p-2.5 flex items-start gap-2.5 hover:bg-slate-50/80 rounded-xl transition group"
-                            >
-                              <div className="w-18 h-13 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative">
-                                <img
-                                  src={getImageUrl(item.featured_media || item.image)}
-                                  alt={item.title}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                                  onError={(e) => {
-                                    if (!e.currentTarget.dataset.fallback) {
-                                      e.currentTarget.dataset.fallback = 'true';
-                                      e.currentTarget.src = '/job-search.png';
-                                    }
-                                  }}
-                                />
+                      <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
+                        {recent.admitCards.slice(0, admitLimit).map((item) => (
+                          <Link
+                            key={item._id}
+                            href={`/admit-card/${item.slug || item._id}`}
+                            className="p-2.5 flex items-start gap-2.5 hover:bg-slate-50/80 rounded-xl transition group"
+                          >
+                            <div className="w-18 h-13 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative">
+                              <img
+                                src={getImageUrl(item.featured_media || item.image)}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                onError={(e) => {
+                                  if (!e.currentTarget.dataset.fallback) {
+                                    e.currentTarget.dataset.fallback = 'true';
+                                    e.currentTarget.src = '/job-search.png';
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-semibold text-slate-900 group-hover:text-amber-700 transition-colors line-clamp-2 leading-snug">
+                                {item.title}
+                              </h4>
+                              <div className="flex items-center justify-between text-[10.5px] text-slate-500 mt-1 font-normal">
+                                <span>📅 {formatDate(item.createdAt || item.created_at)}</span>
+                                <span className="text-amber-700 font-medium">Admit Card</span>
                               </div>
-                              <div className="flex-1 min-w-0">
-                                <h4 className="text-xs font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-2 leading-snug">
-                                  {item.title}
-                                </h4>
-                                <div className="flex items-center justify-between text-[10.5px] text-slate-500 mt-1 font-normal">
-                                  <span>📅 {formatDate(item.createdAt || item.created_at)}</span>
-                                  <span className="text-emerald-600 font-medium">Result</span>
-                                </div>
-                              </div>
-                            </Link>
-                          ))}
-                        </div>
-
-                        {recent.results.length > 5 && (
-                          <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
-                            {resultLimit < recent.results.length ? (
-                              <button
-                                type="button"
-                                onClick={() => setResultLimit((prev) => Math.min(prev + 5, recent.results.length))}
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 py-1 px-3 rounded-lg hover:bg-emerald-50 transition cursor-pointer"
-                              >
-                                <span>Load More ({recent.results.length - resultLimit} More)</span>
-                                <ChevronDown size={13} />
-                              </button>
-                            ) : (
-                              <button
-                                type="button"
-                                onClick={() => setResultLimit(5)}
-                                className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
-                              >
-                                <span>Show Less</span>
-                                <ChevronUp size={13} />
-                              </button>
-                            )}
-                          </div>
-                        )}
+                            </div>
+                          </Link>
+                        ))}
                       </div>
-                    )}
-                  </div>
-                )}
-              </div>
+
+                      {recent.admitCards.length > 5 && (
+                        <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
+                          {admitLimit < recent.admitCards.length ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setAdmitLimit((prev) =>
+                                  Math.min(prev + 5, recent.admitCards.length)
+                                )
+                              }
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700 hover:text-amber-800 py-1 px-3 rounded-lg hover:bg-amber-50 transition cursor-pointer"
+                            >
+                              <span>
+                                Load More ({recent.admitCards.length - admitLimit} More)
+                              </span>
+                              <ChevronDown size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setAdmitLimit(5)}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                            >
+                              <span>Show Less</span>
+                              <ChevronUp size={13} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {recent.results?.length > 0 && (
+                    <div className="bg-white rounded-2xl border border-slate-200/80 shadow-xs overflow-hidden flex flex-col">
+                      <div className="p-3.5 bg-emerald-50/60 border-b border-emerald-100/80 flex items-center justify-between">
+                        <h3 className="font-bold text-slate-900 text-xs sm:text-sm flex items-center gap-1.5">
+                          <span className="text-emerald-600">📊</span>
+                          <span>Recent Results</span>
+                        </h3>
+                        <span className="text-[11px] font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-full border border-emerald-200">
+                          {stats.results} Results
+                        </span>
+                      </div>
+                      <div className="divide-y divide-slate-100 p-1.5 max-h-[440px] overflow-y-auto scrollbar-thin">
+                        {recent.results.slice(0, resultLimit).map((item) => (
+                          <Link
+                            key={item._id}
+                            href={`/result/${item.slug || item._id}`}
+                            className="p-2.5 flex items-start gap-2.5 hover:bg-slate-50/80 rounded-xl transition group"
+                          >
+                            <div className="w-18 h-13 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 relative">
+                              <img
+                                src={getImageUrl(item.featured_media || item.image)}
+                                alt={item.title}
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                onError={(e) => {
+                                  if (!e.currentTarget.dataset.fallback) {
+                                    e.currentTarget.dataset.fallback = 'true';
+                                    e.currentTarget.src = '/job-search.png';
+                                  }
+                                }}
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <h4 className="text-xs font-semibold text-slate-900 group-hover:text-emerald-600 transition-colors line-clamp-2 leading-snug">
+                                {item.title}
+                              </h4>
+                              <div className="flex items-center justify-between text-[10.5px] text-slate-500 mt-1 font-normal">
+                                <span>📅 {formatDate(item.createdAt || item.created_at)}</span>
+                                <span className="text-emerald-600 font-medium">Result</span>
+                              </div>
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+
+                      {recent.results.length > 5 && (
+                        <div className="p-2 bg-slate-50/50 border-t border-slate-100 text-center">
+                          {resultLimit < recent.results.length ? (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setResultLimit((prev) =>
+                                  Math.min(prev + 5, recent.results.length)
+                                )
+                              }
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 py-1 px-3 rounded-lg hover:bg-emerald-50 transition cursor-pointer"
+                            >
+                              <span>
+                                Load More ({recent.results.length - resultLimit} More)
+                              </span>
+                              <ChevronDown size={13} />
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setResultLimit(5)}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-500 hover:text-slate-700 py-1 px-3 rounded-lg hover:bg-slate-100 transition cursor-pointer"
+                            >
+                              <span>Show Less</span>
+                              <ChevronUp size={13} />
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
             </main>
 
             {/* ============================================================== */}
@@ -979,23 +1389,31 @@ export default function AuthorPage() {
                 <div className="flex items-center bg-[#e4e7ec] border-b border-slate-300">
                   <button
                     onClick={() => setSidebarTab('expiring')}
-                    className={`flex-1 py-3 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-medium transition cursor-pointer ${
+                    className={`group flex-1 py-3 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
                       sidebarTab === 'expiring'
                         ? 'bg-[#f0f2f5] text-slate-900 font-bold'
                         : 'text-blue-600 hover:text-blue-700 font-semibold'
                     }`}
                   >
-                    Jobs Expiring Soon
+                    <AnimatedBriefcase
+                      size={14}
+                      className={sidebarTab === 'expiring' ? 'text-orange-600' : 'text-blue-600'}
+                    />
+                    <span>Jobs Expiring Soon</span>
                   </button>
                   <button
                     onClick={() => setSidebarTab('mcq')}
-                    className={`flex-1 py-3 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-medium transition cursor-pointer ${
+                    className={`group flex-1 py-3 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-medium transition cursor-pointer flex items-center justify-center gap-1.5 ${
                       sidebarTab === 'mcq'
                         ? 'bg-[#f0f2f5] text-slate-900 font-bold'
                         : 'text-blue-600 hover:text-blue-700 font-semibold'
                     }`}
                   >
-                    MCQ Questions
+                    <AnimatedHelpCircle
+                      size={14}
+                      className={sidebarTab === 'mcq' ? 'text-purple-600' : 'text-blue-600'}
+                    />
+                    <span>MCQ Questions</span>
                   </button>
                 </div>
 
@@ -1008,7 +1426,7 @@ export default function AuthorPage() {
                         </span>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <Link
-                            href="/jobs"
+                            href="/jobs-expiring-in-30-days"
                             className="text-blue-600 font-semibold hover:underline whitespace-nowrap text-[11px] sm:text-xs"
                           >
                             View All

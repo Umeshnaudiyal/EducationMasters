@@ -158,7 +158,11 @@ const userSchema = new mongoose.Schema(
     last_login_time: { type: Date },
     last_session_date: { type: String }, // Format: YYYY-MM-DD
     session_expires_at: { type: Date },
+    google_id: { type: String, index: true },
+    auth_provider: { type: String, enum: ['local', 'google'], default: 'local' },
+    is_phone_verified: { type: Boolean, default: false },
     otp: String,
+    otp_expires_at: Date,
     phone_verified_at: String,
     email_verified_at: String,
     remember_token: String,

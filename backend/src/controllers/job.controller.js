@@ -1,4 +1,5 @@
-import { Job, State, Category, User } from '../models/index.js';
+import mongoose from 'mongoose';
+import { Job, State, Category, User, Country } from '../models/index.js';
 import { cleanHtmlContent } from '../utils/cleanHtml.js';
 import ApiError from '../utils/apiError.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
@@ -74,6 +75,82 @@ export const getJobs = async (req, res, next) => {
       }
     }
 
+    // State Filter
+    const stateParam = (req.query.state || req.query.state_id || '').trim();
+    if (stateParam && stateParam !== 'all') {
+      const stateConditions = [];
+      if (stateParam === 'all-india' || stateParam === 'central' || stateParam === 'national') {
+        stateConditions.push(
+          { state: null },
+          { state: { $exists: false } },
+          { state_id: null },
+          { state_id: 0 }
+        );
+      } else {
+        const isObjectId = mongoose.Types.ObjectId.isValid(stateParam) && /^[0-9a-fA-F]{24}$/.test(stateParam);
+        const numId = Number(stateParam);
+        if (isObjectId) {
+          stateConditions.push({ state: stateParam });
+        }
+        if (!isNaN(numId) && numId > 0) {
+          stateConditions.push({ state_id: numId });
+        }
+
+        const stateDoc = await State.findOne({
+          $or: [
+            { slug: stateParam.toLowerCase() },
+            { name: { $regex: `^${stateParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+          ],
+        }).select('_id sql_id name slug');
+
+        if (stateDoc) {
+          stateConditions.push({ state: stateDoc._id });
+          if (stateDoc.sql_id) stateConditions.push({ state_id: stateDoc.sql_id });
+          stateConditions.push({ dept: { $regex: stateDoc.name, $options: 'i' } });
+        } else {
+          stateConditions.push({ dept: { $regex: stateParam, $options: 'i' } });
+        }
+      }
+
+      if (stateConditions.length > 0) {
+        query.$and = query.$and ? [...query.$and, { $or: stateConditions }] : [{ $or: stateConditions }];
+      }
+    }
+
+    // Country Filter
+    const countryParam = (req.query.country || req.query.country_id || '').trim();
+    if (countryParam && countryParam !== 'all') {
+      const countryConditions = [];
+      const isObjectId = mongoose.Types.ObjectId.isValid(countryParam) && /^[0-9a-fA-F]{24}$/.test(countryParam);
+      const numId = Number(countryParam);
+      if (isObjectId) {
+        countryConditions.push({ country: countryParam });
+      }
+      if (!isNaN(numId) && numId > 0) {
+        countryConditions.push({ country_id: numId });
+      }
+
+      const countryDoc = await Country.findOne({
+        $or: [
+          { slug: countryParam.toLowerCase() },
+          { code: countryParam.toUpperCase() },
+          { name: { $regex: `^${countryParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+        ],
+      }).select('_id sql_id slug code name');
+
+      if (countryDoc) {
+        countryConditions.push({ country: countryDoc._id });
+        if (countryDoc.sql_id) countryConditions.push({ country_id: countryDoc.sql_id });
+        if (countryDoc.slug === 'india' || countryDoc.code === 'IN' || countryDoc.sql_id === 1) {
+          countryConditions.push({ country: null }, { country: { $exists: false } });
+        }
+      }
+
+      if (countryConditions.length > 0) {
+        query.$and = query.$and ? [...query.$and, { $or: countryConditions }] : [{ $or: countryConditions }];
+      }
+    }
+
     const baseCountQuery = authorFilter ? { $and: [authorFilter] } : {};
 
     const [
@@ -103,9 +180,21 @@ export const getJobs = async (req, res, next) => {
       Job.countDocuments({ ...baseCountQuery, status: 'trash' }),
     ]);
 
+    const formattedJobs = await Promise.all(
+      jobs.map(async (job) => {
+        if ((!job.state || typeof job.state !== 'object' || !job.state.name) && job.state_id) {
+          const stateDoc = await State.findOne({ sql_id: job.state_id }).select('name slug').lean();
+          if (stateDoc) {
+            job.state = stateDoc;
+          }
+        }
+        return job;
+      })
+    );
+
     res.status(200).json({
       success: true,
-      count: jobs.length,
+      count: formattedJobs.length,
       total,
       page,
       pages: Math.ceil(total / limit) || 1,
@@ -116,7 +205,7 @@ export const getJobs = async (req, res, next) => {
         pending: pendingCount,
         trash: trashCount,
       },
-      data: jobs,
+      data: formattedJobs,
     });
   } catch (error) {
     next(error);
@@ -125,22 +214,164 @@ export const getJobs = async (req, res, next) => {
 
 export const getExpiringJobs = async (req, res, next) => {
   try {
-    const limit = parseInt(req.query.limit, 10) || 6;
+    const page = parseInt(req.query.page, 10) || 1;
+    const limit = parseInt(req.query.limit, 10) || 10;
+    const skip = (page - 1) * limit;
+    const days = req.query.days !== undefined && req.query.days !== '' ? parseInt(req.query.days, 10) : 30;
+    const search = (req.query.search || req.query.keyword || '').trim();
+    const stateParam = (req.query.state || req.query.state_id || '').trim();
+    const countryParam = (req.query.country || req.query.country_id || '').trim();
+
     const todayStr = new Date().toISOString().slice(0, 10);
-    
-    const expiringJobs = await Job.find({ 
-      app_ends: { $gte: todayStr, $nin: [null, '', '0000-00-00'] } 
-    })
-      .select('title slug app_ends dates categories featured_media state country created_at')
-      .populate('featured_media', 'path file alt')
-      .populate('categories', 'name slug')
-      .sort({ app_ends: 1, created_at: -1 })
-      .limit(limit);
+    const query = {
+      app_ends: { $gte: todayStr, $nin: [null, '', '0000-00-00'] },
+      status: { $nin: ['trash', 'draft'] }
+    };
+
+    if (days && days > 0) {
+      const futureDate = new Date();
+      futureDate.setDate(futureDate.getDate() + days);
+      const futureDateStr = futureDate.toISOString().slice(0, 10);
+      query.app_ends = { $gte: todayStr, $lte: futureDateStr, $nin: [null, '', '0000-00-00'] };
+    }
+
+    if (search) {
+      const searchConditions = [
+        { title: { $regex: search, $options: 'i' } },
+        { short_description: { $regex: search, $options: 'i' } },
+        { description: { $regex: search, $options: 'i' } },
+        { dept: { $regex: search, $options: 'i' } },
+      ];
+      if (query.$and) {
+        query.$and.push({ $or: searchConditions });
+      } else {
+        query.$and = [{ $or: searchConditions }];
+      }
+    }
+
+    // State Filter
+    if (stateParam && stateParam !== 'all') {
+      const stateConditions = [];
+      if (stateParam === 'all-india' || stateParam === 'central' || stateParam === 'national') {
+        stateConditions.push(
+          { state: null },
+          { state: { $exists: false } },
+          { state_id: null },
+          { state_id: 0 }
+        );
+      } else {
+        const isObjectId = mongoose.Types.ObjectId.isValid(stateParam) && /^[0-9a-fA-F]{24}$/.test(stateParam);
+        const numId = Number(stateParam);
+        if (isObjectId) {
+          stateConditions.push({ state: stateParam });
+        }
+        if (!isNaN(numId) && numId > 0) {
+          stateConditions.push({ state_id: numId });
+        }
+
+        const stateDoc = await State.findOne({
+          $or: [
+            { slug: stateParam },
+            { name: { $regex: `^${stateParam.replace(/-/g, ' ')}$`, $options: 'i' } },
+            { name: { $regex: stateParam.replace(/-/g, ' '), $options: 'i' } },
+          ],
+        }).select('_id sql_id name');
+
+        if (stateDoc) {
+          stateConditions.push({ state: stateDoc._id });
+          if (stateDoc.sql_id) stateConditions.push({ state_id: stateDoc.sql_id });
+        }
+
+        const stateRegex = new RegExp(stateParam.replace(/-/g, ' '), 'i');
+        stateConditions.push({ dept: stateRegex });
+      }
+
+      if (stateConditions.length > 0) {
+        if (query.$and) {
+          query.$and.push({ $or: stateConditions });
+        } else {
+          query.$and = [{ $or: stateConditions }];
+        }
+      }
+    }
+
+    // Country Filter
+    if (countryParam && countryParam !== 'all') {
+      if (countryParam === 'india') {
+        const indiaDoc = await Country.findOne({
+          $or: [{ slug: 'india' }, { code: 'IN' }, { name: /^india$/i }],
+        }).select('_id sql_id');
+        const indiaConditions = [
+          { country: null },
+          { country: { $exists: false } },
+          { country_id: null },
+          { country_id: 0 },
+        ];
+        if (indiaDoc) {
+          indiaConditions.push({ country: indiaDoc._id });
+          if (indiaDoc.sql_id) indiaConditions.push({ country_id: indiaDoc.sql_id });
+        }
+        if (query.$and) {
+          query.$and.push({ $or: indiaConditions });
+        } else {
+          query.$and = [{ $or: indiaConditions }];
+        }
+      } else {
+        const isObjectId = mongoose.Types.ObjectId.isValid(countryParam) && /^[0-9a-fA-F]{24}$/.test(countryParam);
+        const countryDoc = await Country.findOne({
+          $or: [
+            ...(isObjectId ? [{ _id: countryParam }] : []),
+            { slug: countryParam },
+            { code: countryParam.toUpperCase() },
+            { name: { $regex: `^${countryParam.replace(/-/g, ' ')}$`, $options: 'i' } },
+          ],
+        }).select('_id sql_id');
+        if (countryDoc) {
+          const cConditions = [{ country: countryDoc._id }];
+          if (countryDoc.sql_id) cConditions.push({ country_id: countryDoc.sql_id });
+          if (query.$and) {
+            query.$and.push({ $or: cConditions });
+          } else {
+            query.$and = [{ $or: cConditions }];
+          }
+        }
+      }
+    }
+
+    const [jobs, total] = await Promise.all([
+      Job.find(query)
+        .select('title slug app_ends dates categories featured_media state country created_at short_description description author dept user_id state_id')
+        .populate('author', 'name nicename image')
+        .populate('featured_media', 'path file alt name')
+        .populate('categories', 'name slug')
+        .populate('state', 'name slug')
+        .populate('country', 'name slug code')
+        .sort({ app_ends: 1, created_at: -1 })
+        .skip(skip)
+        .limit(limit)
+        .lean(),
+      Job.countDocuments(query),
+    ]);
+
+    const formattedJobs = await Promise.all(
+      jobs.map(async (job) => {
+        if ((!job.state || typeof job.state !== 'object' || !job.state.name) && job.state_id) {
+          const stateDoc = await State.findOne({ sql_id: job.state_id }).select('name slug').lean();
+          if (stateDoc) {
+            job.state = stateDoc;
+          }
+        }
+        return job;
+      })
+    );
 
     res.status(200).json({
       success: true,
-      count: expiringJobs.length,
-      data: expiringJobs,
+      count: formattedJobs.length,
+      total,
+      page,
+      pages: Math.ceil(total / limit) || 1,
+      data: formattedJobs,
     });
   } catch (error) {
     next(error);
@@ -151,7 +382,7 @@ export const getJobBySlug = async (req, res, next) => {
   try {
     const isId = req.params.slug.match(/^[0-9a-fA-F]{24}$/);
     const job = await Job.findOne(isId ? { _id: req.params.slug } : { slug: req.params.slug })
-      .populate('author', 'name nicename email image bio')
+      .populate('author', 'name nicename email image bio website twitter facebook instagram linkedin youtube phone role')
       .populate('categories', 'name slug')
       .populate('featured_media', 'path file alt name')
       .populate('country', 'name slug code')

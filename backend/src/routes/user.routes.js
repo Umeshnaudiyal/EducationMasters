@@ -9,11 +9,16 @@ import {
   deleteUser,
   bulkActionUsers,
   getPublicAuthorProfile,
+  getPublicAuthorsList,
 } from '../controllers/user.controller.js';
 import { protect, restrictTo } from '../middlewares/auth.middleware.js';
 import { getSessionLogs } from '../controllers/auth.controller.js';
 
 const router = express.Router();
+
+// Public Authors Directory & Stats (No auth required)
+router.get('/authors', getPublicAuthorsList);
+router.get('/author/all', getPublicAuthorsList);
 
 // Public Author Profile (No auth required)
 router.get('/author/:slug', getPublicAuthorProfile);

@@ -18,6 +18,8 @@ const CATEGORY_MAP = {
   'syllabus': { title: 'Syllabus Posts', name: 'Syllabus', subtitle: 'Latest Government Exam Syllabus, Exam Pattern & Subject Guide' },
   'articles': { title: 'Articles Posts', name: 'Articles', subtitle: 'Latest Educational Articles, Career Guidance & Exam Updates' },
   'article': { title: 'Articles Posts', name: 'Articles', subtitle: 'Latest Educational Articles, Career Guidance & Exam Updates' },
+  'education': { title: 'Education Posts', name: 'Education', subtitle: 'Latest Educational Articles, Career Guidance & Exam Updates' },
+  'educational-resources': { title: 'Educational Resources', name: 'Educational Resources', subtitle: 'Curated Study Materials, Notes & Exam Preparation Resources' },
   'gk': { title: 'G.K. Posts', name: 'G.K.', subtitle: 'General Knowledge Questions, Notes & Daily GK Updates' },
   'general-knowledge': { title: 'General Knowledge Posts', name: 'General Knowledge', subtitle: 'Improve your General Knowledge for Govt Exams' },
   'defence': { title: 'Defence Posts', name: 'Defence', subtitle: 'Defence Preparation, Army, Navy, Airforce & CDS Updates' },
@@ -375,7 +377,7 @@ export default function CategoryPage() {
                         28 Jobs are expiring in 30 Days
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Link href="/jobs" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
+                        <Link href="/jobs-expiring-in-30-days" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
                           View All
                         </Link>
                         <span className="bg-blue-600 text-white text-[10px] sm:text-[11px] font-normal px-1.5 py-0.5 rounded inline-flex items-center gap-1 leading-none whitespace-nowrap shadow-2xs">

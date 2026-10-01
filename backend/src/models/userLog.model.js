@@ -25,8 +25,14 @@ const userLogSchema = new mongoose.Schema(
     },
     action: {
       type: String,
-      enum: ['login', 'logout', 'session_expired', 'auto_logout'],
+      enum: ['login', 'logout', 'session_expired', 'auto_logout', 'system_logout'],
       default: 'login',
+      index: true,
+    },
+    logout_by: {
+      type: String,
+      enum: ['user', 'system', 'admin'],
+      default: 'user',
       index: true,
     },
     login_time: {

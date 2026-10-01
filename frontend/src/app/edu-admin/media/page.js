@@ -34,7 +34,7 @@ import {
 } from '@/utils/imageValidation';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
-   
+
 // Consistent unique key helper
 const getMediaKey = (item, idx) => {
   if (item._id) return String(item._id);
@@ -60,11 +60,10 @@ const MediaGridCard = memo(function MediaGridCard({
   return (
     <div
       onClick={() => onOpenDetails(item, idx)}
-      className={`relative aspect-square bg-slate-100 rounded border overflow-hidden cursor-pointer select-none box-border ${
-        isSelected
+      className={`relative aspect-square bg-slate-100 rounded border overflow-hidden cursor-pointer select-none box-border ${isSelected
           ? 'border-[#2271b1] ring-2 ring-[#2271b1] ring-inset shadow-xs'
           : 'border-slate-300 hover:border-[#2271b1] hover:ring-2 hover:ring-[#2271b1] hover:ring-inset'
-      }`}
+        }`}
     >
       <img
         src={fullUrl}
@@ -85,11 +84,10 @@ const MediaGridCard = memo(function MediaGridCard({
           className="absolute top-1.5 left-1.5 z-20"
         >
           <div
-            className={`w-4 h-4 rounded flex items-center justify-center shadow-xs ${
-              isSelected
+            className={`w-4 h-4 rounded flex items-center justify-center shadow-xs ${isSelected
                 ? 'bg-[#2271b1] text-white'
                 : 'bg-white border border-slate-400 text-transparent hover:border-[#2271b1]'
-            }`}
+              }`}
           >
             <Check size={10} strokeWidth={3} />
           </div>
@@ -244,8 +242,8 @@ export default function MediaLibraryPage() {
         idx !== undefined && idx >= 0
           ? idx
           : mediaList.findIndex(
-              (m) => String(m._id || m.sql_id) === String(item._id || item.sql_id)
-            );
+            (m) => String(m._id || m.sql_id) === String(item._id || item.sql_id)
+          );
 
       setSelectedMedia(item);
       setSelectedIndex(resolvedIndex >= 0 ? resolvedIndex : 0);
@@ -662,9 +660,8 @@ export default function MediaLibraryPage() {
             setDragOver(false);
             handleFileUpload(e.dataTransfer.files);
           }}
-          className={`p-6 border-2 border-dashed rounded-lg text-center transition-all bg-white shadow-2xs ${
-            dragOver ? 'border-[#2271b1] bg-blue-50/50' : 'border-slate-300 hover:border-slate-400'
-          }`}
+          className={`p-6 border-2 border-dashed rounded-lg text-center transition-all bg-white shadow-2xs ${dragOver ? 'border-[#2271b1] bg-blue-50/50' : 'border-slate-300 hover:border-slate-400'
+            }`}
         >
           <div className="max-w-md mx-auto space-y-3">
             <UploadCloud size={36} className="mx-auto text-[#2271b1]" />
@@ -747,22 +744,20 @@ export default function MediaLibraryPage() {
           <div className="flex items-center bg-slate-100 p-0.5 rounded border border-slate-200">
             <button
               onClick={() => setViewMode('grid')}
-              className={`p-1 rounded transition-all cursor-pointer ${
-                viewMode === 'grid'
+              className={`p-1 rounded transition-all cursor-pointer ${viewMode === 'grid'
                   ? 'bg-white text-[#2271b1] shadow-xs'
                   : 'text-slate-500 hover:text-slate-700'
-              }`}
+                }`}
               title="Grid View"
             >
               <Grid size={15} />
             </button>
             <button
               onClick={() => setViewMode('list')}
-              className={`p-1 rounded transition-all cursor-pointer ${
-                viewMode === 'list'
+              className={`p-1 rounded transition-all cursor-pointer ${viewMode === 'list'
                   ? 'bg-white text-[#2271b1] shadow-xs'
                   : 'text-slate-500 hover:text-slate-700'
-              }`}
+                }`}
               title="List View"
             >
               <List size={15} />
@@ -930,9 +925,8 @@ export default function MediaLibraryPage() {
                     <tr
                       key={itemKey}
                       onClick={() => openMediaDetails(item, idx)}
-                      className={`hover:bg-blue-50/40 transition-colors cursor-pointer ${
-                        isSelected ? 'bg-blue-50/80' : ''
-                      }`}
+                      className={`hover:bg-blue-50/40 transition-colors cursor-pointer ${isSelected ? 'bg-blue-50/80' : ''
+                        }`}
                     >
                       {bulkMode && (
                         <td className="p-2.5 text-center" onClick={(e) => e.stopPropagation()}>
@@ -1236,9 +1230,8 @@ export default function MediaLibraryPage() {
                       readOnly={isAuthor}
                       onChange={(e) => !isAuthor && handleAltChange(e.target.value)}
                       placeholder="Describe the purpose or content of the image..."
-                      className={`w-full px-3 py-2 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs resize-none ${
-                        isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1]'
-                      }`}
+                      className={`w-full px-3 py-2 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs resize-none ${isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1]'
+                        }`}
                     />
                     <p className="text-[11px] text-slate-500 leading-tight">
                       Search engines use this text to understand image contents and index them in Google Images.
@@ -1254,9 +1247,8 @@ export default function MediaLibraryPage() {
                       readOnly={isAuthor}
                       onChange={(e) => !isAuthor && handleTitleChange(e.target.value)}
                       placeholder="Image Title..."
-                      className={`w-full px-3 py-1.5 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs ${
-                        isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1]'
-                      }`}
+                      className={`w-full px-3 py-1.5 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs ${isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1]'
+                        }`}
                     />
                   </div>
 
@@ -1269,9 +1261,8 @@ export default function MediaLibraryPage() {
                       readOnly={isAuthor}
                       onChange={(e) => !isAuthor && handleCaptionChange(e.target.value)}
                       placeholder="Optional caption displayed under the image..."
-                      className={`w-full px-3 py-1.5 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs resize-none ${
-                        isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'
-                      }`}
+                      className={`w-full px-3 py-1.5 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs resize-none ${isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'
+                        }`}
                     />
                   </div>
 
@@ -1286,9 +1277,8 @@ export default function MediaLibraryPage() {
                       readOnly={isAuthor}
                       onChange={(e) => !isAuthor && handleDescriptionChange(e.target.value)}
                       placeholder="Detailed notes or description..."
-                      className={`w-full px-3 py-1.5 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs resize-none ${
-                        isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'
-                      }`}
+                      className={`w-full px-3 py-1.5 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none shadow-2xs resize-none ${isAuthor ? 'bg-slate-50 cursor-not-allowed' : 'bg-white'
+                        }`}
                     />
                   </div>
 
