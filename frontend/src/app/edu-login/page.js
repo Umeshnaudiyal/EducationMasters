@@ -112,7 +112,7 @@ export default function EduLoginPage() {
         if (res.ok && data.success) {
           setSuccessMsg(
             data.message ||
-              'Account registered successfully! Your account is currently inactive pending administrator approval.'
+            'Account registered successfully! Your account is currently inactive pending administrator approval.'
           );
           setName('');
           setPassword('');
@@ -174,15 +174,14 @@ export default function EduLoginPage() {
   const currentYear = new Date().getFullYear();
 
   const getInputStyle = (hasError) =>
-    `w-full bg-zinc-950/90 text-slate-100 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-3 py-2.5 rounded border transition-all duration-200 shadow-inner ${
-      hasError
-        ? 'border-red-500 ring-2 ring-red-500/30 bg-red-950/20 focus:border-red-500 focus:ring-2 focus:ring-red-500 focus:outline-none'
-        : 'border-zinc-700/80 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
+    `w-full bg-zinc-950/90 text-slate-100 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-3 py-2.5 rounded border transition-all duration-200 shadow-inner ${hasError
+      ? 'border-red-500 ring-2 ring-red-500/30 bg-red-950/20 focus:border-red-500 focus:ring-2 focus:ring-red-500 focus:outline-none'
+      : 'border-zinc-700/80 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500'
     }`;
 
   return (
     <div
-      className="min-h-screen w-full flex items-center justify-center p-4 bg-zinc-950 font-sans text-white relative overflow-hidden select-none bg-cover bg-center"
+      className="min-h-screen w-full flex items-center justify-center p-3 sm:p-4 bg-zinc-950 font-sans text-white relative overflow-hidden select-none bg-cover bg-center"
       style={{
         backgroundImage: `linear-gradient(to bottom, rgba(0,0,0,0.55), rgba(0,0,0,0.75)), url('/login.webp')`,
         backgroundSize: 'cover',
@@ -192,22 +191,22 @@ export default function EduLoginPage() {
     >
       <div className="w-full max-w-sm sm:max-w-md flex flex-col items-center z-10 animate-in fade-in zoom-in-95 duration-300">
         {/* Brand Logo */}
-        <div className="mb-6 flex flex-col items-center">
+        <div className="mb-5 sm:mb-6 flex flex-col items-center">
           <Link href="/" title="Back to Home">
             <img
               src="/logo.webp"
               alt="Education Masters"
-              className="h-16 sm:h-20 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform"
+              className="h-14 sm:h-20 w-auto object-contain drop-shadow-md hover:scale-105 transition-transform"
             />
           </Link>
         </div>
 
         {/* Card Container */}
-        <div className="w-full max-w-xs sm:max-w-sm bg-zinc-900/95 border border-zinc-800/90 p-6 sm:p-7 rounded-2xl shadow-2xl backdrop-blur-md">
-          <h2 className="text-xl font-bold text-center mb-1 text-white">
+        <div className="w-full max-w-[340px] sm:max-w-sm bg-zinc-900/95 border border-zinc-800/90 p-5 sm:p-7 rounded-2xl shadow-2xl backdrop-blur-md">
+          <h2 className="text-lg sm:text-xl font-bold text-center mb-1 text-white">
             {isRegisterMode ? 'Create Account' : 'Portal Login'}
           </h2>
-          <p className="text-xs text-slate-400 text-center mb-5">
+          <p className="text-[11px] sm:text-xs text-slate-400 text-center mb-4 sm:mb-5">
             {isRegisterMode
               ? 'Register for Education Masters access'
               : 'Sign in with your email and password'}

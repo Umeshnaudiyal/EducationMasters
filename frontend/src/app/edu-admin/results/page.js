@@ -332,17 +332,17 @@ export default function ResultsAdminPage() {
         </div>
 
         {/* Search Bar */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-1">
+        <form onSubmit={handleSearchSubmit} className="w-full md:w-auto flex items-center gap-1">
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search Results"
-            className="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white text-slate-800 focus:outline-none focus:border-[#2271b1] shadow-2xs w-48 md:w-56"
+            placeholder="Search Results..."
+            className="px-2.5 py-1 text-xs border border-slate-300 rounded bg-white text-slate-800 focus:outline-none focus:border-[#2271b1] shadow-2xs flex-1 md:w-56"
           />
           <button
             type="submit"
-            className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs cursor-pointer"
+            className="px-3 py-1 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs cursor-pointer shrink-0"
           >
             Search Results
           </button>
@@ -350,11 +350,11 @@ export default function ResultsAdminPage() {
       </div>
 
       {/* Bulk Actions Controls */}
-      <div className="flex items-center gap-1.5 pt-1">
+      <div className="flex flex-wrap items-center gap-1.5 pt-1">
         <select
           value={bulkAction}
           onChange={(e) => setBulkAction(e.target.value)}
-          className="px-2 py-1 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-[#2271b1] shadow-2xs"
+          className="px-2 py-1 text-xs border border-slate-300 rounded bg-white text-slate-700 focus:outline-none focus:border-[#2271b1] shadow-2xs flex-1 sm:flex-initial"
         >
           <option value="">Bulk Actions</option>
           <option value="publish">Set as Published</option>
@@ -364,44 +364,184 @@ export default function ResultsAdminPage() {
         <button
           onClick={handleBulkApply}
           disabled={!bulkAction || selectedIds.length === 0}
-          className="px-2.5 py-1 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs cursor-pointer"
+          className="px-2.5 py-1 bg-white hover:bg-slate-50 disabled:opacity-50 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs cursor-pointer shrink-0"
         >
           Apply
         </button>
       </div>
 
-      {/* Results Table */}
+      {/* Main Content Container: Mobile Cards (block md:hidden) + Desktop Table (hidden md:block) */}
       <div className="bg-white border border-slate-300 rounded shadow-2xs overflow-hidden">
-        {loading ? (
-          <div className="py-12">
-            <AdminLoader text="Loading Result Posts..." subtext="Retrieving examination results and merit lists" />
-          </div>
-        ) : results.length === 0 ? (
-          <div className="text-center py-12 text-slate-500 text-xs">
-            No result posts found matching your criteria.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-[#f6f7f7] border-b border-slate-300 text-slate-700 font-bold">
-                  <th className="p-2.5 w-8 text-center">
+        
+        {/* Mobile View: Touch-Optimized Clean Cards */}
+        <div className="block md:hidden divide-y divide-slate-200">
+          {loading ? (
+            <div className="py-10 text-center">
+              <AdminLoader text="Loading Result Posts..." subtext="Retrieving examination results and merit lists" minHeight="min-h-[160px]" />
+            </div>
+          ) : results.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              No result posts found matching your criteria.
+            </div>
+          ) : (
+            results.map((item) => {
+              const mediaUrl = item.featured_media ? getImageUrl(item.featured_media) : null;
+              const authorName = item.author?.name || item.author?.nicename || 'Admin';
+              const deptName =
+                item.department?.name ||
+                (typeof item.department === 'string' ? item.department : null) ||
+                item.dept ||
+                '—';
+
+              const isPublished =
+                item.status === 'publish' ||
+                item.status === 'published' ||
+                item.status === 'active';
+              const isDraft = item.status === 'draft';
+              const isPending = item.status === 'pending' || item.status === 'pending_review';
+              const isTrash = item.status === 'trash';
+
+              const normalizedStatus = isPublished
+                ? 'publish'
+                : isPending
+                ? 'pending'
+                : isTrash
+                ? 'trash'
+                : 'draft';
+
+              const isChecked = selectedIds.includes(item._id);
+
+              return (
+                <div key={item._id} className="p-3 space-y-2.5 bg-white">
+                  {/* Top Row: Checkbox + Thumbnail + Title */}
+                  <div className="flex items-start gap-2.5">
                     <input
                       type="checkbox"
-                      onChange={handleSelectAll}
-                      checked={selectedIds.length === results.length && results.length > 0}
-                      className="rounded border-slate-300 text-[#2271b1] focus:ring-0 cursor-pointer"
+                      checked={isChecked}
+                      onChange={() => toggleSelect(item._id)}
+                      className="rounded border-slate-300 text-[#2271b1] focus:ring-0 cursor-pointer mt-1 shrink-0"
                     />
-                  </th>
-                  <th className="p-2.5">Result Post</th>
-                  <th className="p-2.5 w-36">Author</th>
-                  <th className="p-2.5 w-44">Department</th>
-                  <th className="p-2.5 w-32">Status</th>
-                  <th className="p-2.5 w-28 text-center">Action</th>
+                    <Link
+                      href={`/result/${item.slug || item._id}`}
+                      target="_blank"
+                      title="Preview Result"
+                      className="w-16 h-12 rounded bg-slate-100 border border-slate-200 shrink-0 overflow-hidden flex items-center justify-center shadow-2xs"
+                    >
+                      {mediaUrl ? (
+                        <img
+                          src={mediaUrl}
+                          alt={item.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <ImageIcon size={16} className="text-slate-400" />
+                      )}
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/result/${item.slug || item._id}`}
+                        target="_blank"
+                        className="font-bold text-[#0073aa] hover:underline text-xs line-clamp-2 leading-snug"
+                      >
+                        {item.title}
+                      </Link>
+                      <div className="text-[10.5px] text-slate-500 mt-1 flex flex-wrap items-center gap-x-1.5">
+                        <span className="font-medium text-slate-700">{authorName}</span>
+                        <span>•</span>
+                        <span className="text-slate-600 truncate max-w-[140px]">{deptName}</span>
+                        <span>•</span>
+                        <span>{item.created_at ? formatTimeAgo(item.created_at) : 'Recent'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Bar: Status Select + Edit + Trash */}
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={normalizedStatus}
+                        disabled={updatingId === item._id}
+                        onChange={(e) => handleStatusChange(item._id, e.target.value, item.title)}
+                        className={`text-[11px] font-semibold rounded-md px-2 py-1 border cursor-pointer appearance-none pr-5 focus:outline-none shadow-2xs ${
+                          isPublished
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : isPending
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : isTrash
+                            ? 'bg-rose-50 text-rose-700 border-rose-300'
+                            : 'bg-slate-100 text-slate-700 border-slate-300'
+                        } ${updatingId === item._id ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        {!isAuthor && <option value="publish">Published</option>}
+                        <option value="pending">Pending</option>
+                        <option value="draft">Draft</option>
+                        <option value="trash">Trash</option>
+                      </select>
+                      <ChevronDown
+                        size={11}
+                        className="absolute right-1 pointer-events-none text-slate-500"
+                      />
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5">
+                      <Link
+                        href={`/edu-admin/result/edit/${item.slug || item._id}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-semibold bg-[#00a0d2] hover:bg-[#008cb7] text-white rounded shadow-2xs"
+                      >
+                        <Edit size={11} />
+                        <span>Edit</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal(item._id, item.title)}
+                        className="p-1.5 text-white bg-[#dc3232] hover:bg-[#c92c2c] rounded shadow-2xs cursor-pointer"
+                        title="Delete Result"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table: 100% Exact Desktop Layout (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
+          <table className="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr className="bg-[#f6f7f7] border-b border-slate-300 text-slate-700 font-bold">
+                <th className="p-2.5 w-8 text-center">
+                  <input
+                    type="checkbox"
+                    onChange={handleSelectAll}
+                    checked={selectedIds.length === results.length && results.length > 0}
+                    className="rounded border-slate-300 text-[#2271b1] focus:ring-0 cursor-pointer"
+                  />
+                </th>
+                <th className="p-2.5">Result Post</th>
+                <th className="p-2.5 w-36">Author</th>
+                <th className="p-2.5 w-44">Department</th>
+                <th className="p-2.5 w-32">Status</th>
+                <th className="p-2.5 w-28 text-center">Action</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+              {loading ? (
+                <tr>
+                  <td colSpan={6} className="py-12 bg-white">
+                    <AdminLoader text="Loading Result Posts..." subtext="Retrieving examination results and merit lists" />
+                  </td>
                 </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-200">
-                {results.map((item) => {
+              ) : results.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="py-8 text-center text-slate-500 italic">
+                    No result posts found matching your criteria.
+                  </td>
+                </tr>
+              ) : (
+                results.map((item) => {
                   const mediaUrl = item.featured_media ? getImageUrl(item.featured_media) : null;
                   const authorName = item.author?.name || item.author?.nicename || 'Admin';
                   const deptName =
@@ -572,11 +712,11 @@ export default function ResultsAdminPage() {
                       </td>
                     </tr>
                   );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
 
         {/* Pagination Footer */}
         <div className="px-3.5 py-2.5 bg-[#f6f7f7] border-t border-slate-300 flex items-center justify-between text-xs text-slate-600">

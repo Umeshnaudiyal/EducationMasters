@@ -101,13 +101,16 @@ export default function StateProfilePage() {
 
     async function fetchSidebarJobs() {
       try {
-        const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6`);
+        const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&state=${encodeURIComponent(slug)}`);
         const json = await res.json();
         if (isMounted && json.success && Array.isArray(json.data)) {
           setExpiringJobs(json.data);
+        } else {
+          setExpiringJobs([]);
         }
       } catch (err) {
         console.error('Error fetching expiring jobs:', err);
+        if (isMounted) setExpiringJobs([]);
       }
     }
 
@@ -687,11 +690,11 @@ export default function StateProfilePage() {
                     <div>
                       <div className="flex items-center justify-between text-[11px] sm:text-xs mb-2.5 pb-2 border-b border-slate-300 gap-1.5">
                         <span className="text-slate-700 font-medium whitespace-nowrap">
-                          {expiringJobs.length} Jobs expiring in 30 Days
+                          {expiringJobs.length} {state.name ? `${state.name} ` : ''}Jobs expiring in 30 Days
                         </span>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <Link
-                            href="/jobs"
+                            href={`/jobs-expiring-in-30-days?state=${encodeURIComponent(slug)}`}
                             className="text-blue-600 font-semibold hover:underline whitespace-nowrap text-[11px] sm:text-xs"
                           >
                             View All

@@ -54,11 +54,13 @@ export default function QuestionsListPage() {
   const [activeSearch, setActiveSearch] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedState, setSelectedState] = useState('');
+  const [selectedMockSeries, setSelectedMockSeries] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
 
   // Dropdown options
   const [subjectsList, setSubjectsList] = useState([]);
   const [statesList, setStatesList] = useState([]);
+  const [mockSeriesList, setMockSeriesList] = useState([]);
 
   // Selections & bulk actions
   const [selectedIds, setSelectedIds] = useState([]);
@@ -76,14 +78,17 @@ export default function QuestionsListPage() {
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [subRes, stRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=100`),
+        const [subRes, stRes, msRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=200`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states?all=true`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-test-series?limit=200&status=all`),
         ]);
         const subData = await subRes.json();
         const stData = await stRes.json();
+        const msData = await msRes.json();
         if (subData.success) setSubjectsList(subData.data || []);
         if (stData.success) setStatesList(stData.data || []);
+        if (msData.success) setMockSeriesList(msData.data || []);
       } catch (err) {
         console.error('Error fetching filter options:', err);
       }
@@ -102,6 +107,7 @@ export default function QuestionsListPage() {
         search: activeSearch,
         subject: selectedSubject,
         state: selectedState,
+        mock_test_series: selectedMockSeries,
         date: selectedDate,
       });
 
@@ -133,7 +139,7 @@ export default function QuestionsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, activeTab, activeSearch, selectedSubject, selectedState, selectedDate, session]);
+  }, [pagination.page, pagination.limit, activeTab, activeSearch, selectedSubject, selectedState, selectedMockSeries, selectedDate, session]);
 
   useEffect(() => {
     fetchQuestions();
@@ -501,12 +507,29 @@ export default function QuestionsListPage() {
               setSelectedState(e.target.value);
               setPagination((prev) => ({ ...prev, page: 1 }));
             }}
-            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] max-w-[160px]"
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] max-w-[150px]"
           >
             <option value="">All States</option>
             {statesList.map((st) => (
               <option key={st._id} value={st._id}>
                 {st.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Mock Test Series Filter */}
+          <select
+            value={selectedMockSeries}
+            onChange={(e) => {
+              setSelectedMockSeries(e.target.value);
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] max-w-[160px]"
+          >
+            <option value="">All Mock Series</option>
+            {mockSeriesList.map((ser) => (
+              <option key={ser._id} value={ser._id}>
+                {ser.title}
               </option>
             ))}
           </select>
@@ -524,7 +547,161 @@ export default function QuestionsListPage() {
 
       {/* Questions Data Table */}
       <div className="bg-white border border-slate-300 rounded shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Mobile View: Touch-Friendly Question Cards */}
+        <div className="block md:hidden divide-y divide-slate-200">
+          {loading ? (
+            <div className="py-10 text-center text-slate-400">
+              <div className="flex items-center justify-center gap-2">
+                <Loader2 size={16} className="animate-spin text-[#2271b1]" />
+                <span>Loading question bank...</span>
+              </div>
+            </div>
+          ) : questions.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 space-y-1">
+              <HelpCircle size={28} className="mx-auto text-slate-300 mb-1" />
+              <p className="font-semibold text-slate-700">No questions found</p>
+              <p className="text-[11px] text-slate-400">
+                Try changing the status tab, filters, or search term.
+              </p>
+            </div>
+          ) : (
+            questions.map((q, idx) => {
+              const isSelected = selectedIds.includes(q._id);
+              const correctOpt = q.options?.find((o) => o.is_correct);
+              const answerDisplay =
+                q.correct_answer ||
+                (correctOpt ? `Option ${correctOpt.index}` : 'A');
+              const statusStr = (q.status || 'Published').toLowerCase();
+
+              return (
+                <div key={q._id} className="p-3 space-y-2 bg-white text-xs">
+                  {/* Top: Checkbox + Question Content */}
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isSelected}
+                      onChange={() => toggleSelect(q._id)}
+                      className="rounded border-slate-300 text-[#2271b1] focus:ring-[#2271b1] mt-1 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold text-slate-900 leading-snug line-clamp-3">
+                        {q.content}
+                      </div>
+                      {q.ans_info && (
+                        <p className="text-[11px] text-slate-500 mt-1 line-clamp-2 italic">
+                          💡 {q.ans_info}
+                        </p>
+                      )}
+                      {/* Meta Tags: Answer, Subject, State */}
+                      <div className="flex flex-wrap items-center gap-1.5 mt-2">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10.5px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          <CheckCircle2 size={11} className="text-emerald-600" />
+                          <span>Ans: {answerDisplay}</span>
+                        </span>
+                        {(q.subject?.name || q.subject_name) && (
+                          <span className="px-2 py-0.5 rounded text-[10.5px] font-medium bg-slate-100 text-slate-700 border border-slate-200">
+                            {q.subject?.name || q.subject_name}
+                          </span>
+                        )}
+                        {(q.state?.name || q.state_name) && (
+                          <span className="px-2 py-0.5 rounded text-[10.5px] font-medium bg-blue-50 text-blue-700 border border-blue-200">
+                            {q.state?.name || q.state_name}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Bar: Status Dropdown + Edit/Trash */}
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={
+                          statusStr.includes('pub')
+                            ? 'Published'
+                            : statusStr.includes('pending')
+                            ? 'Pending'
+                            : statusStr.includes('trash')
+                            ? 'Trash'
+                            : 'Draft'
+                        }
+                        disabled={updatingStatusId === q._id}
+                        onChange={(e) => handleStatusChange(q._id, e.target.value)}
+                        className={`text-[11px] font-semibold rounded px-2 py-1 border cursor-pointer appearance-none pr-5 focus:outline-none shadow-2xs ${
+                          statusStr.includes('pub')
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : statusStr.includes('pending')
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : statusStr.includes('trash')
+                            ? 'bg-rose-50 text-rose-700 border-rose-300'
+                            : 'bg-slate-100 text-slate-700 border-slate-300'
+                        } ${updatingStatusId === q._id ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        <option value="Published">Published</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Draft">Draft</option>
+                        <option value="Trash">Trash</option>
+                      </select>
+                      {updatingStatusId === q._id ? (
+                        <span className="absolute right-2 w-3 h-3 border-2 border-slate-400 border-t-blue-600 rounded-full animate-spin pointer-events-none" />
+                      ) : (
+                        <ChevronDown
+                          size={11}
+                          className="absolute right-1 pointer-events-none text-slate-500"
+                        />
+                      )}
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5">
+                      {activeTab === 'trash' ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleRestore(q._id)}
+                            title="Restore question"
+                            className="p-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded transition-colors shadow-2xs cursor-pointer"
+                          >
+                            <RotateCcw size={12} />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => confirmDelete(q)}
+                            title="Delete permanently"
+                            className="p-1.5 bg-[#dc3232] hover:bg-[#b32d2e] text-white rounded transition-colors shadow-2xs cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            href={`/edu-admin/questions/edit/${q._id}`}
+                            title="Edit Question"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00a0d2] hover:bg-[#008ebb] text-white rounded text-xs font-semibold transition-colors shadow-2xs"
+                          >
+                            <Edit2 size={11} />
+                            <span>Edit</span>
+                          </Link>
+                          <button
+                            type="button"
+                            onClick={() => confirmDelete(q)}
+                            title="Move to Trash"
+                            className="p-1.5 bg-[#dc3232] hover:bg-[#b32d2e] text-white rounded transition-colors shadow-2xs cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table: 100% Exact Desktop Layout (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 border-collapse">
             <thead className="bg-[#f6f7f7] border-b border-slate-300 text-xs font-semibold text-slate-800">
               <tr>

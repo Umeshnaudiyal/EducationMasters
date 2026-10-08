@@ -115,8 +115,34 @@ export const resolveTagIds = async (tags) => {
   return [...new Set(resolvedIds.map((id) => id.toString()))].map((id) => new mongoose.Types.ObjectId(id));
 };
 
+const isPlaceholderText = (val) => {
+  if (!val) return true;
+  if (typeof val === 'string') {
+    const s = val.trim().toLowerCase();
+    return (
+      !s ||
+      s === '— please choose —' ||
+      s === '-- please choose --' ||
+      s === 'please choose' ||
+      s === '— select —' ||
+      s === '-- select --' ||
+      s === 'select' ||
+      s === '— select state —' ||
+      s === '-- select state --' ||
+      s === '— select department —' ||
+      s === '-- select department --' ||
+      s === '— select country —' ||
+      s === '-- select country --' ||
+      s === 'none' ||
+      s === 'null' ||
+      s === 'undefined'
+    );
+  }
+  return false;
+};
+
 export const resolveCountryId = async (country) => {
-  if (!country || country === '— Please Choose —' || country === '-- Please Choose --' || country === '— Select Country —' || country === '-- Select Country --') {
+  if (!country || isPlaceholderText(country)) {
     return null;
   }
 
@@ -129,7 +155,7 @@ export const resolveCountryId = async (country) => {
   }
 
   const nameOrSlug = typeof country === 'object' ? (country.name || country.slug || country.code || '') : String(country).trim();
-  if (!nameOrSlug) return null;
+  if (!nameOrSlug || isPlaceholderText(nameOrSlug)) return null;
 
   const countryDoc = await Country.findOne({
     $or: [
@@ -143,7 +169,7 @@ export const resolveCountryId = async (country) => {
 };
 
 export const resolveStateId = async (state) => {
-  if (!state || state === '-- All India --' || state === '— All India —' || state === 'all' || state === 'all-india') {
+  if (!state || isPlaceholderText(state) || state === '-- All India --' || state === '— All India —' || state === 'all' || state === 'all-india') {
     return null;
   }
 
@@ -156,7 +182,7 @@ export const resolveStateId = async (state) => {
   }
 
   const nameOrSlug = typeof state === 'object' ? (state.name || state.slug || '') : String(state).trim();
-  if (!nameOrSlug) return null;
+  if (!nameOrSlug || isPlaceholderText(nameOrSlug)) return null;
 
   const stateDoc = await State.findOne({
     $or: [
@@ -169,7 +195,7 @@ export const resolveStateId = async (state) => {
 };
 
 export const resolveDepartmentId = async (dept) => {
-  if (!dept || dept === '— Please Choose —' || dept === '-- Please Choose --') {
+  if (!dept || isPlaceholderText(dept)) {
     return null;
   }
 
@@ -182,7 +208,7 @@ export const resolveDepartmentId = async (dept) => {
   }
 
   const nameOrSlug = typeof dept === 'object' ? (dept.name || dept.slug || '') : String(dept).trim();
-  if (!nameOrSlug) return null;
+  if (!nameOrSlug || isPlaceholderText(nameOrSlug)) return null;
 
   const deptDoc = await Department.findOne({
     $or: [

@@ -66,12 +66,30 @@ const resultSchema = new mongoose.Schema(
     meta_id: { type: Number, default: 0 },
   },
   {
-    timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+    timestamps: true,
     strict: false,
   }
 );
 
-resultSchema.index({ created_at: -1, _id: -1 });
+resultSchema.pre('save', function (next) {
+  const now = new Date();
+  const dateStr = now.toISOString().replace('T', ' ').slice(0, 19);
+  if (!this.created_at) {
+    this.created_at = this.createdAt && !isNaN(new Date(this.createdAt).getTime())
+      ? new Date(this.createdAt).toISOString().replace('T', ' ').slice(0, 19)
+      : dateStr;
+  }
+  if (!this.createdAt || isNaN(new Date(this.createdAt).getTime())) {
+    this.createdAt = this.created_at && !isNaN(new Date(this.created_at).getTime())
+      ? new Date(this.created_at)
+      : now;
+  }
+  this.updated_at = dateStr;
+  this.updatedAt = now;
+  next();
+});
+
+resultSchema.index({ createdAt: -1, created_at: -1, _id: -1 });
 
 const Result = mongoose.models.Result || mongoose.model('Result', resultSchema);
 export default Result;

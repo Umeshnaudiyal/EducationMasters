@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useParams, usePathname } from 'next/navigation';
+import { useParams, usePathname, notFound } from 'next/navigation';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -11,12 +11,64 @@ import {
   ExternalLink, Download, ChevronRight, ChevronDown, X,
   Send, MessageSquare, Check, Award, Globe,
   Building, Clock, FileText, HelpCircle, CheckCircle2,
-  Share, BookmarkCheck
+  Share, BookmarkCheck, Mail, Phone
 } from 'lucide-react';
-import StateLink from '@/components/StateLink';
+import StateLink, { isPlaceholderString } from '@/components/StateLink';
+import InternalLinkModal, { isInternalLink } from '@/components/InternalLinkModal';
 import { getImageUrl } from '@/utils/image';
+import authorsData from '@/utils/authorsData.json';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1';
+const API_BASE = typeof window !== 'undefined'
+  ? '/apis/v1'
+  : (process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1');
+
+const findAuthorInCatalog = (identifier) => {
+  if (!identifier) return null;
+  const cleanId = String(identifier).trim().toLowerCase();
+  return (
+    authorsData.find((a) => {
+      if (!a) return false;
+      const aId = (a._id || '').toLowerCase();
+      const aSlug = (a.slug || '').toLowerCase();
+      const aNice = (a.nicename || '').toLowerCase();
+      const aName = (a.name || '').toLowerCase();
+      const aEmail = (a.email || '').toLowerCase();
+      return (
+        aId === cleanId ||
+        aSlug === cleanId ||
+        aNice === cleanId ||
+        aName === cleanId ||
+        aEmail === cleanId
+      );
+    }) || null
+  );
+};
+
+const formatSocialUrl = (type, val) => {
+  if (!val || typeof val !== 'string') return '';
+  const clean = val.trim();
+  if (!clean) return '';
+  if (clean.startsWith('http://') || clean.startsWith('https://')) return clean;
+
+  switch (type) {
+    case 'twitter':
+      return `https://twitter.com/${clean.replace(/^@/, '')}`;
+    case 'facebook':
+      return `https://facebook.com/${clean}`;
+    case 'instagram':
+      return `https://instagram.com/${clean.replace(/^@/, '')}`;
+    case 'linkedin':
+      return clean.startsWith('in/') ? `https://linkedin.com/${clean}` : `https://linkedin.com/in/${clean}`;
+    case 'youtube':
+      return `https://youtube.com/${clean.startsWith('@') ? clean : `@${clean}`}`;
+    case 'website':
+      return `https://${clean}`;
+    default:
+      return clean;
+  }
+};
+
+
 
 // Helper for clean, bulletproof date formatting
 const formatDate = (dateStr) => {
@@ -193,6 +245,53 @@ export default function SingleArticlePage() {
   const [loading, setLoading] = useState(true);
   const [showLeftAd, setShowLeftAd] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [internalLinkModal, setInternalLinkModal] = useState({
+    isOpen: false,
+    targetUrl: '',
+    targetWindow: '_self',
+  });
+
+  const handleArticleContentClick = (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+      return;
+    }
+
+    // Never intercept channel join links, share buttons, top breadcrumbs, or byline author
+    if (
+      link.closest('nav') ||
+      link.closest('.share-buttons') ||
+      link.closest('[data-no-interception]') ||
+      link.getAttribute('data-no-interception') ||
+      href.includes('whatsapp.com/channel') ||
+      href.includes('t.me/educationmastersin') ||
+      href.includes('api.whatsapp.com/send') ||
+      href.includes('facebook.com/educationmastersindia')
+    ) {
+      return;
+    }
+
+    // Check if clicked inside text editor raw HTML, highlights table, overview table, or article body
+    const isInsideArticleContent = Boolean(
+      link.closest('.article-raw-html') ||
+      link.closest('.article-content-body') ||
+      link.closest('table') ||
+      link.closest('.overflow-x-auto')
+    );
+
+    if (isInsideArticleContent) {
+      e.preventDefault();
+      e.stopPropagation();
+      setInternalLinkModal({
+        isOpen: true,
+        targetUrl: href,
+        targetWindow: link.getAttribute('target') || '_blank',
+      });
+    }
+  };
 
   const isJobPage = pathname.startsWith('/job') || article?.isJob;
   const isAdmitCardPage = pathname.startsWith('/admit-card') || article?.isAdmitCard || article?.category?.toLowerCase().includes('admit');
@@ -317,11 +416,11 @@ export default function SingleArticlePage() {
         }
       }
 
-      // Fallback mock data
-      setArticle(generateFallbackArticle(articleSlug));
+      // If not found in any endpoint, trigger notFound
+      notFound();
     } catch (err) {
       console.error('Fetch article error:', err);
-      setArticle(generateFallbackArticle(articleSlug));
+      notFound();
     } finally {
       setLoading(false);
     }
@@ -379,16 +478,16 @@ export default function SingleArticlePage() {
 
     // Extract Department / Board / Agency Name
     const extractDepartment = (rawItem) => {
-      if (rawItem.dept && String(rawItem.dept).trim()) {
+      if (rawItem.dept && String(rawItem.dept).trim() && !isPlaceholderString(rawItem.dept)) {
         return cleanHTML(rawItem.dept);
       }
       if (rawItem.department) {
         const deptStr = typeof rawItem.department === 'object' ? rawItem.department.name : String(rawItem.department);
-        if (deptStr && deptStr.trim() && deptStr !== '[object Object]') return cleanHTML(deptStr);
+        if (deptStr && deptStr.trim() && deptStr !== '[object Object]' && !isPlaceholderString(deptStr)) return cleanHTML(deptStr);
       }
       if (rawItem.board) {
         const boardStr = typeof rawItem.board === 'object' ? rawItem.board.name : String(rawItem.board);
-        if (boardStr && boardStr.trim() && boardStr !== '[object Object]') return cleanHTML(boardStr);
+        if (boardStr && boardStr.trim() && boardStr !== '[object Object]' && !isPlaceholderString(boardStr)) return cleanHTML(boardStr);
       }
 
       const titleStr = (rawItem.title || '').trim();
@@ -420,17 +519,41 @@ export default function SingleArticlePage() {
     const categoryName = extractDepartment(raw);
     const categorySlug = catSlug || (isResult ? 'results' : isAdmitCard ? 'admit-cards' : isJob ? 'jobs' : 'articles');
 
-    // Extract authentic Author details
+    // Extract authentic Author details with rich social profiles and catalogue fallback
     let authorName = 'Vikash Sharma';
     let authorSlug = 'DigitalDeepak';
     let authorImage = 'https://educationmasters.in/assets/img/users/admin_1777271474.png';
     let authorBio = 'Vikash Sharma is an education expert and digital learning strategist with over 10 years of experience in the Indian education ecosystem. As the founder of EducationMasters.in, he is dedicated to helping students and job aspirants stay updated with the latest government exams, results, and career guidance.';
+    let authorRole = 'Author';
+    let authorNicename = '';
+    let authorWebsite = '';
+    let authorTwitter = '';
+    let authorFacebook = '';
+    let authorInstagram = '';
+    let authorLinkedin = '';
+    let authorYoutube = '';
+    let authorEmail = '';
+    let authorPhone = '';
 
-    if (raw.author) {
-      if (typeof raw.author === 'object') {
-        const rawName = raw.author.name?.trim() || '';
-        const rawNice = raw.author.nicename?.trim() || '';
-        authorSlug = rawNice || raw.author.slug || rawName || 'DigitalDeepak';
+    const authorParam = raw.author;
+    let catalogMatch = null;
+
+    if (authorParam) {
+      if (typeof authorParam === 'object') {
+        const rawId = authorParam._id || authorParam.id || '';
+        const rawName = (authorParam.name || '').trim();
+        const rawNice = (authorParam.nicename || '').trim();
+        const rawSlug = (authorParam.slug || '').trim();
+        const rawEmail = (authorParam.email || '').trim();
+
+        catalogMatch =
+          findAuthorInCatalog(rawId) ||
+          findAuthorInCatalog(rawSlug) ||
+          findAuthorInCatalog(rawNice) ||
+          findAuthorInCatalog(rawName) ||
+          findAuthorInCatalog(rawEmail);
+
+        authorSlug = rawNice || rawSlug || rawName || catalogMatch?.slug || catalogMatch?.nicename || 'DigitalDeepak';
 
         if (rawName.toLowerCase() === 'admin' && rawNice) {
           authorName = rawNice;
@@ -440,20 +563,55 @@ export default function SingleArticlePage() {
           authorName = rawName;
         } else if (rawNice) {
           authorName = rawNice;
+        } else if (catalogMatch?.name) {
+          authorName = catalogMatch.name;
         }
 
-        if (raw.author.image) {
-          authorImage = getImageUrl(raw.author.image, 'https://educationmasters.in/assets/img/defaults/user.png');
+        if (authorParam.image) {
+          authorImage = getImageUrl(authorParam.image, 'https://educationmasters.in/assets/img/defaults/user.png');
+        } else if (catalogMatch?.image) {
+          authorImage = getImageUrl(catalogMatch.image, 'https://educationmasters.in/assets/img/defaults/user.png');
         }
 
-        if (raw.author.bio && raw.author.bio.trim()) {
-          authorBio = cleanHTML(raw.author.bio);
+        if (authorParam.bio && authorParam.bio.trim()) {
+          authorBio = cleanHTML(authorParam.bio);
+        } else if (catalogMatch?.bio && catalogMatch.bio.trim()) {
+          authorBio = cleanHTML(catalogMatch.bio);
         } else {
           authorBio = `I am ${authorName}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic decisions.`;
         }
-      } else if (typeof raw.author === 'string') {
-        authorName = raw.author;
-        authorSlug = raw.author;
+
+        authorRole = authorParam.role || catalogMatch?.role || 'Author';
+        authorNicename = rawNice || catalogMatch?.nicename || '';
+        authorWebsite = authorParam.website || catalogMatch?.website || '';
+        authorTwitter = authorParam.twitter || catalogMatch?.twitter || '';
+        authorFacebook = authorParam.facebook || catalogMatch?.facebook || '';
+        authorInstagram = authorParam.instagram || catalogMatch?.instagram || '';
+        authorLinkedin = authorParam.linkedin || catalogMatch?.linkedin || '';
+        authorYoutube = authorParam.youtube || catalogMatch?.youtube || '';
+        authorEmail = authorParam.email || catalogMatch?.email || '';
+        authorPhone = authorParam.phone || catalogMatch?.phone || '';
+      } else if (typeof authorParam === 'string') {
+        catalogMatch = findAuthorInCatalog(authorParam);
+        if (catalogMatch) {
+          authorName = catalogMatch.name || authorParam;
+          authorSlug = catalogMatch.slug || catalogMatch.nicename || authorParam;
+          authorImage = getImageUrl(catalogMatch.image, 'https://educationmasters.in/assets/img/defaults/user.png');
+          authorBio = catalogMatch.bio ? cleanHTML(catalogMatch.bio) : `I am ${authorName}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content.`;
+          authorRole = catalogMatch.role || 'Author';
+          authorNicename = catalogMatch.nicename || '';
+          authorWebsite = catalogMatch.website || '';
+          authorTwitter = catalogMatch.twitter || '';
+          authorFacebook = catalogMatch.facebook || '';
+          authorInstagram = catalogMatch.instagram || '';
+          authorLinkedin = catalogMatch.linkedin || '';
+          authorYoutube = catalogMatch.youtube || '';
+          authorEmail = catalogMatch.email || '';
+          authorPhone = catalogMatch.phone || '';
+        } else {
+          authorName = authorParam;
+          authorSlug = authorParam;
+        }
       }
     }
 
@@ -462,19 +620,24 @@ export default function SingleArticlePage() {
       slug: authorSlug,
       image: authorImage,
       bio: authorBio,
-      nicename: typeof raw.author === 'object' ? raw.author.nicename : '',
-      website: typeof raw.author === 'object' ? raw.author.website : '',
-      twitter: typeof raw.author === 'object' ? raw.author.twitter : '',
-      facebook: typeof raw.author === 'object' ? raw.author.facebook : '',
-      linkedin: typeof raw.author === 'object' ? raw.author.linkedin : '',
-      instagram: typeof raw.author === 'object' ? raw.author.instagram : '',
+      role: authorRole,
+      nicename: authorNicename,
+      website: authorWebsite,
+      twitter: authorTwitter,
+      facebook: authorFacebook,
+      instagram: authorInstagram,
+      linkedin: authorLinkedin,
+      youtube: authorYoutube,
+      email: authorEmail,
+      phone: authorPhone,
     };
 
     const pubDate = formatDate(raw.created_at || raw.createdAt || raw.exam_rdate || raw.result_date);
 
     // Dynamic Result / Admit Card Details Object
     const examNameVal = cleanHTML(raw.post || raw.title || 'Government Examination 2026');
-    const deptNameVal = cleanHTML(raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department) || categoryName || 'Official Authority');
+    const rawDeptCandidate = raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department);
+    const deptNameVal = cleanHTML((rawDeptCandidate && !isPlaceholderString(rawDeptCandidate)) ? rawDeptCandidate : (categoryName || 'Official Authority'));
     const postNameVal = cleanHTML(raw.desig || raw.post || raw.title || 'Various Posts');
     const examDateVal = raw.exam_date ? formatDate(raw.exam_date) : (raw.dates?.exam_date ? formatDate(raw.dates.exam_date) : 'As per scheduled');
     const examTimeVal = cleanHTML(raw.exam_time || 'As per scheduled');
@@ -511,10 +674,13 @@ export default function SingleArticlePage() {
     } : null;
 
     // Standard Job Details Object
+    const rawLocationCandidate = raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state);
+    const cleanJobLocation = (rawLocationCandidate && !isPlaceholderString(rawLocationCandidate)) ? cleanHTML(rawLocationCandidate) : 'All India';
+
     const jobDetailsObj = isJob ? {
       postName: cleanHTML(raw.title),
       totalVacancies: cleanHTML(raw.posts || raw.total_posts || raw.vacancies || 'N/A'),
-      jobLocation: cleanHTML(raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state) || 'All India'),
+      jobLocation: cleanJobLocation,
       qualification: cleanHTML(raw.qualification || 'As per notification'),
       releaseDate: formatDate(raw.released || raw.created_at || raw.createdAt),
       startDate: formatDate(raw.app_start || raw.dates?.start_date || raw.created_at),
@@ -662,8 +828,17 @@ export default function SingleArticlePage() {
     <div className="min-h-screen flex flex-col bg-white text-slate-800 font-sans">
       {/* Global CSS overrides for clean HTML rendering */}
       <style jsx global>{`
+        .article-raw-html {
+          width: 100% !important;
+          max-width: 100% !important;
+          word-break: break-word;
+          overflow-wrap: break-word;
+        }
         .article-raw-html table {
           width: 100% !important;
+          display: block !important;
+          overflow-x: auto !important;
+          max-width: 100% !important;
           border-collapse: collapse !important;
           margin-top: 1rem !important;
           margin-bottom: 1.5rem !important;
@@ -711,9 +886,24 @@ export default function SingleArticlePage() {
           margin-bottom: 0.75rem !important;
         }
         .article-raw-html p {
+          width: 100% !important;
+          max-width: 100% !important;
           margin-bottom: 0.85rem !important;
           line-height: 1.7 !important;
           color: #334155 !important;
+          text-align: justify !important;
+          text-justify: inter-word !important;
+          hyphens: auto;
+          -webkit-hyphens: auto;
+        }
+        @media (min-width: 640px) {
+          .article-raw-html p {
+            text-align: left !important;
+          }
+        }
+        .article-raw-html div,
+        .article-raw-html span {
+          max-width: 100% !important;
         }
       `}</style>
 
@@ -721,14 +911,14 @@ export default function SingleArticlePage() {
       <LiveTicker />
 
       {/* Main Page Container */}
-      <main className="flex-1 w-full max-w-[1440px] mx-auto px-4 sm:px-6 py-4 md:py-6">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-6 py-4 md:py-6">
 
         {/* 3-Column Layout Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
           {/* ================= LEFT SKYSCRAPER AD CONTAINER ================= */}
           {showLeftAd && (
-            <aside className="hidden xl:block xl:col-span-2 sticky top-20">
+            <aside className="hidden xl:block xl:col-span-2 sticky top-20 self-start z-10">
               <div className="w-[160px] mx-auto bg-slate-900 text-white rounded overflow-hidden shadow-sm relative group">
                 <button
                   onClick={() => setShowLeftAd(false)}
@@ -793,19 +983,17 @@ export default function SingleArticlePage() {
                 <div className="h-72 bg-slate-100 rounded w-full"></div>
               </div>
             ) : article ? (
-              <article className="space-y-5">
-
-
+              <article className="space-y-3 sm:space-y-4 md:space-y-5" onClick={handleArticleContentClick}>
 
                 {/* 2. Article Main Title */}
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 leading-snug sm:leading-tight">
                   {article.title}
                 </h1>
 
                 {/* 3. Byline Meta: Author, Category, Posted Date & Status */}
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-slate-700 font-normal">
-                  <span>
-                    By{' '}
+                <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-2.5 gap-y-1 text-xs sm:text-sm text-slate-600 font-normal">
+                  <span className="inline-flex items-center">
+                    By&nbsp;
                     <Link
                       href={`/author/${encodeURIComponent(
                         (typeof article.author === 'object'
@@ -817,9 +1005,9 @@ export default function SingleArticlePage() {
                       {typeof article.author === 'object' ? article.author.name : article.author}
                     </Link>
                   </span>
-                  <span className="text-slate-300">|</span>
-                  <span>
-                    In{' '}
+                  <span className="text-slate-300 select-none">•</span>
+                  <span className="inline-flex items-center">
+                    In&nbsp;
                     {isJobPage ? (
                       <Link href="/jobs" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
                         Jobs
@@ -838,28 +1026,26 @@ export default function SingleArticlePage() {
                       </Link>
                     )}
                   </span>
-                  <span className="text-slate-300">|</span>
-                  <span>
-                    Posted: <span className="font-bold text-slate-900">{article.date}</span>
+                  <span className="text-slate-300 select-none">•</span>
+                  <span className="inline-flex items-center whitespace-nowrap">
+                    Posted:&nbsp;<strong className="font-bold text-slate-900">{article.date}</strong>
                   </span>
                   {article.lastDate && (
-                    <>
-                      <span className="text-slate-300">|</span>
-                      <span>
-                        Status: <span className="font-bold text-slate-900">{article.lastDate}</span>
-                      </span>
-                    </>
+                    <span className="inline-flex items-center whitespace-nowrap">
+                      <span className="text-slate-300 mr-2 select-none">•</span>
+                      Status:&nbsp;<strong className="font-bold text-slate-900">{article.lastDate}</strong>
+                    </span>
                   )}
                 </div>
 
                 {/* 4. Official Disclaimer Box */}
-                <div className="p-3.5 bg-[#fef9ed] border border-[#f5dfb8] rounded text-xs text-[#8a5314] leading-relaxed">
+                <div className="w-full p-2.5 sm:p-3.5 bg-[#fef9ed] border border-[#f5dfb8] rounded-lg text-xs text-[#8a5314] leading-relaxed">
                   <strong className="font-semibold">Disclaimer:</strong> The content shown on this page related to government jobs, admit cards and results is either sourced from various internet portals or directly from official government websites. We do not claim any affiliation or authority over this content. It is solely for information providing purposes.
                 </div>
 
                 {/* 5. Featured Banner Image (if available) */}
                 {article.image && (
-                  <div className="w-full my-2">
+                  <div className="w-full my-1.5 sm:my-2">
                     <img
                       src={article.image}
                       alt={article.title}
@@ -868,8 +1054,8 @@ export default function SingleArticlePage() {
                   </div>
                 )}
 
-                {/* 6. Professional Social Share Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 border-y border-slate-200/80 my-3 bg-slate-50/60 px-3 rounded-lg">
+                {/* 6. Professional Social Share Bar (Icons expand on hover to show label) */}
+                <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1.5 sm:py-2.5 border-y border-slate-200/80 my-2 sm:my-3 bg-slate-50/60 px-2.5 sm:px-3 rounded-lg">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-1">Share:</span>
 
@@ -878,10 +1064,13 @@ export default function SingleArticlePage() {
                       href={`https://api.whatsapp.com/send?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center space-x-1.5 bg-[#25D366] hover:bg-[#1eb956] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-8 px-2.5 bg-[#25D366] hover:bg-[#1eb956] text-white text-xs font-semibold rounded-full shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+                      title="Share on WhatsApp"
                     >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.157 4.228 4.228-1.157z" /></svg>
-                      <span>WhatsApp</span>
+                      <svg className="w-3.5 h-3.5 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.157 4.228 4.228-1.157z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        WhatsApp
+                      </span>
                     </a>
 
                     {/* Telegram */}
@@ -889,10 +1078,13 @@ export default function SingleArticlePage() {
                       href={`https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(article.title)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center space-x-1.5 bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-8 px-2.5 bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs font-semibold rounded-full shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+                      title="Share on Telegram"
                     >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.832.942z" /></svg>
-                      <span>Telegram</span>
+                      <svg className="w-3.5 h-3.5 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.832.942z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        Telegram
+                      </span>
                     </a>
 
                     {/* Facebook */}
@@ -900,10 +1092,13 @@ export default function SingleArticlePage() {
                       href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center space-x-1.5 bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-8 px-2.5 bg-[#1877F2] hover:bg-[#166fe5] text-white text-xs font-semibold rounded-full shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+                      title="Share on Facebook"
                     >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
-                      <span>Facebook</span>
+                      <svg className="w-3.5 h-3.5 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        Facebook
+                      </span>
                     </a>
 
                     {/* Twitter / X */}
@@ -911,20 +1106,36 @@ export default function SingleArticlePage() {
                       href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="inline-flex items-center space-x-1.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-8 px-2.5 bg-slate-900 hover:bg-black text-white text-xs font-semibold rounded-full shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+                      title="Share on X / Twitter"
                     >
-                      <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
-                      <span>Twitter</span>
+                      <svg className="w-3.5 h-3.5 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        Twitter
+                      </span>
                     </a>
                   </div>
 
                   {/* Copy Link Button */}
                   <button
+                    type="button"
                     onClick={handleCopyLink}
-                    className="inline-flex items-center space-x-1.5 bg-white hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-semibold px-3.5 py-1.5 rounded-full shadow-2xs hover:shadow transition-all duration-200 transform hover:-translate-y-0.5"
+                    className="group inline-flex items-center justify-center h-8 px-2.5 bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-700 text-xs font-semibold rounded-full shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
+                    title={copiedLink ? 'Link Copied!' : 'Copy Link'}
                   >
-                    {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5 text-slate-500" />}
-                    <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                    {copiedLink ? (
+                      <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                    ) : (
+                      <Copy className="w-3.5 h-3.5 text-slate-600 shrink-0 transition-transform duration-300 group-hover:scale-110" />
+                    )}
+                    <span
+                      className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-out ${copiedLink
+                        ? 'max-w-24 opacity-100 ml-1.5 text-emerald-600 font-semibold'
+                        : 'max-w-0 opacity-0 group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5'
+                        }`}
+                    >
+                      {copiedLink ? 'Copied!' : 'Copy Link'}
+                    </span>
                   </button>
                 </div>
 
@@ -1032,7 +1243,7 @@ export default function SingleArticlePage() {
                     </div>
 
                     {/* SECTION 3: DIRECT VIEW RESULT LINK CALLOUT BANNER */}
-                    <div className="my-6 p-6 sm:p-8 bg-[#1d68e1] text-white rounded-lg text-center shadow-md space-y-3">
+                    <div className="my-6 p-6 sm:p-8 bg-[#1d68e1] text-white rounded-lg text-center shadow-md space-y-3 direct-link-banner" data-editor-content="true">
                       <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                         {article.isResult ? 'Direct View Result Link' : 'Direct Download Admit Card Link'}
                       </h3>
@@ -1137,7 +1348,7 @@ export default function SingleArticlePage() {
                       )}
                     </div>
 
-                    {/* SECTION 6: FAQS & DISCOVER MORE BOX */}
+                    {/* SECTION 6: FAQS */}
                     {article.resultDetails.faqItems && article.resultDetails.faqItems.length > 0 && (
                       <div className="pt-3 space-y-4">
                         <h2 className="text-xl sm:text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">
@@ -1145,42 +1356,10 @@ export default function SingleArticlePage() {
                         </h2>
 
                         <div className="space-y-4">
-                          {article.resultDetails.faqItems.slice(0, 3).map((faq, idx) => (
+                          {article.resultDetails.faqItems.map((faq, idx) => (
                             <div key={idx} className="space-y-1">
                               <p className="font-bold text-slate-900 text-sm sm:text-base">
                                 Q{idx + 1}. {faq.question}
-                              </p>
-                              <p className="text-slate-700 text-sm sm:text-base leading-relaxed font-normal">
-                                Answer: {faq.answer}
-                              </p>
-                            </div>
-                          ))}
-
-                          {/* Discover More Box 1 matching screenshot */}
-                          <div className="my-4 border border-[#d2def2] rounded-md overflow-hidden bg-[#f3f7fd]">
-                            <div className="px-4 py-2.5 bg-[#e4edfa] border-b border-[#d2def2] font-bold text-slate-800 text-sm">
-                              Discover more
-                            </div>
-                            <div className="divide-y divide-[#e0ebf8]">
-                              <Link href="/jobs" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
-                                <span>Recruitment & Staffing</span>
-                                <ChevronRight className="w-4 h-4 text-slate-400" />
-                              </Link>
-                              <Link href="/jobs" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
-                                <span>Job</span>
-                                <ChevronRight className="w-4 h-4 text-slate-400" />
-                              </Link>
-                              <Link href="/category/articles" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
-                                <span>education</span>
-                                <ChevronRight className="w-4 h-4 text-slate-400" />
-                              </Link>
-                            </div>
-                          </div>
-
-                          {article.resultDetails.faqItems.slice(3).map((faq, idx) => (
-                            <div key={idx + 3} className="space-y-1">
-                              <p className="font-bold text-slate-900 text-sm sm:text-base">
-                                Q{idx + 4}. {faq.question}
                               </p>
                               <p className="text-slate-700 text-sm sm:text-base leading-relaxed font-normal">
                                 Answer: {faq.answer}
@@ -1196,10 +1375,10 @@ export default function SingleArticlePage() {
                   /* ========================================================================= */
                   /* 7. GENERAL / JOB ARTICLE VIEW */
                   /* ========================================================================= */
-                  <div className="text-slate-700 text-base leading-relaxed space-y-4 font-normal">
+                  <div className="w-full text-slate-700 text-sm sm:text-base leading-relaxed space-y-4 font-normal">
                     {article.content ? (
                       <div
-                        className="article-raw-html text-slate-700 text-base leading-relaxed space-y-4"
+                        className="article-raw-html w-full text-slate-700 text-sm sm:text-base leading-relaxed space-y-4"
                         dangerouslySetInnerHTML={{ __html: article.content }}
                       />
                     ) : null}
@@ -1347,17 +1526,20 @@ export default function SingleArticlePage() {
                     <p className="text-xs text-slate-500 font-normal mt-0.5">(इस पोस्ट को अपने दोस्तों के साथ शेयर करना ना भूले)</p>
                   </div>
 
-                  {/* Circular Social Share Buttons */}
+                  {/* Expandable Social Share Buttons */}
                   <div className="flex flex-wrap items-center gap-2 pt-1">
                     {/* WhatsApp */}
                     <a
                       href={`https://api.whatsapp.com/send?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-9 h-9 rounded-full bg-[#25D366] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-9 px-2.5 rounded-full bg-[#25D366] hover:bg-[#1eb956] text-white shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                       title="WhatsApp"
                     >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.157 4.228 4.228-1.157z" /></svg>
+                      <svg className="w-4 h-4 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-1.157 4.228 4.228-1.157z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-xs font-semibold transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        WhatsApp
+                      </span>
                     </a>
 
                     {/* Telegram */}
@@ -1365,10 +1547,13 @@ export default function SingleArticlePage() {
                       href={`https://t.me/share/url?url=${encodeURIComponent(currentUrl)}&text=${encodeURIComponent(article.title)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-9 h-9 rounded-full bg-[#0088cc] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-9 px-2.5 rounded-full bg-[#0088cc] hover:bg-[#0077b5] text-white shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                       title="Telegram"
                     >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.832.942z" /></svg>
+                      <svg className="w-4 h-4 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M12 0c-6.627 0-12 5.373-12 12s5.373 12 12 12 12-5.373 12-12-5.373-12-12-12zm5.894 8.221l-1.97 9.28c-.145.658-.537.818-1.084.508l-3-2.21-1.446 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.333-.373-.121l-6.871 4.326-2.962-.924c-.643-.204-.657-.643.136-.953l11.57-4.461c.537-.194 1.006.131.832.942z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-xs font-semibold transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        Telegram
+                      </span>
                     </a>
 
                     {/* Facebook */}
@@ -1376,10 +1561,13 @@ export default function SingleArticlePage() {
                       href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-9 h-9 rounded-full bg-[#1877F2] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-9 px-2.5 rounded-full bg-[#1877F2] hover:bg-[#166fe5] text-white shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                       title="Facebook"
                     >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+                      <svg className="w-4 h-4 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-xs font-semibold transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        Facebook
+                      </span>
                     </a>
 
                     {/* LinkedIn */}
@@ -1387,10 +1575,13 @@ export default function SingleArticlePage() {
                       href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-9 h-9 rounded-full bg-[#0077b5] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-9 px-2.5 rounded-full bg-[#0077b5] hover:bg-[#00669c] text-white shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                       title="LinkedIn"
                     >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
+                      <svg className="w-4 h-4 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-xs font-semibold transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        LinkedIn
+                      </span>
                     </a>
 
                     {/* Twitter */}
@@ -1398,10 +1589,13 @@ export default function SingleArticlePage() {
                       href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(article.title + ' ' + currentUrl)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-9 h-9 rounded-full bg-slate-900 hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-9 px-2.5 rounded-full bg-slate-900 hover:bg-black text-white shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                       title="Twitter / X"
                     >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                      <svg className="w-4 h-4 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-xs font-semibold transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        Twitter
+                      </span>
                     </a>
 
                     {/* Reddit */}
@@ -1409,33 +1603,16 @@ export default function SingleArticlePage() {
                       href={`https://reddit.com/submit?url=${encodeURIComponent(currentUrl)}&title=${encodeURIComponent(article.title)}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="w-9 h-9 rounded-full bg-[#FF4500] hover:opacity-90 text-white flex items-center justify-center shadow-xs transition transform hover:-translate-y-0.5"
+                      className="group inline-flex items-center justify-center h-9 px-2.5 rounded-full bg-[#FF4500] hover:bg-[#e03d00] text-white shadow-2xs hover:shadow-md transition-all duration-300 ease-out transform hover:-translate-y-0.5 active:scale-95 cursor-pointer"
                       title="Reddit"
                     >
-                      <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" /></svg>
+                      <svg className="w-4 h-4 fill-current shrink-0 transition-transform duration-300 group-hover:scale-110" viewBox="0 0 24 24"><path d="M12 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0zm5.01 4.744c.688 0 1.25.561 1.25 1.249a1.25 1.25 0 0 1-2.498.056l-2.597-.547-.8 3.747c1.824.07 3.48.632 4.674 1.488.308-.309.73-.491 1.207-.491.968 0 1.754.786 1.754 1.754 0 .716-.435 1.333-1.01 1.614a3.111 3.111 0 0 1 .042.52c0 2.694-3.13 4.87-7.004 4.87-3.874 0-7.004-2.176-7.004-4.87 0-.183.015-.366.043-.534A1.748 1.748 0 0 1 4.028 12c0-.968.786-1.754 1.754-1.754.463 0 .898.196 1.207.49 1.207-.883 2.878-1.43 4.744-1.487l.885-4.182a.342.342 0 0 1 .14-.197.35.35 0 0 1 .238-.042l2.906.617a1.214 1.214 0 0 1 1.108-.701zM9.25 12C8.561 12 8 12.562 8 13.25c0 .687.561 1.248 1.25 1.248.687 0 1.248-.561 1.248-1.249 0-.688-.561-1.249-1.249-1.249zm5.5 0c-.687 0-1.248.561-1.248 1.25 0 .687.561 1.248 1.249 1.248.688 0 1.249-.561 1.249-1.249 0-.687-.562-1.249-1.25-1.249zm-5.466 3.99a.327.327 0 0 0-.231.094.33.33 0 0 0 0 .463c.842.842 2.484.913 2.961.913.477 0 2.105-.056 2.961-.913a.361.361 0 0 0 .029-.463.33.33 0 0 0-.464 0c-.547.533-1.684.73-2.512.73-.828 0-1.979-.196-2.512-.73a.326.326 0 0 0-.232-.095z" /></svg>
+                      <span className="max-w-0 opacity-0 overflow-hidden whitespace-nowrap text-xs font-semibold transition-all duration-300 ease-out group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5">
+                        Reddit
+                      </span>
                     </a>
                   </div>
 
-                  {/* Discover More Box 2 */}
-                  <div className="my-4 border border-[#d2def2] rounded-md overflow-hidden bg-[#f3f7fd]">
-                    <div className="px-4 py-2.5 bg-[#e4edfa] border-b border-[#d2def2] font-bold text-slate-800 text-sm">
-                      Discover more
-                    </div>
-                    <div className="divide-y divide-[#e0ebf8]">
-                      <Link href="/category/articles" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
-                        <span>education</span>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
-                      </Link>
-                      <Link href="/category/articles" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
-                        <span>Educational Resources</span>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
-                      </Link>
-                      <Link href="/jobs" className="flex items-center justify-between px-4 py-3 text-slate-700 hover:text-blue-600 hover:bg-[#ebf2fc] text-sm font-medium transition">
-                        <span>job</span>
-                        <ChevronRight className="w-4 h-4 text-slate-400" />
-                      </Link>
-                    </div>
-                  </div>
                 </div>
 
                 {/* 11. Others Category Jobs Grid */}
@@ -1479,9 +1656,9 @@ export default function SingleArticlePage() {
                   </div>
                 </div>
 
-                {/* 12. Professional Author Box Matching Live Reference Image */}
+                {/* 12. Professional Author Box Matching Live Reference Image & Linked Social Profiles */}
                 {article.author && !article.content?.includes('class="author') && (
-                  <div className="my-8 p-5 bg-[#f8f9fa] border border-slate-200/90 rounded-md flex flex-col sm:flex-row items-start gap-4">
+                  <div className="my-8 p-4 sm:p-5 bg-gradient-to-br from-slate-50/95 to-[#f8f9fa] border border-slate-200/90 rounded-xl flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-5 shadow-2xs">
                     {/* Left Square Avatar Frame */}
                     <Link
                       href={`/author/${encodeURIComponent(
@@ -1489,13 +1666,13 @@ export default function SingleArticlePage() {
                           ? article.author.slug || article.author.nicename || article.author.name
                           : article.author) || 'DigitalDeepak'
                       )}`}
-                      className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border border-slate-200 rounded p-1 shadow-2xs overflow-hidden block group hover:border-blue-400 transition"
+                      className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border border-slate-200/90 rounded-xl p-1 shadow-xs overflow-hidden block group hover:border-blue-400 transition-all duration-300"
                       title="View Author Profile"
                     >
                       <img
                         src={typeof article.author === 'object' ? article.author.image : 'https://educationmasters.in/assets/img/defaults/user.png'}
                         alt={typeof article.author === 'object' ? article.author.name : article.author}
-                        className="w-full h-full object-cover rounded-xs group-hover:scale-105 transition-transform duration-300"
+                        className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           if (!e.currentTarget.dataset.fallback) {
                             e.currentTarget.dataset.fallback = 'true';
@@ -1508,36 +1685,115 @@ export default function SingleArticlePage() {
                     </Link>
 
                     {/* Right Bio Content */}
-                    <div className="flex-1 space-y-2">
-                      <Link
-                        href={`/author/${encodeURIComponent(
-                          (typeof article.author === 'object'
-                            ? article.author.slug || article.author.nicename || article.author.name
-                            : article.author) || 'DigitalDeepak'
-                        )}`}
-                        className="text-lg font-bold text-slate-800 hover:text-blue-600 hover:underline leading-none inline-block transition"
-                      >
-                        {typeof article.author === 'object' ? article.author.name : article.author}
-                      </Link>
+                    <div className="flex-1 space-y-2 min-w-0">
+                      <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2">
+                        <Link
+                          href={`/author/${encodeURIComponent(
+                            (typeof article.author === 'object'
+                              ? article.author.slug || article.author.nicename || article.author.name
+                              : article.author) || 'DigitalDeepak'
+                          )}`}
+                          className="text-lg font-extrabold text-slate-900 hover:text-blue-600 hover:underline leading-tight transition inline-block"
+                        >
+                          {typeof article.author === 'object' ? article.author.name : article.author}
+                        </Link>
+                        {typeof article.author === 'object' && article.author.role && (
+                          <span className="bg-orange-50 text-orange-700 border border-orange-200/80 font-bold text-[10px] px-2.5 py-0.5 rounded-full capitalize leading-none">
+                            {article.author.role}
+                          </span>
+                        )}
+                        {typeof article.author === 'object' && article.author.nicename && (
+                          <span className="text-xs text-slate-400 font-medium">
+                            @{article.author.nicename}
+                          </span>
+                        )}
+                      </div>
+
                       <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
                         {typeof article.author === 'object' && article.author.bio ? article.author.bio : 'Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content covering government jobs, entrance exams, admissions, results, and career guidance.'}
                       </p>
 
-                      {/* Social Links Row */}
-                      <div className="flex items-center space-x-2.5 pt-1 text-slate-400">
-                        {typeof article.author === 'object' && article.author.website && (
-                          <a href={article.author.website.startsWith('http') ? article.author.website : `https://${article.author.website}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition" title="Website"><Globe className="w-3.5 h-3.5" /></a>
-                        )}
-                        {typeof article.author === 'object' && article.author.facebook && (
-                          <a href={article.author.facebook.startsWith('http') ? article.author.facebook : `https://facebook.com/${article.author.facebook}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-600 transition" title="Facebook"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" /></svg></a>
-                        )}
-                        {typeof article.author === 'object' && article.author.twitter && (
-                          <a href={article.author.twitter.startsWith('http') ? article.author.twitter : `https://twitter.com/${article.author.twitter}`} target="_blank" rel="noopener noreferrer" className="hover:text-sky-500 transition" title="Twitter"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" /></svg></a>
-                        )}
-                        {typeof article.author === 'object' && article.author.linkedin && (
-                          <a href={article.author.linkedin.startsWith('http') ? article.author.linkedin : `https://linkedin.com/in/${article.author.linkedin}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue-700 transition" title="LinkedIn"><svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24"><path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" /></svg></a>
-                        )}
-                      </div>
+                      {/* Social Media & Contact Links Row */}
+                      {typeof article.author === 'object' && (article.author.website || article.author.twitter || article.author.facebook || article.author.instagram || article.author.linkedin || article.author.youtube) && (
+                        <div className="flex items-center justify-center sm:justify-start gap-2 pt-1.5 flex-wrap">
+                          {article.author.website && (
+                            <a
+                              href={formatSocialUrl('website', article.author.website)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-7 h-7 rounded-lg bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
+                              title="Official Website"
+                            >
+                              <Globe className="w-3.5 h-3.5" />
+                            </a>
+                          )}
+                          {article.author.twitter && (
+                            <a
+                              href={formatSocialUrl('twitter', article.author.twitter)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-7 h-7 rounded-lg bg-white hover:bg-sky-50 text-slate-500 hover:text-sky-500 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
+                              title="Twitter / X"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                              </svg>
+                            </a>
+                          )}
+                          {article.author.facebook && (
+                            <a
+                              href={formatSocialUrl('facebook', article.author.facebook)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-7 h-7 rounded-lg bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-600 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
+                              title="Facebook"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
+                              </svg>
+                            </a>
+                          )}
+                          {article.author.instagram && (
+                            <a
+                              href={formatSocialUrl('instagram', article.author.instagram)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-7 h-7 rounded-lg bg-white hover:bg-pink-50 text-slate-500 hover:text-pink-600 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
+                              title="Instagram"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z" />
+                              </svg>
+                            </a>
+                          )}
+                          {article.author.linkedin && (
+                            <a
+                              href={formatSocialUrl('linkedin', article.author.linkedin)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-7 h-7 rounded-lg bg-white hover:bg-blue-50 text-slate-500 hover:text-blue-700 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
+                              title="LinkedIn"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.262-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                              </svg>
+                            </a>
+                          )}
+                          {article.author.youtube && (
+                            <a
+                              href={formatSocialUrl('youtube', article.author.youtube)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-7 h-7 rounded-lg bg-white hover:bg-rose-50 text-slate-500 hover:text-rose-600 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
+                              title="YouTube"
+                            >
+                              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
+                                <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
+                              </svg>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -1554,7 +1810,7 @@ export default function SingleArticlePage() {
           </section>
 
           {/* ================= RIGHT SIDEBAR WIDGET MATCHING LIVE JOB PAGE REFERENCE ================= */}
-          <aside className="col-span-1 lg:col-span-4 xl:col-span-3 sticky top-20 space-y-4">
+          <aside className="col-span-1 lg:col-span-4 xl:col-span-3 sticky top-20 self-start z-10 space-y-4 max-h-[calc(100vh-5.5rem)] overflow-y-auto">
 
             <div className="bg-[#f8f9fa] border border-slate-200 rounded-lg p-3.5 shadow-2xs">
 
@@ -1585,7 +1841,7 @@ export default function SingleArticlePage() {
                   <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
                     <span className="font-normal text-slate-600">28 Jobs are expiring in 30 Days</span>
                     <div className="flex items-center space-x-1.5">
-                      <Link href="/jobs" className="text-[#2563eb] font-medium hover:underline">View All</Link>
+                      <Link href="/jobs-expiring-in-30-days" className="text-[#2563eb] font-medium hover:underline">View All</Link>
                       <span className="bg-[#2563eb] text-white text-[11px] font-semibold px-2 py-0.5 rounded flex items-center space-x-1">
                         <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" /></svg>
                         <span>Jobs</span>
@@ -1691,6 +1947,14 @@ export default function SingleArticlePage() {
 
         </div>
       </main>
+
+      {/* Popup Modal for Internal Links in Text Editor */}
+      <InternalLinkModal
+        isOpen={internalLinkModal.isOpen}
+        onClose={() => setInternalLinkModal((prev) => ({ ...prev, isOpen: false }))}
+        targetUrl={internalLinkModal.targetUrl}
+        targetWindow={internalLinkModal.targetWindow}
+      />
 
       <Footer />
     </div>

@@ -557,7 +557,7 @@ export const bulkActionUsers = asyncHandler(async (req, res) => {
   throw new ApiError(400, 'Invalid bulk action');
 });
 
-// Get Public Author Profile & Published Content Stats (Blogs, Jobs, Admit Cards, Results, Pie Chart Data)
+// Get Public Author Profile & Published Content Stats (Blogs, Jobs, Admit Cards, Results, Questions, Exams, Pie Chart Data)
 export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
   const { slug } = req.params;
   if (!slug) {
@@ -597,13 +597,6 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
     );
   }
 
-  // Fallback: If still not found, search default admin/author user
-  if (!user) {
-    user = await User.findOne({ role: { $in: ['admin', 'superadmin', 'author'] } }).select(
-      'name nicename email image bio role website twitter facebook instagram linkedin youtube createdAt created_at sql_id'
-    );
-  }
-
   if (!user) {
     throw new ApiError(404, `Author "${slug}" not found`);
   }
@@ -613,70 +606,64 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
   const Job = (await import('../models/job.model.js')).default;
   const AdmitCard = (await import('../models/admitCard.model.js')).default;
   const Result = (await import('../models/result.model.js')).default;
-  const Media = (await import('../models/media.model.js')).default;
+  const Exam = (await import('../models/exam.model.js')).default;
 
   const authorFilter = {
     $or: [{ author: user._id }, ...(user.sql_id ? [{ user_id: user.sql_id }] : [])],
   };
 
-  // Fetch counts and recent items in parallel
-  let [
+  // Fetch real counts and recent items for this author in parallel
+  const [
     blogsCount,
     jobsCount,
     admitCardsCount,
     resultsCount,
+    examsCount,
     recentBlogs,
     recentJobs,
     recentAdmitCards,
     recentResults,
+    recentExams,
   ] = await Promise.all([
-    Blog.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
-    Job.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
-    AdmitCard.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
-    Result.countDocuments({ ...authorFilter, status: { $ne: 'trash' } }),
-    Blog.find({ ...authorFilter, status: { $ne: 'trash' } })
+    Blog.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
+    Job.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
+    AdmitCard.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
+    Result.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
+    Exam.countDocuments({ ...authorFilter }),
+    Blog.find({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } })
       .sort({ createdAt: -1, created_at: -1 })
-      .limit(25)
+      .limit(30)
       .populate('featured_media', 'path file alt name')
       .select('title slug image featured_media description createdAt created_at categories')
       .lean(),
-    Job.find({ ...authorFilter, status: { $ne: 'trash' } })
+    Job.find({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } })
       .sort({ createdAt: -1, created_at: -1 })
-      .limit(25)
+      .limit(30)
       .populate('featured_media', 'path file alt name')
       .select('title slug image featured_media description app_ends createdAt created_at dept state')
       .lean(),
-    AdmitCard.find({ ...authorFilter, status: { $ne: 'trash' } })
+    AdmitCard.find({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } })
       .sort({ createdAt: -1, created_at: -1 })
-      .limit(25)
+      .limit(30)
       .populate('featured_media', 'path file alt name')
       .select('title slug image featured_media description createdAt created_at department')
       .lean(),
-    Result.find({ ...authorFilter, status: { $ne: 'trash' } })
+    Result.find({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } })
       .sort({ createdAt: -1, created_at: -1 })
-      .limit(25)
+      .limit(30)
       .populate('featured_media', 'path file alt name')
       .select('title slug image featured_media description createdAt created_at department')
+      .lean(),
+    Exam.find({ ...authorFilter })
+      .sort({ createdAt: -1, created_at: -1 })
+      .limit(30)
+      .select('name slug image description createdAt created_at')
       .lean(),
   ]);
 
-  // If author specifically has 0 posts (e.g. newly created user), fallback to global latest published items
-  if (blogsCount === 0 && jobsCount === 0 && admitCardsCount === 0 && resultsCount === 0) {
-    [blogsCount, jobsCount, admitCardsCount, resultsCount, recentBlogs, recentJobs, recentAdmitCards, recentResults] = await Promise.all([
-      Blog.countDocuments({ status: { $ne: 'trash' } }),
-      Job.countDocuments({ status: { $ne: 'trash' } }),
-      AdmitCard.countDocuments({ status: { $ne: 'trash' } }),
-      Result.countDocuments({ status: { $ne: 'trash' } }),
-      Blog.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description createdAt created_at categories').lean(),
-      Job.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description app_ends createdAt created_at dept state').lean(),
-      AdmitCard.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description createdAt created_at department').lean(),
-      Result.find({ status: { $ne: 'trash' } }).sort({ createdAt: -1 }).limit(25).populate('featured_media', 'path file alt name').select('title slug image featured_media description createdAt created_at department').lean(),
-    ]);
-  }
+  const totalPosts = blogsCount + jobsCount + admitCardsCount + resultsCount + examsCount;
 
-  const totalPosts = blogsCount + jobsCount + admitCardsCount + resultsCount;
-
-  // Chart data breakdown for Interactive Pie / Donut Chart with vibrant orange & rich complementary tones
+  // Real chart data breakdown
   const chartData = [
     {
       name: 'Govt. Jobs',
@@ -716,6 +703,18 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
     },
   ];
 
+  if (examsCount > 0) {
+    chartData.push({
+      name: 'Examinations',
+      type: 'exams',
+      count: examsCount,
+      percent: totalPosts > 0 ? Math.round((examsCount / totalPosts) * 100) : 0,
+      color: '#0891b2',
+      secondaryColor: '#06b6d4',
+      icon: '🎓',
+    });
+  }
+
   return res.status(200).json(
     new ApiResponse(
       200,
@@ -726,6 +725,7 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
           jobs: jobsCount,
           admitCards: admitCardsCount,
           results: resultsCount,
+          exams: examsCount,
           total: totalPosts,
         },
         chartData,
@@ -734,10 +734,278 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
           jobs: recentJobs,
           admitCards: recentAdmitCards,
           results: recentResults,
+          exams: recentExams,
         },
       },
       'Author profile and published content fetched successfully'
     )
   );
 });
+
+// Get Public Authors Directory with Aggregated Stats, Content Ranking, and Pagination
+export const getPublicAuthorsList = asyncHandler(async (req, res) => {
+  const page = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const limit = Math.max(1, Math.min(100, parseInt(req.query.limit, 10) || 20));
+  const search = String(req.query.search || '').trim();
+  const roleFilter = String(req.query.role || 'all').toLowerCase().trim();
+  const sortBy = String(req.query.sortBy || 'total').toLowerCase().trim();
+  const order = String(req.query.order || 'desc').toLowerCase().trim();
+
+  const Blog = (await import('../models/blog.model.js')).default;
+  const Job = (await import('../models/job.model.js')).default;
+  const AdmitCard = (await import('../models/admitCard.model.js')).default;
+  const Result = (await import('../models/result.model.js')).default;
+  const Question = (await import('../models/question.model.js')).default;
+
+  // Run aggregations across content collections in parallel
+  const [
+    blogAuthorCounts,
+    blogSqlCounts,
+    jobAuthorCounts,
+    jobSqlCounts,
+    admitAuthorCounts,
+    admitSqlCounts,
+    resultAuthorCounts,
+    resultSqlCounts,
+    questionAuthorCounts
+  ] = await Promise.all([
+    Blog.aggregate([
+      { $match: { author: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$author', count: { $sum: 1 } } }
+    ]),
+    Blog.aggregate([
+      { $match: { user_id: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$user_id', count: { $sum: 1 } } }
+    ]),
+    Job.aggregate([
+      { $match: { author: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$author', count: { $sum: 1 } } }
+    ]),
+    Job.aggregate([
+      { $match: { user_id: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$user_id', count: { $sum: 1 } } }
+    ]),
+    AdmitCard.aggregate([
+      { $match: { author: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$author', count: { $sum: 1 } } }
+    ]),
+    AdmitCard.aggregate([
+      { $match: { user_id: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$user_id', count: { $sum: 1 } } }
+    ]),
+    Result.aggregate([
+      { $match: { author: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$author', count: { $sum: 1 } } }
+    ]),
+    Result.aggregate([
+      { $match: { user_id: { $ne: null }, status: { $ne: 'trash' } } },
+      { $group: { _id: '$user_id', count: { $sum: 1 } } }
+    ]),
+    Question.aggregate([
+      { $match: { author: { $ne: null } } },
+      { $group: { _id: '$author', count: { $sum: 1 } } }
+    ]),
+  ]);
+
+  // Build ID lookup maps
+  const blogMap = new Map();
+  blogAuthorCounts.forEach(b => blogMap.set(String(b._id), (blogMap.get(String(b._id)) || 0) + b.count));
+  const blogSqlMap = new Map();
+  blogSqlCounts.forEach(b => blogSqlMap.set(Number(b._id), b.count));
+
+  const jobMap = new Map();
+  jobAuthorCounts.forEach(j => jobMap.set(String(j._id), (jobMap.get(String(j._id)) || 0) + j.count));
+  const jobSqlMap = new Map();
+  jobSqlCounts.forEach(j => jobSqlMap.set(Number(j._id), j.count));
+
+  const admitMap = new Map();
+  admitAuthorCounts.forEach(a => admitMap.set(String(a._id), (admitMap.get(String(a._id)) || 0) + a.count));
+  const admitSqlMap = new Map();
+  admitSqlCounts.forEach(a => admitSqlMap.set(Number(a._id), a.count));
+
+  const resultMap = new Map();
+  resultAuthorCounts.forEach(r => resultMap.set(String(r._id), (resultMap.get(String(r._id)) || 0) + r.count));
+  const resultSqlMap = new Map();
+  resultSqlCounts.forEach(r => resultSqlMap.set(Number(r._id), r.count));
+
+  const questionMap = new Map();
+  questionAuthorCounts.forEach(q => questionMap.set(String(q._id), q.count));
+
+  // User query: Get authors/editors/admins/writers or any user who has posted content
+  const activeContentAuthorIds = [
+    ...blogMap.keys(),
+    ...jobMap.keys(),
+    ...admitMap.keys(),
+    ...resultMap.keys(),
+    ...questionMap.keys()
+  ].filter(id => /^[0-9a-fA-F]{24}$/.test(id));
+
+  const activeContentSqlIds = [
+    ...blogSqlMap.keys(),
+    ...jobSqlMap.keys(),
+    ...admitSqlMap.keys(),
+    ...resultSqlMap.keys()
+  ].filter(id => !isNaN(id) && id > 0);
+
+  let userQuery = {};
+
+  if (roleFilter && roleFilter !== 'all') {
+    if (roleFilter === 'author') {
+      userQuery.$or = [{ role: { $in: ['author', 'Author'] } }, { role_id: 3 }];
+    } else if (roleFilter === 'editor') {
+      userQuery.$or = [{ role: { $in: ['editor', 'Editor'] } }, { role_id: 2 }];
+    } else if (roleFilter === 'admin') {
+      userQuery.$or = [{ role: { $in: ['admin', 'Admin', 'superadmin', 'Superadmin'] } }, { role_id: 1 }];
+    } else if (roleFilter === 'writer') {
+      userQuery.$or = [{ role: { $in: ['writer', 'Writer'] } }];
+    } else {
+      userQuery.role = { $regex: `^${roleFilter}$`, $options: 'i' };
+    }
+  } else {
+    userQuery.$or = [
+      { role: { $in: ['admin', 'superadmin', 'author', 'editor', 'writer', 'Admin', 'Superadmin', 'Author', 'Editor', 'Writer'] } },
+      { role_id: { $in: [1, 2, 3] } },
+      { _id: { $in: activeContentAuthorIds } },
+      { sql_id: { $in: activeContentSqlIds } }
+    ];
+  }
+
+  if (search) {
+    const searchConditions = [
+      { name: { $regex: search, $options: 'i' } },
+      { nicename: { $regex: search, $options: 'i' } },
+      { email: { $regex: search, $options: 'i' } },
+      { bio: { $regex: search, $options: 'i' } }
+    ];
+
+    if (userQuery.$or) {
+      userQuery = {
+        $and: [
+          { $or: userQuery.$or },
+          { $or: searchConditions }
+        ]
+      };
+    } else {
+      userQuery.$or = searchConditions;
+    }
+  }
+
+  const rawUsers = await User.find(userQuery)
+    .select('name nicename email phone image bio role role_id website twitter facebook instagram linkedin youtube sql_id createdAt created_at')
+    .lean();
+
+  // Combine user profile with computed stats
+  let authors = rawUsers.map(user => {
+    const objIdStr = String(user._id);
+    const sqlId = user.sql_id ? Number(user.sql_id) : null;
+
+    const blogs = Math.max(blogMap.get(objIdStr) || 0, sqlId ? (blogSqlMap.get(sqlId) || 0) : 0);
+    const jobs = Math.max(jobMap.get(objIdStr) || 0, sqlId ? (jobSqlMap.get(sqlId) || 0) : 0);
+    const admitCards = Math.max(admitMap.get(objIdStr) || 0, sqlId ? (admitSqlMap.get(sqlId) || 0) : 0);
+    const results = Math.max(resultMap.get(objIdStr) || 0, sqlId ? (resultSqlMap.get(sqlId) || 0) : 0);
+    const questions = questionMap.get(objIdStr) || 0;
+
+    const total = blogs + jobs + admitCards + results + questions;
+
+    let role = user.role || 'author';
+    if (typeof role === 'string') role = role.toLowerCase();
+
+    return {
+      _id: user._id,
+      name: user.name || 'Author',
+      nicename: user.nicename || user.name?.toLowerCase().replace(/\s+/g, '-') || String(user._id),
+      slug: user.nicename || user.name?.toLowerCase().replace(/\s+/g, '-') || String(user._id),
+      email: user.email || '',
+      phone: user.phone || null,
+      image: user.image || null,
+      bio: user.bio || '',
+      role: role,
+      website: user.website || null,
+      twitter: user.twitter || null,
+      facebook: user.facebook || null,
+      instagram: user.instagram || null,
+      linkedin: user.linkedin || null,
+      youtube: user.youtube || null,
+      createdAt: user.createdAt || user.created_at || null,
+      stats: {
+        blogs,
+        jobs,
+        admitCards,
+        results,
+        questions,
+        total
+      }
+    };
+  });
+
+  // Calculate platform totals across all authors
+  const platformStats = {
+    totalAuthors: authors.length,
+    activeAuthors: authors.filter(a => a.stats.total > 0).length,
+    totalContentPublished: authors.reduce((sum, a) => sum + a.stats.total, 0),
+    totalBlogs: authors.reduce((sum, a) => sum + a.stats.blogs, 0),
+    totalJobs: authors.reduce((sum, a) => sum + a.stats.jobs, 0),
+    totalAdmitCards: authors.reduce((sum, a) => sum + a.stats.admitCards, 0),
+    totalResults: authors.reduce((sum, a) => sum + a.stats.results, 0),
+    totalQuestions: authors.reduce((sum, a) => sum + a.stats.questions, 0),
+  };
+
+  // Sorting
+  authors.sort((a, b) => {
+    let diff = 0;
+    if (sortBy === 'blogs') {
+      diff = b.stats.blogs - a.stats.blogs;
+    } else if (sortBy === 'jobs') {
+      diff = b.stats.jobs - a.stats.jobs;
+    } else if (sortBy === 'questions') {
+      diff = b.stats.questions - a.stats.questions;
+    } else if (sortBy === 'name') {
+      return order === 'asc' ? a.name.localeCompare(b.name) : b.name.localeCompare(a.name);
+    } else if (sortBy === 'recent') {
+      const dateA = new Date(a.createdAt || 0).getTime();
+      const dateB = new Date(b.createdAt || 0).getTime();
+      diff = dateB - dateA;
+    } else {
+      // Default: 'total' (maximum content published first)
+      diff = b.stats.total - a.stats.total;
+    }
+
+    if (diff === 0) {
+      return a.name.localeCompare(b.name);
+    }
+    return order === 'asc' ? -diff : diff;
+  });
+
+  // Assign overall platform rank to each author
+  authors = authors.map((a, index) => ({
+    ...a,
+    rank: index + 1
+  }));
+
+  // Pagination slice (20 authors per page as requested)
+  const totalAuthors = authors.length;
+  const totalPages = Math.ceil(totalAuthors / limit) || 1;
+  const skip = (page - 1) * limit;
+  const paginatedAuthors = authors.slice(skip, skip + limit);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      {
+        authors: paginatedAuthors,
+        platformStats,
+        pagination: {
+          page,
+          limit,
+          totalAuthors,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
+        }
+      },
+      'Authors directory retrieved successfully'
+    )
+  );
+});
+
 

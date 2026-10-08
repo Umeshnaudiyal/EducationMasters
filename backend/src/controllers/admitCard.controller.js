@@ -121,7 +121,7 @@ export const getAdmitCardBySlug = async (req, res, next) => {
     const admitCard = await AdmitCard.findOne(
       isId ? { _id: req.params.slug } : { slug: req.params.slug }
     )
-      .populate('author', 'name nicename email image bio')
+      .populate('author', 'name nicename email image bio website twitter facebook instagram linkedin youtube phone role')
       .populate('featured_media', 'path file alt name')
       .populate('country', 'name slug code')
       .populate('state', 'name slug')
@@ -224,7 +224,23 @@ export const createAdmitCard = async (req, res, next) => {
       req.body.state = await resolveStateId(req.body.state);
     }
     if (req.body.department !== undefined || req.body.dept !== undefined) {
-      req.body.department = await resolveDepartmentId(req.body.department || req.body.dept);
+      const deptRef = req.body.department !== undefined ? req.body.department : req.body.dept;
+      if (!deptRef || deptRef === '— Please Choose —' || deptRef === '-- Please Choose --' || deptRef === '— Select Department —') {
+        req.body.department = null;
+        req.body.dept = null;
+      } else {
+        req.body.department = await resolveDepartmentId(deptRef);
+        if (req.body.department) {
+          const deptDoc = await Department.findById(req.body.department).select('name');
+          if (deptDoc) {
+            req.body.dept = deptDoc.name;
+          }
+        } else if (typeof deptRef === 'string' && !/^[0-9a-fA-F]{24}$/.test(deptRef.trim())) {
+          req.body.dept = deptRef.trim();
+        } else {
+          req.body.dept = null;
+        }
+      }
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
@@ -375,7 +391,23 @@ export const updateAdmitCard = async (req, res, next) => {
       req.body.state = await resolveStateId(req.body.state);
     }
     if (req.body.department !== undefined || req.body.dept !== undefined) {
-      req.body.department = await resolveDepartmentId(req.body.department || req.body.dept);
+      const deptRef = req.body.department !== undefined ? req.body.department : req.body.dept;
+      if (!deptRef || deptRef === '— Please Choose —' || deptRef === '-- Please Choose --' || deptRef === '— Select Department —') {
+        req.body.department = null;
+        req.body.dept = null;
+      } else {
+        req.body.department = await resolveDepartmentId(deptRef);
+        if (req.body.department) {
+          const deptDoc = await Department.findById(req.body.department).select('name');
+          if (deptDoc) {
+            req.body.dept = deptDoc.name;
+          }
+        } else if (typeof deptRef === 'string' && !/^[0-9a-fA-F]{24}$/.test(deptRef.trim())) {
+          req.body.dept = deptRef.trim();
+        } else {
+          req.body.dept = null;
+        }
+      }
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);

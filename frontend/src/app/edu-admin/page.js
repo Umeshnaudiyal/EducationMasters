@@ -38,6 +38,26 @@ import {
   Edit,
   ArrowUpRight,
 } from 'lucide-react';
+import {
+  AnimatedBriefcase,
+  AnimatedFileText,
+  AnimatedCheckSquare,
+  AnimatedAward,
+  AnimatedUsers,
+  AnimatedZap,
+  AnimatedRefresh,
+  AnimatedPlus,
+  AnimatedClock,
+  AnimatedBarChart,
+  AnimatedPieChart,
+  AnimatedLayers,
+  AnimatedGraduationCap,
+  AnimatedSparkles,
+  AnimatedCheckCircle,
+  AnimatedDatabase,
+  AnimatedCpu,
+  AnimatedLandmark,
+} from '@/components/AnimatedIcons';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
 
@@ -263,7 +283,7 @@ export default function AdminDashboardPage() {
       gradFrom: '#34D399',
       gradTo: '#059669',
       href: '/edu-admin/questions',
-      icon: CheckSquare,
+      icon: AnimatedCheckSquare,
     },
     {
       id: 'blogs',
@@ -275,7 +295,7 @@ export default function AdminDashboardPage() {
       gradFrom: '#F472B6',
       gradTo: '#DB2777',
       href: '/edu-admin/blogs',
-      icon: FileText,
+      icon: AnimatedFileText,
     },
     {
       id: 'jobs',
@@ -287,7 +307,7 @@ export default function AdminDashboardPage() {
       gradFrom: '#22D3EE',
       gradTo: '#0891B2',
       href: '/edu-admin/jobs',
-      icon: Briefcase,
+      icon: AnimatedBriefcase,
     },
     {
       id: 'institutes',
@@ -299,7 +319,7 @@ export default function AdminDashboardPage() {
       gradFrom: '#FBBF24',
       gradTo: '#D97706',
       href: '/edu-admin/institutes',
-      icon: Building2,
+      icon: AnimatedLandmark,
     },
     {
       id: 'admitCards',
@@ -311,7 +331,7 @@ export default function AdminDashboardPage() {
       gradFrom: '#C084FC',
       gradTo: '#9333EA',
       href: '/edu-admin/admit-cards',
-      icon: Award,
+      icon: AnimatedAward,
     },
     {
       id: 'results',
@@ -323,7 +343,7 @@ export default function AdminDashboardPage() {
       gradFrom: '#60A5FA',
       gradTo: '#2563EB',
       href: '/edu-admin/results',
-      icon: CheckCircle2,
+      icon: AnimatedCheckCircle,
     },
   ];
 
@@ -552,42 +572,42 @@ export default function AdminDashboardPage() {
       `}} />
 
       {/* 1. TOP HEADER & METRIC ACTION BAR */}
-      <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-[#1e3a8a] to-[#2563eb] text-white flex items-center justify-center font-bold text-base shadow-sm shrink-0">
-            {(session?.user?.name || session?.user?.nicename || 'A').charAt(0).toUpperCase()}
+      <div className="bg-white border border-slate-200 rounded-xl p-3 sm:p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
+          <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-tr from-[#1e3a8a] to-[#2563eb] text-white flex items-center justify-center font-bold text-sm sm:text-base shadow-sm shrink-0">
+            {String(session?.user?.name || session?.user?.nicename || 'A').charAt(0).toUpperCase()}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-base sm:text-lg font-bold text-slate-900 tracking-tight leading-none">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <h1 className="text-sm sm:text-base md:text-lg font-bold text-slate-900 tracking-tight leading-snug">
                 Welcome back, {session?.user?.name || session?.user?.nicename || 'Administrator'}
               </h1>
-              <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200">
+              <span className="px-2 py-0.5 rounded-full text-[9.5px] sm:text-[10px] font-extrabold uppercase tracking-wider bg-blue-50 text-blue-700 border border-blue-200 shrink-0">
                 {userRole === 'superadmin' ? 'Super Admin' : userRole === 'admin' ? 'Admin' : 'Staff'}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-slate-500 mt-1">
-              <span className="flex items-center gap-1 text-emerald-600 font-semibold">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 text-[11px] sm:text-xs text-slate-500 mt-1">
+              <span className="flex items-center gap-1 text-emerald-600 font-semibold shrink-0">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span>Portal Online</span>
               </span>
-              <span>•</span>
-              <span>In-Memory RAM Cache Active (0.05ms)</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:inline">In-Memory RAM Cache Active (0.05ms)</span>
             </div>
           </div>
         </div>
 
         {/* Action Controls & Clock */}
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
           {/* Cache Status Badge / Clear Button */}
           <button
             type="button"
             onClick={handleClearCache}
             disabled={isClearingCache}
             title="Purge in-memory API cache"
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition cursor-pointer shadow-2xs"
+            className="group inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition cursor-pointer shadow-2xs"
           >
-            <Zap size={13} className={isClearingCache ? 'animate-spin text-amber-500' : 'text-amber-500'} />
+            <AnimatedZap size={13} className={isClearingCache ? 'animate-spin text-amber-500' : 'text-amber-500'} />
             <span>{isClearingCache ? 'Purging...' : 'Purge Cache'}</span>
           </button>
 
@@ -596,24 +616,24 @@ export default function AdminDashboardPage() {
             type="button"
             onClick={() => fetchStats(true)}
             disabled={refreshing}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition cursor-pointer shadow-2xs"
+            className="group inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-lg border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold transition cursor-pointer shadow-2xs"
           >
-            <RefreshCw size={13} className={refreshing ? 'animate-spin text-blue-600' : 'text-slate-500'} />
+            <AnimatedRefresh size={13} className={refreshing ? 'animate-spin text-blue-600' : 'text-slate-500'} />
             <span>Refresh</span>
           </button>
 
           {/* Quick Create Dropdown / Buttons */}
           <Link
             href="/edu-admin/jobs"
-            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-bold transition shadow-xs"
+            className="group inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-bold transition shadow-xs"
           >
-            <Plus size={13} />
+            <AnimatedPlus size={13} />
             <span>Post Job</span>
           </Link>
 
           {/* Clock Pill */}
-          <div className="hidden xl:flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700 text-xs font-mono font-medium shadow-2xs">
-            <Clock size={13} className="text-blue-600 shrink-0" />
+          <div className="group hidden xl:flex items-center gap-1.5 bg-slate-100 border border-slate-200 px-3 py-1.5 rounded-lg text-slate-700 text-xs font-mono font-medium shadow-2xs">
+            <AnimatedClock size={13} className="text-blue-600 shrink-0" />
             <span>{currentTime || 'Syncing...'}</span>
           </div>
         </div>
@@ -623,7 +643,7 @@ export default function AdminDashboardPage() {
       {cacheClearSuccess && (
         <div className="bg-emerald-50 border border-emerald-300 text-emerald-800 text-xs px-4 py-2.5 rounded-xl flex items-center justify-between shadow-xs animate-in fade-in slide-in-from-top-2">
           <div className="flex items-center gap-2">
-            <CheckCircle2 size={16} className="text-emerald-600" />
+            <AnimatedCheckCircle size={16} className="text-emerald-600" />
             <span className="font-semibold">In-Memory Cache Successfully Purged!</span>
             <span className="text-emerald-700">All live GET endpoints re-synchronized with MongoDB.</span>
           </div>
@@ -641,7 +661,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Govt. Jobs</span>
             <div className="w-7 h-7 rounded-lg bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Briefcase size={14} />
+              <AnimatedBriefcase size={14} />
             </div>
           </div>
           <div className="mt-2">
@@ -661,7 +681,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Articles</span>
             <div className="w-7 h-7 rounded-lg bg-pink-50 text-pink-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <FileText size={14} />
+              <AnimatedFileText size={14} />
             </div>
           </div>
           <div className="mt-2">
@@ -680,7 +700,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">MCQ Bank</span>
             <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <CheckSquare size={14} />
+              <AnimatedCheckSquare size={14} />
             </div>
           </div>
           <div className="mt-2">
@@ -699,7 +719,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Admit Cards</span>
             <div className="w-7 h-7 rounded-lg bg-purple-50 text-purple-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Award size={14} />
+              <AnimatedAward size={14} />
             </div>
           </div>
           <div className="mt-2">
@@ -718,7 +738,7 @@ export default function AdminDashboardPage() {
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Portal Users</span>
             <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-              <Users size={14} />
+              <AnimatedUsers size={14} />
             </div>
           </div>
           <div className="mt-2">
@@ -730,11 +750,11 @@ export default function AdminDashboardPage() {
         </Link>
 
         {/* Card 6: RAM Cache Hit Rate */}
-        <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between">
+        <div className="bg-white border border-slate-200 rounded-xl p-3.5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between group">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider">Cache Rate</span>
-            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center">
-              <Zap size={14} />
+            <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition-transform">
+              <AnimatedZap size={14} />
             </div>
           </div>
           <div className="mt-2">
@@ -759,15 +779,15 @@ export default function AdminDashboardPage() {
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-100">
                 <div>
                   <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                    <BarChart3 size={15} className="text-blue-600" />
+                    <AnimatedBarChart size={15} className="text-blue-600" />
                     <span>Publishing &amp; Recruitment Activity</span>
                   </h2>
                   <p className="text-[11px] text-slate-500">{activeActivity.title}</p>
                 </div>
 
                 {/* Chart Legend & Filter */}
-                <div className="flex items-center gap-3">
-                  <div className="flex items-center gap-2 text-[11px] font-bold">
+                <div className="flex flex-wrap items-center justify-between gap-2.5 sm:gap-3">
+                  <div className="flex flex-wrap items-center gap-2 text-[10px] sm:text-[11px] font-bold">
                     <span className="flex items-center gap-1 text-cyan-700">
                       <span className="w-2.5 h-2.5 rounded-full bg-cyan-500" />
                       <span>Jobs</span>
@@ -794,7 +814,7 @@ export default function AdminDashboardPage() {
                             setChartTimeframe(tf);
                             setHoveredPointIdx(null);
                           }}
-                          className={`px-3 py-1 rounded-md transition-all duration-200 cursor-pointer uppercase font-extrabold ${
+                          className={`px-2.5 sm:px-3 py-1 rounded-md transition-all duration-200 cursor-pointer uppercase font-extrabold ${
                             isActive
                               ? 'bg-white text-blue-600 shadow-2xs ring-1 ring-slate-200 scale-[1.03]'
                               : 'text-slate-500 hover:text-slate-900 hover:bg-white/60'
@@ -1145,7 +1165,7 @@ export default function AdminDashboardPage() {
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div>
                   <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                    <PieChart size={14} className="text-pink-600" />
+                    <AnimatedPieChart size={14} className="text-pink-600" />
                     <span>Content Share &amp; Breakdown</span>
                   </h3>
                   <p className="text-[10px] text-slate-400">Proportional volume of portal resources</p>
@@ -1297,7 +1317,7 @@ export default function AdminDashboardPage() {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
                 <h2 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-                  <Layers size={15} className="text-blue-600" />
+                  <AnimatedLayers size={15} className="text-blue-600" />
                   <span>Recent Content &amp; Updates Stream</span>
                 </h2>
                 <p className="text-[11px] text-slate-500">Live feed of items published across all categories</p>
@@ -1345,8 +1365,8 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Posts Table with Staggered Entrance and Hover Micro-Animations */}
-            <div className="overflow-x-auto border border-slate-200 rounded-lg shadow-2xs">
-              <table className="w-full text-left text-xs text-slate-700">
+            <div className="overflow-x-auto border border-slate-200 rounded-lg shadow-2xs w-full max-w-full custom-scrollbar">
+              <table className="w-full min-w-[580px] text-left text-xs text-slate-700">
                 <thead className="bg-slate-50 text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200">
                   <tr>
                     <th className="py-2.5 px-3">Type</th>
@@ -1420,7 +1440,7 @@ export default function AdminDashboardPage() {
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-slate-400 animate-in fade-in duration-200">
                         <div className="flex flex-col items-center justify-center gap-1.5">
-                          <Layers size={22} className="text-slate-300" />
+                          <AnimatedLayers size={22} className="text-slate-300" />
                           <span className="text-xs font-semibold text-slate-500">No recent updates found</span>
                           <span className="text-[11px] text-slate-400">Items published under this category will appear here in real time.</span>
                         </div>
@@ -1436,7 +1456,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
             <div className="flex items-center justify-between pb-2 border-b border-slate-100">
               <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center gap-1.5">
-                <GraduationCap size={14} className="text-blue-600" />
+                <AnimatedGraduationCap size={14} className="text-blue-600" />
                 <span>Top Popular Categories &amp; Taxonomies</span>
               </h3>
               <span className="text-[10px] font-semibold text-slate-400">Resource Distribution &amp; Traffic</span>
@@ -1498,7 +1518,7 @@ export default function AdminDashboardPage() {
           <div className="bg-white border border-slate-200 rounded-xl p-4 shadow-xs space-y-3">
             <h3 className="text-xs font-bold text-slate-900 uppercase tracking-wider flex items-center justify-between">
               <span>Quick Actions &amp; Tools</span>
-              <Sparkles size={13} className="text-amber-500" />
+              <AnimatedSparkles size={13} className="text-amber-500" />
             </h3>
 
             <div className="grid grid-cols-2 gap-2">
@@ -1507,7 +1527,7 @@ export default function AdminDashboardPage() {
                 className="p-2.5 bg-slate-50 hover:bg-cyan-50 border border-slate-200/80 hover:border-cyan-300 rounded-lg flex flex-col items-start gap-1 transition group no-underline"
               >
                 <div className="p-1.5 rounded-md bg-cyan-100 text-cyan-700 group-hover:scale-105 transition-transform">
-                  <Briefcase size={14} />
+                  <AnimatedBriefcase size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-800 group-hover:text-cyan-700">Post Govt Job</span>
                 <span className="text-[10px] text-slate-500">Recruitment notification</span>
@@ -1518,7 +1538,7 @@ export default function AdminDashboardPage() {
                 className="p-2.5 bg-slate-50 hover:bg-pink-50 border border-slate-200/80 hover:border-pink-300 rounded-lg flex flex-col items-start gap-1 transition group no-underline"
               >
                 <div className="p-1.5 rounded-md bg-pink-100 text-pink-700 group-hover:scale-105 transition-transform">
-                  <FileText size={14} />
+                  <AnimatedFileText size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-800 group-hover:text-pink-700">Write Article</span>
                 <span className="text-[10px] text-slate-500">Blog with SEO tags</span>
@@ -1529,7 +1549,7 @@ export default function AdminDashboardPage() {
                 className="p-2.5 bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-300 rounded-lg flex flex-col items-start gap-1 transition group no-underline"
               >
                 <div className="p-1.5 rounded-md bg-emerald-100 text-emerald-700 group-hover:scale-105 transition-transform">
-                  <CheckSquare size={14} />
+                  <AnimatedCheckSquare size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-800 group-hover:text-emerald-700">Add MCQ</span>
                 <span className="text-[10px] text-slate-500">Quiz &amp; mock questions</span>
@@ -1540,7 +1560,7 @@ export default function AdminDashboardPage() {
                 className="p-2.5 bg-slate-50 hover:bg-purple-50 border border-slate-200/80 hover:border-purple-300 rounded-lg flex flex-col items-start gap-1 transition group no-underline"
               >
                 <div className="p-1.5 rounded-md bg-purple-100 text-purple-700 group-hover:scale-105 transition-transform">
-                  <Award size={14} />
+                  <AnimatedAward size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-800 group-hover:text-purple-700">Admit Cards</span>
                 <span className="text-[10px] text-slate-500">Exam hall tickets</span>
@@ -1551,7 +1571,7 @@ export default function AdminDashboardPage() {
                 className="p-2.5 bg-slate-50 hover:bg-emerald-50 border border-slate-200/80 hover:border-emerald-300 rounded-lg flex flex-col items-start gap-1 transition group no-underline"
               >
                 <div className="p-1.5 rounded-md bg-emerald-100 text-emerald-700 group-hover:scale-105 transition-transform">
-                  <CheckCircle2 size={14} />
+                  <AnimatedCheckCircle size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-800 group-hover:text-emerald-700">Exam Results</span>
                 <span className="text-[10px] text-slate-500">Scorecard alerts</span>
@@ -1562,7 +1582,7 @@ export default function AdminDashboardPage() {
                 className="p-2.5 bg-slate-50 hover:bg-amber-50 border border-slate-200/80 hover:border-amber-300 rounded-lg flex flex-col items-start gap-1 transition group no-underline"
               >
                 <div className="p-1.5 rounded-md bg-amber-100 text-amber-700 group-hover:scale-105 transition-transform">
-                  <Database size={14} />
+                  <AnimatedDatabase size={14} />
                 </div>
                 <span className="text-xs font-bold text-slate-800 group-hover:text-amber-700">Media Library</span>
                 <span className="text-[10px] text-slate-500">12,243 assets</span>
@@ -1581,33 +1601,33 @@ export default function AdminDashboardPage() {
             </h3>
 
             <div className="space-y-2 text-xs">
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <div className="group flex items-center justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 flex items-center gap-1.5">
-                  <Cpu size={13} className="text-slate-400" />
+                  <AnimatedCpu size={13} className="text-slate-400 group-hover:text-blue-500" />
                   <span>Runtime Engine</span>
                 </span>
                 <span className="font-bold text-slate-800">Node v22 &amp; Next.js 16</span>
               </div>
 
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <div className="group flex items-center justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 flex items-center gap-1.5">
-                  <Database size={13} className="text-slate-400" />
+                  <AnimatedDatabase size={13} className="text-slate-400 group-hover:text-emerald-500" />
                   <span>Database</span>
                 </span>
                 <span className="font-bold text-slate-800">MongoDB Atlas Cluster</span>
               </div>
 
-              <div className="flex items-center justify-between py-1.5 border-b border-slate-100">
+              <div className="group flex items-center justify-between py-1.5 border-b border-slate-100">
                 <span className="text-slate-500 flex items-center gap-1.5">
-                  <Zap size={13} className="text-amber-500" />
+                  <AnimatedZap size={13} className="text-amber-500" />
                   <span>In-Memory Cache</span>
                 </span>
                 <span className="font-bold text-emerald-600">Active (0.05ms)</span>
               </div>
 
-              <div className="flex items-center justify-between py-1.5">
+              <div className="group flex items-center justify-between py-1.5">
                 <span className="text-slate-500 flex items-center gap-1.5">
-                  <Users size={13} className="text-slate-400" />
+                  <AnimatedUsers size={13} className="text-slate-400 group-hover:text-blue-500" />
                   <span>Today User Logs</span>
                 </span>
                 <Link href="/edu-admin/users/logs" className="font-bold text-blue-600 hover:underline">

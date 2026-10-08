@@ -830,7 +830,7 @@ export default function CategoriesPage() {
             </div>
           </div>
 
-          {/* Main Table */}
+          {/* Main Table Container: Mobile Cards (block md:hidden) + Desktop Table (hidden md:block) */}
           <div className="bg-white rounded border border-slate-300 shadow-2xs overflow-hidden min-h-[350px]">
             {loading ? (
               <div className="p-12">
@@ -845,26 +845,137 @@ export default function CategoriesPage() {
                 </p>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs text-slate-700">
-                  <thead className="bg-[#f6f7f7] text-slate-800 font-bold border-b border-slate-300 select-none">
-                    <tr>
-                      <th className="p-2.5 w-10 text-center">
-                        <input
-                          type="checkbox"
-                          checked={selectedIds.size === categories.length && categories.length > 0}
-                          onChange={toggleSelectAll}
-                          className="rounded text-[#2271b1]"
-                        />
-                      </th>
-                      <th className="p-2.5 w-12 text-center text-slate-500">#</th>
-                      <th className="p-2.5 w-20 text-center">Image</th>
-                      <th className="p-2.5">Name</th>
-                      <th className="p-2.5 w-44">Slug</th>
-                      <th className="p-2.5 w-56">Description</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-200">
+              <>
+                {/* Mobile View: Touch-Friendly Category Cards */}
+                <div className="block md:hidden divide-y divide-slate-100">
+                  {categories.map((cat, idx) => {
+                    const isSelected = selectedIds.has(cat._id);
+                    const isDefaultUncategorized =
+                      cat.slug === 'uncategorized' || cat.name.toLowerCase() === 'uncategorized';
+
+                    return (
+                      <div
+                        key={cat._id}
+                        className={`p-3 space-y-2 text-xs bg-white ${
+                          isSelected ? 'bg-blue-50/50' : ''
+                        }`}
+                      >
+                        {/* Top Row: Checkbox + Thumbnail + Name + Slug */}
+                        <div className="flex items-start gap-2.5">
+                          <input
+                            type="checkbox"
+                            checked={isSelected}
+                            onChange={() => toggleSelect(cat._id)}
+                            className="rounded text-[#2271b1] mt-1 shrink-0"
+                          />
+                          {cat.featured_media ? (
+                            <div className="w-12 h-10 rounded bg-slate-100 overflow-hidden shrink-0 border border-slate-200">
+                              <img
+                                src={getImageUrl(cat.featured_media)}
+                                alt={cat.name}
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  if (!e.currentTarget.dataset.fallback) {
+                                    e.currentTarget.dataset.fallback = 'true';
+                                    e.currentTarget.src = '/logo.webp';
+                                  } else {
+                                    e.currentTarget.style.display = 'none';
+                                  }
+                                }}
+                              />
+                            </div>
+                          ) : (
+                            <div className="w-12 h-10 rounded bg-slate-100 text-slate-400 text-[9px] font-medium border border-slate-200 flex items-center justify-center shrink-0">
+                              No Image
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-bold text-[#0073aa] text-xs leading-snug">
+                              {cat.name}
+                            </p>
+                            <div className="text-[11px] text-slate-500 font-mono mt-0.5">
+                              Slug: {cat.slug || '—'}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Middle: Description if present */}
+                        {cat.description && (
+                          <p className="text-[11px] text-slate-600 line-clamp-2 pl-6">
+                            {cat.description.replace(/<[^>]+>/g, '')}
+                          </p>
+                        )}
+
+                        {/* Bottom Row: Always-Visible Mobile Actions */}
+                        <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 pl-6">
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            #{cat.sql_id || idx + 1 + (page - 1) * 10}
+                          </span>
+
+                          <div className="flex items-center gap-2">
+                            {!isAuthor && (
+                              <>
+                                <button
+                                  type="button"
+                                  onClick={() => startEdit(cat)}
+                                  className="px-2 py-1 bg-[#00a0d2] text-white rounded text-[11px] font-semibold"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => startQuickEdit(cat)}
+                                  className="px-2 py-1 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded text-[11px] font-semibold border border-slate-300"
+                                >
+                                  Quick Edit
+                                </button>
+                                {!isDefaultUncategorized && (
+                                  <button
+                                    type="button"
+                                    onClick={() => openDeleteModal(cat)}
+                                    className="p-1 bg-rose-600 text-white rounded cursor-pointer"
+                                    title="Delete Category"
+                                  >
+                                    <Trash2 size={12} />
+                                  </button>
+                                )}
+                              </>
+                            )}
+                            <Link
+                              href={`/category/${cat.slug}`}
+                              target="_blank"
+                              className="px-2 py-1 bg-slate-50 border border-slate-200 text-[#0073aa] rounded text-[11px] font-semibold"
+                            >
+                              View
+                            </Link>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {/* Desktop View: Exact Same Desktop Table (hidden on mobile) */}
+                <div className="hidden md:block overflow-x-auto">
+                  <table className="w-full text-left text-xs text-slate-700">
+                    <thead className="bg-[#f6f7f7] text-slate-800 font-bold border-b border-slate-300 select-none">
+                      <tr>
+                        <th className="p-2.5 w-10 text-center">
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.size === categories.length && categories.length > 0}
+                            onChange={toggleSelectAll}
+                            className="rounded text-[#2271b1]"
+                          />
+                        </th>
+                        <th className="p-2.5 w-12 text-center text-slate-500">#</th>
+                        <th className="p-2.5 w-20 text-center">Image</th>
+                        <th className="p-2.5">Name</th>
+                        <th className="p-2.5 w-44">Slug</th>
+                        <th className="p-2.5 w-56">Description</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200">
                     {categories.map((cat, idx) => {
                       const isSelected = selectedIds.has(cat._id);
                       const isQuickEditing = quickEditingId === cat._id;
@@ -1049,7 +1160,8 @@ export default function CategoriesPage() {
                   </tbody>
                 </table>
               </div>
-            )}
+            </>
+          )}
           </div>
 
           {/* Bottom Pagination & Help Notice matching Screenshot */}

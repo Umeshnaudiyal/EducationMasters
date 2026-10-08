@@ -614,9 +614,161 @@ export default function UsersManagementPage() {
         </form>
       </div>
 
-      {/* Users Table (Matching Screenshot #1) */}
+      {/* Users Container: Mobile Cards (block md:hidden) + Desktop Table (hidden md:block) */}
       <div className="bg-white border border-slate-200 rounded shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        
+        {/* Mobile View: Touch-Friendly User Cards */}
+        <div className="block md:hidden divide-y divide-slate-100">
+          {loading ? (
+            <div className="py-10 text-center">
+              <AdminLoader
+                text="Loading Users..."
+                subtext="Retrieving user records and roles from database"
+                minHeight="min-h-[200px]"
+              />
+            </div>
+          ) : users.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              No users found.
+            </div>
+          ) : (
+            users.map((user, idx) => {
+              const isChecked = selectedIds.includes(user._id);
+              const isTrash = activeTab === 'trash' || user.active === 0 || user.deleted_at;
+
+              return (
+                <div
+                  key={user._id || idx}
+                  className={`p-3 space-y-2.5 bg-white ${
+                    isChecked ? 'bg-blue-50/50' : ''
+                  }`}
+                >
+                  {/* Top Row: Checkbox + Avatar + Name & Meta */}
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => handleSelectOne(user._id)}
+                      className="rounded border-slate-300 text-[#2271b1] focus:ring-[#2271b1] mt-1 shrink-0"
+                    />
+                    <UserAvatarThumbnail user={user} />
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/edu-admin/users/edit/${user._id}`}
+                        className="font-bold text-[#2271b1] hover:underline text-xs line-clamp-1 block"
+                      >
+                        {user.name || user.nicename || 'Unnamed User'}
+                      </Link>
+                      <div className="text-[11px] text-slate-600 font-mono mt-0.5 break-all">
+                        {user.email}
+                      </div>
+                      <div className="text-[10.5px] text-slate-400 mt-0.5">
+                        Joined: {formatRelativeTime(user.createdAt || user.created_at || user.user_registered || user._id)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Middle Row: Phone & Roles */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 pl-6 pt-1 text-[11px]">
+                    <div className="text-slate-500">
+                      Phone: <span className="text-slate-700 font-medium">{user.phone ? user.phone : '—'}</span>
+                    </div>
+
+                    {/* Role selector */}
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={(user.role || 'user').toLowerCase() === 'superadmin' ? 'admin' : (user.role || 'user').toLowerCase()}
+                        disabled={updatingRow.id === user._id && updatingRow.field === 'role'}
+                        onChange={(e) =>
+                          handleRoleChange(user._id, e.target.value, user.name || user.email)
+                        }
+                        className={`text-[11px] font-semibold rounded px-2 py-0.5 border appearance-none pr-5 ${
+                          user.role === 'admin' || user.role === 'superadmin'
+                            ? 'bg-purple-50 text-purple-700 border-purple-300'
+                            : user.role === 'editor'
+                            ? 'bg-blue-50 text-blue-700 border-blue-300'
+                            : user.role === 'author' || user.role === 'writer'
+                            ? 'bg-sky-50 text-sky-700 border-sky-300'
+                            : 'bg-slate-50 text-slate-700 border-slate-300'
+                        }`}
+                      >
+                        <option value="admin">Admin</option>
+                        <option value="editor">Editor</option>
+                        <option value="author">Writer</option>
+                        <option value="institute_admin">Institute</option>
+                        <option value="user">End User</option>
+                      </select>
+                      <ChevronDown size={10} className="absolute right-1 pointer-events-none text-slate-500" />
+                    </div>
+                  </div>
+
+                  {/* Bottom Row: Status Toggle + Action Buttons */}
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100 pl-6">
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={user.active === 0 || user.deleted_at ? '0' : '1'}
+                        disabled={updatingRow.id === user._id && updatingRow.field === 'status'}
+                        onChange={(e) =>
+                          handleStatusChange(user._id, e.target.value, user.name || user.email)
+                        }
+                        className={`text-[11px] font-bold rounded px-2 py-0.5 border appearance-none pr-5 ${
+                          user.active === 0 || user.deleted_at
+                            ? 'bg-slate-100 text-slate-700 border-slate-300'
+                            : 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                        }`}
+                      >
+                        <option value="1">Active</option>
+                        <option value="0">Deactivated</option>
+                      </select>
+                      <ChevronDown size={10} className="absolute right-1 pointer-events-none text-slate-500" />
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5">
+                      {isTrash ? (
+                        <>
+                          <button
+                            onClick={() => handleRestore(user._id)}
+                            title="Restore User"
+                            className="p-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded transition-colors"
+                          >
+                            <RotateCcw size={12} />
+                          </button>
+                          <button
+                            onClick={() => openDeleteModal(user._id, user.name || user.email, true)}
+                            title="Delete Permanently"
+                            className="p-1.5 bg-red-600 hover:bg-red-700 text-white rounded transition-colors cursor-pointer"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <Link
+                            href={`/edu-admin/users/edit/${user._id}`}
+                            className="px-2 py-1 bg-[#00a0d2] hover:bg-[#008cb8] text-white font-medium rounded text-xs transition-colors flex items-center gap-1 shadow-2xs"
+                          >
+                            <Edit2 size={11} />
+                            <span>Edit</span>
+                          </Link>
+                          <button
+                            onClick={() => openDeleteModal(user._id, user.name || user.email, false)}
+                            className="p-1 bg-[#d63638] hover:bg-[#b32d2e] text-white rounded shadow-2xs cursor-pointer"
+                            title="Trash"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table: Exact Same Original Table (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-600 border-collapse">
             <thead className="bg-[#f6f7f7] border-b border-slate-200 text-slate-800 font-semibold">
               <tr>

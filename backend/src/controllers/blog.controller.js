@@ -1,4 +1,4 @@
-import { Blog, Job, Category, User } from '../models/index.js';
+import { Blog, Job, Category, User, State } from '../models/index.js';
 import { cleanHtmlContent } from '../utils/cleanHtml.js';
 import ApiError from '../utils/apiError.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
@@ -8,6 +8,27 @@ import {
   resolveStateId,
   sanitizeObjectId,
 } from '../utils/resolveReferences.js';
+
+const formatBlogState = async (blog) => {
+  if (!blog) return blog;
+  if ((!blog.state || typeof blog.state !== 'object' || !blog.state.name) && blog.state_id) {
+    const stateDoc = await State.findOne({ sql_id: blog.state_id }).select('name slug sql_id').lean();
+    if (stateDoc) {
+      blog.state = stateDoc;
+    }
+  } else if (typeof blog.state === 'string' && /^[0-9a-fA-F]{24}$/.test(blog.state)) {
+    const stateDoc = await State.findById(blog.state).select('name slug sql_id').lean();
+    if (stateDoc) {
+      blog.state = stateDoc;
+    }
+  }
+  return blog;
+};
+
+const formatBlogStates = async (blogs) => {
+  if (!Array.isArray(blogs)) return blogs;
+  return Promise.all(blogs.map((b) => formatBlogState(b)));
+};
 
 export const getBlogs = async (req, res, next) => {
   try {
@@ -99,19 +120,23 @@ export const getBlogs = async (req, res, next) => {
 
       const [jobs, blogs] = await Promise.all([
         Job.find(jobQuery)
-          .populate('author', 'name nicename email image bio')
+          .populate('author', 'name nicename email image bio website twitter facebook instagram linkedin youtube phone role')
           .populate('categories', 'name slug')
+          .populate('state', 'name slug sql_id')
           .populate('featured_media', 'path file alt name')
           .lean(),
         Blog.find(blogQuery)
-          .populate('author', 'name nicename email image bio')
+          .populate('author', 'name nicename email image bio website twitter facebook instagram linkedin youtube phone role')
           .populate('categories', 'name slug')
           .populate('tags', 'name slug')
+          .populate('state', 'name slug sql_id')
           .populate('featured_media', 'path file alt name')
           .lean()
       ]);
 
-      const combined = [...jobs, ...blogs].sort((a, b) => {
+      const formattedBlogs = await formatBlogStates(blogs);
+
+      const combined = [...jobs, ...formattedBlogs].sort((a, b) => {
         const dateA = new Date(a.created_at || a.createdAt || 0).getTime();
         const dateB = new Date(b.created_at || b.createdAt || 0).getTime();
         return dateB - dateA;
@@ -130,8 +155,8 @@ export const getBlogs = async (req, res, next) => {
     }
 
     if (targetFilter) {
-      // General article/articles filter should list all published articles in chronological order
-      if (!['article', 'articles', 'all'].includes(targetFilter)) {
+      // General article/articles/education filter should list all published articles in chronological order
+      if (!['article', 'articles', 'education', 'educational-resources', 'all'].includes(targetFilter)) {
         const CATEGORY_MAP = {
           'current-affair': 'current|affair|samayik',
           'current-affairs': 'current|affair|samayik',
@@ -158,13 +183,15 @@ export const getBlogs = async (req, res, next) => {
 
     const [blogs, total, allCount, draftCount, publishedCount, pendingCount, trashCount] = await Promise.all([
       Blog.find(query)
-        .populate('author', 'name nicename email image bio')
+        .populate('author', 'name nicename email image bio website twitter facebook instagram linkedin youtube phone role')
         .populate('categories', 'name slug')
         .populate('tags', 'name slug')
+        .populate('state', 'name slug sql_id')
         .populate('featured_media')
         .sort({ created_at: -1, sql_id: -1 })
         .skip(skip)
-        .limit(limit),
+        .limit(limit)
+        .lean(),
       Blog.countDocuments(query),
       Blog.countDocuments({ ...baseCountQuery, status: { $ne: 'trash' } }),
       Blog.countDocuments({ ...baseCountQuery, status: 'draft' }),
@@ -173,9 +200,11 @@ export const getBlogs = async (req, res, next) => {
       Blog.countDocuments({ ...baseCountQuery, status: 'trash' }),
     ]);
 
+    const formattedBlogs = await formatBlogStates(blogs);
+
     res.status(200).json({
       success: true,
-      count: blogs.length,
+      count: formattedBlogs.length,
       total,
       page,
       pages: Math.ceil(total / limit),
@@ -186,7 +215,7 @@ export const getBlogs = async (req, res, next) => {
         pending: pendingCount,
         trash: trashCount,
       },
-      data: blogs,
+      data: formattedBlogs,
     });
   } catch (error) {
     next(error);
@@ -196,15 +225,19 @@ export const getBlogs = async (req, res, next) => {
 export const getBlogBySlug = async (req, res, next) => {
   try {
     const isId = req.params.slug.match(/^[0-9a-fA-F]{24}$/);
-    const blog = await Blog.findOne(isId ? { _id: req.params.slug } : { slug: req.params.slug })
-      .populate('author', 'name nicename email image bio')
+    let blog = await Blog.findOne(isId ? { _id: req.params.slug } : { slug: req.params.slug })
+      .populate('author', 'name nicename email image bio website twitter facebook instagram linkedin youtube phone role')
       .populate('categories', 'name slug description')
       .populate('tags', 'name slug')
-      .populate('featured_media', 'path file alt caption');
+      .populate('state', 'name slug sql_id')
+      .populate('featured_media', 'path file alt caption')
+      .lean();
 
     if (!blog) {
       return res.status(404).json({ success: false, message: 'Blog post not found' });
     }
+
+    blog = await formatBlogState(blog);
 
     res.status(200).json({ success: true, data: blog });
   } catch (error) {
@@ -273,6 +306,14 @@ export const createBlog = async (req, res, next) => {
     }
     if (req.body.state !== undefined) {
       req.body.state = await resolveStateId(req.body.state);
+      if (req.body.state) {
+        const stateDoc = await State.findById(req.body.state).select('sql_id').lean();
+        if (stateDoc && stateDoc.sql_id) {
+          req.body.state_id = stateDoc.sql_id;
+        }
+      } else {
+        req.body.state_id = 0;
+      }
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
@@ -305,7 +346,8 @@ export const createBlog = async (req, res, next) => {
     }
 
     const blog = await Blog.create(req.body);
-    res.status(201).json({ success: true, message: 'Blog created successfully', data: blog });
+    const populatedBlog = await formatBlogState(await Blog.findById(blog._id).populate('state', 'name slug sql_id').lean());
+    res.status(201).json({ success: true, message: 'Blog created successfully', data: populatedBlog || blog });
   } catch (error) {
     next(error);
   }
@@ -405,6 +447,14 @@ export const updateBlog = async (req, res, next) => {
     }
     if (req.body.state !== undefined) {
       req.body.state = await resolveStateId(req.body.state);
+      if (req.body.state) {
+        const stateDoc = await State.findById(req.body.state).select('sql_id').lean();
+        if (stateDoc && stateDoc.sql_id) {
+          req.body.state_id = stateDoc.sql_id;
+        }
+      } else {
+        req.body.state_id = 0;
+      }
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
@@ -414,11 +464,12 @@ export const updateBlog = async (req, res, next) => {
       existingBlog._id,
       req.body,
       { new: true, runValidators: true }
-    );
+    ).populate('state', 'name slug sql_id').lean();
     if (!blog) {
       throw new ApiError(404, 'Blog post not found or has been deleted.');
     }
-    res.status(200).json({ success: true, message: 'Blog updated successfully', data: blog });
+    const formattedBlog = await formatBlogState(blog);
+    res.status(200).json({ success: true, message: 'Blog updated successfully', data: formattedBlog });
   } catch (error) {
     next(error);
   }

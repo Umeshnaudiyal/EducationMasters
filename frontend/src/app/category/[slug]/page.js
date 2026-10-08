@@ -18,6 +18,8 @@ const CATEGORY_MAP = {
   'syllabus': { title: 'Syllabus Posts', name: 'Syllabus', subtitle: 'Latest Government Exam Syllabus, Exam Pattern & Subject Guide' },
   'articles': { title: 'Articles Posts', name: 'Articles', subtitle: 'Latest Educational Articles, Career Guidance & Exam Updates' },
   'article': { title: 'Articles Posts', name: 'Articles', subtitle: 'Latest Educational Articles, Career Guidance & Exam Updates' },
+  'education': { title: 'Education Posts', name: 'Education', subtitle: 'Latest Educational Articles, Career Guidance & Exam Updates' },
+  'educational-resources': { title: 'Educational Resources', name: 'Educational Resources', subtitle: 'Curated Study Materials, Notes & Exam Preparation Resources' },
   'gk': { title: 'G.K. Posts', name: 'G.K.', subtitle: 'General Knowledge Questions, Notes & Daily GK Updates' },
   'general-knowledge': { title: 'General Knowledge Posts', name: 'General Knowledge', subtitle: 'Improve your General Knowledge for Govt Exams' },
   'defence': { title: 'Defence Posts', name: 'Defence', subtitle: 'Defence Preparation, Army, Navy, Airforce & CDS Updates' },
@@ -178,9 +180,9 @@ export default function CategoryPage() {
             <div className="text-xs text-slate-500 mb-1 flex items-center gap-1.5 font-medium overflow-x-auto whitespace-nowrap">
               <Link href="/" className="hover:text-blue-600 text-blue-600 underline">Home</Link>
               <span>›</span>
-              <span className="text-slate-500">Categories</span>
+              <Link href="/categories" className="hover:text-blue-600 text-blue-600 underline">Categories</Link>
               <span>›</span>
-              <span className="text-slate-800 font-bold">Category: {categoryInfo.name}</span>
+              <span className="text-slate-800 font-bold"> {categoryInfo.name}</span>
             </div>
 
             {/* Title Header */}
@@ -319,8 +321,8 @@ export default function CategoryPage() {
                         key={item}
                         onClick={() => setPage(item)}
                         className={`px-3 py-1.5 transition border-r border-slate-200 last:border-r-0 ${isCurrent
-                            ? 'bg-blue-600 text-white font-semibold'
-                            : 'text-blue-600 hover:bg-slate-50 font-medium'
+                          ? 'bg-blue-600 text-white font-semibold'
+                          : 'text-blue-600 hover:bg-slate-50 font-medium'
                           }`}
                       >
                         {item}
@@ -350,8 +352,8 @@ export default function CategoryPage() {
                 <button
                   onClick={() => setRightTab('expiring')}
                   className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-normal transition ${rightTab === 'expiring'
-                      ? 'bg-[#f0f2f5] text-slate-900 rounded-tl-lg font-medium'
-                      : 'text-blue-600 hover:text-blue-700 font-medium'
+                    ? 'bg-[#f0f2f5] text-slate-900 rounded-tl-lg font-medium'
+                    : 'text-blue-600 hover:text-blue-700 font-medium'
                     }`}
                 >
                   Jobs Expiring Soon
@@ -359,8 +361,8 @@ export default function CategoryPage() {
                 <button
                   onClick={() => setRightTab('mcq')}
                   className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-normal transition ${rightTab === 'mcq'
-                      ? 'bg-[#f0f2f5] text-slate-900 rounded-tr-lg font-medium'
-                      : 'text-blue-600 hover:text-blue-700 font-medium'
+                    ? 'bg-[#f0f2f5] text-slate-900 rounded-tr-lg font-medium'
+                    : 'text-blue-600 hover:text-blue-700 font-medium'
                     }`}
                 >
                   MCQ Questions
@@ -375,7 +377,7 @@ export default function CategoryPage() {
                         28 Jobs are expiring in 30 Days
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Link href="/jobs" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
+                        <Link href="/jobs-expiring-in-30-days" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
                           View All
                         </Link>
                         <span className="bg-blue-600 text-white text-[10px] sm:text-[11px] font-normal px-1.5 py-0.5 rounded inline-flex items-center gap-1 leading-none whitespace-nowrap shadow-2xs">

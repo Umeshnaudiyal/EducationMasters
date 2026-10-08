@@ -18,6 +18,8 @@ import {
   BookOpen,
   Plus,
   Minus,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
@@ -108,10 +110,17 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
 
   // Dropdown list data
   const [subjects, setSubjects] = useState([]);
+  const [topics, setTopics] = useState([]);
   const [states, setStates] = useState([]);
   const [districts, setDistricts] = useState([]);
   const [exams, setExams] = useState([]);
   const [examSearch, setExamSearch] = useState('');
+  
+  // Mock Test Series & Tests state
+  const [mockSeriesList, setMockSeriesList] = useState([]);
+  const [mockTestsList, setMockTestsList] = useState([]);
+  const [selectedSeriesForTest, setSelectedSeriesForTest] = useState('');
+  const [loadingTests, setLoadingTests] = useState(false);
 
   // UI state
   const [loadingInitial, setLoadingInitial] = useState(false);
@@ -125,21 +134,27 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
   useEffect(() => {
     const loadDropdowns = async () => {
       try {
-        const [subRes, stRes, exRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=100`),
+        const [subRes, stRes, exRes, topRes, msRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=200`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states?all=true`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/exams?limit=100`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/exams?limit=200`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/topics?limit=300`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-test-series?limit=200&status=all`),
         ]);
 
-        const [subData, stData, exData] = await Promise.all([
+        const [subData, stData, exData, topData, msData] = await Promise.all([
           subRes.json(),
           stRes.json(),
           exRes.json(),
+          topRes.json(),
+          msRes.json(),
         ]);
 
         if (subData.success) setSubjects(subData.data || []);
         if (stData.success) setStates(stData.data || []);
         if (exData.success) setExams(exData.data || []);
+        if (topData.success) setTopics(topData.data || []);
+        if (msData.success) setMockSeriesList(msData.data || []);
       } catch (err) {
         console.error('Error loading dropdown data:', err);
       }
@@ -180,12 +195,30 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
           )
         : [];
 
+      const rawMockSeries = Array.isArray(initialData.mock_test_series)
+        ? initialData.mock_test_series.map((s) => (typeof s === 'object' && s?._id ? String(s._id) : String(s)))
+        : (initialData.mock_test_series ? [String(initialData.mock_test_series)] : []);
+
+      const rawMockTests = Array.isArray(initialData.mock_tests)
+        ? initialData.mock_tests.map((t) => (typeof t === 'object' && t?._id ? String(t._id) : String(t)))
+        : (initialData.mock_tests ? [String(initialData.mock_tests)] : []);
+
+      const activeSeriesId = rawMockSeries[0] || '';
+      if (activeSeriesId) {
+        setSelectedSeriesForTest(activeSeriesId);
+        fetchTestsForSeries(activeSeriesId);
+      }
+
       setFormData((prev) => ({
         ...prev,
         ...initialData,
         options: completeOptions,
         correct_answer: `Option ${correctIdx + 1}`,
         subject: initialData.subject?._id ? String(initialData.subject._id) : (initialData.subject || ''),
+        topic: initialData.topic?._id ? String(initialData.topic._id) : (initialData.topic || ''),
+        topic_name: initialData.topic_name || '',
+        mock_test_series: rawMockSeries,
+        mock_tests: rawMockTests,
         state: stateId,
         district: districtId,
         examinations: rawExams,
@@ -196,6 +229,52 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
       }
     }
   }, [initialData]);
+
+  // Fetch tests for a series
+  const fetchTestsForSeries = async (seriesId) => {
+    if (!seriesId) {
+      setMockTestsList([]);
+      return;
+    }
+    try {
+      setLoadingTests(true);
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-tests?series=${seriesId}&status=all&limit=100`
+      );
+      const data = await res.json();
+      if (data.success) {
+        setMockTestsList(data.data || []);
+      }
+    } catch (err) {
+      console.error('Error fetching mock tests for series:', err);
+    } finally {
+      setLoadingTests(false);
+    }
+  };
+
+  const handleSeriesSelectChange = (seriesId) => {
+    setSelectedSeriesForTest(seriesId);
+    if (seriesId) {
+      // Add series to formData.mock_test_series if not present
+      setFormData((prev) => {
+        const curSeries = prev.mock_test_series || [];
+        const nextSeries = curSeries.includes(seriesId) ? curSeries : [...curSeries, seriesId];
+        return { ...prev, mock_test_series: nextSeries };
+      });
+      fetchTestsForSeries(seriesId);
+    } else {
+      setMockTestsList([]);
+    }
+  };
+
+  const toggleMockTest = (testId) => {
+    setFormData((prev) => {
+      const cur = prev.mock_tests || [];
+      const isSelected = cur.includes(testId);
+      const nextTests = isSelected ? cur.filter((id) => id !== testId) : [...cur, testId];
+      return { ...prev, mock_tests: nextTests };
+    });
+  };
 
   // Fetch districts when state changes
   const fetchDistrictsForState = async (stateId, keepDistrictId = null) => {
@@ -521,31 +600,69 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
                 </select>
               </div>
 
-              {/* Subject */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 mb-1">
-                  Subject <span className="text-rose-500">*</span>
-                </label>
-                <select
-                  value={formData.subject || ''}
-                  onChange={(e) => {
-                    const sId = e.target.value;
-                    const found = subjects.find((s) => s._id === sId);
-                    setFormData({
-                      ...formData,
-                      subject: sId,
-                      subject_name: found ? found.name : '',
-                    });
-                  }}
-                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded focus:border-[#2271b1] outline-hidden text-slate-800"
-                >
-                  <option value="">Select Subject</option>
-                  {subjects.map((s) => (
-                    <option key={s._id} value={s._id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+              {/* Subject & Topic Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {/* Subject */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Subject <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={formData.subject || ''}
+                    onChange={(e) => {
+                      const sId = e.target.value;
+                      const found = subjects.find((s) => s._id === sId);
+                      setFormData({
+                        ...formData,
+                        subject: sId,
+                        subject_name: found ? found.name : '',
+                        topic: '',
+                        topic_name: '',
+                      });
+                    }}
+                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded focus:border-[#2271b1] outline-hidden text-slate-800"
+                  >
+                    <option value="">Select Subject</option>
+                    {subjects.map((s) => (
+                      <option key={s._id} value={s._id}>
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Topic (Filtered by Subject) */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Topic (Optional)
+                  </label>
+                  <select
+                    value={formData.topic || ''}
+                    onChange={(e) => {
+                      const tId = e.target.value;
+                      const found = topics.find((t) => t._id === tId);
+                      setFormData({
+                        ...formData,
+                        topic: tId,
+                        topic_name: found ? found.name : '',
+                      });
+                    }}
+                    className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded focus:border-[#2271b1] outline-hidden text-slate-800"
+                  >
+                    <option value="">Select Topic</option>
+                    {topics
+                      .filter((t) => {
+                        if (!formData.subject) return true;
+                        const sId = t.subject?._id ? String(t.subject._id) : String(t.subject || '');
+                        return sId === String(formData.subject);
+                      })
+                      .map((t) => (
+                        <option key={t._id} value={t._id}>
+                          {t.name}
+                        </option>
+                      ))}
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -941,6 +1058,91 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
                   })
                 )}
               </div>
+            </div>
+          </div>
+
+          {/* Mock Test Allocation Widget Box (Testbook-style Linkage) */}
+          <div className="bg-white border border-indigo-200 rounded-xl shadow-2xs overflow-hidden">
+            <div className="px-4 py-3 bg-indigo-50/70 border-b border-indigo-100 flex items-center justify-between">
+              <div className="flex items-center gap-1.5">
+                <Layers size={14} className="text-indigo-600" />
+                <h3 className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                  Mock Test Allocation
+                </h3>
+              </div>
+              <span className="text-[10px] text-indigo-600 font-bold bg-indigo-100/80 px-2 py-0.5 rounded-full">
+                {(formData.mock_tests || []).length} assigned
+              </span>
+            </div>
+
+            <div className="p-3.5 space-y-3 text-xs">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                  1. Select Mock Test Series
+                </label>
+                <select
+                  value={selectedSeriesForTest}
+                  onChange={(e) => handleSeriesSelectChange(e.target.value)}
+                  className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded focus:border-indigo-500 outline-hidden text-slate-800 font-medium"
+                >
+                  <option value="">-- Choose Series (e.g. SSC CGL 2024) --</option>
+                  {mockSeriesList.map((series) => (
+                    <option key={series._id} value={series._id}>
+                      {series.title} {series.examination_name ? `(${series.examination_name})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {selectedSeriesForTest && (
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                    2. Allocate to Specific Test(s)
+                  </label>
+
+                  {loadingTests ? (
+                    <div className="py-4 text-center text-slate-400 text-xs flex items-center justify-center gap-2">
+                      <Loader2 size={13} className="animate-spin text-indigo-500" />
+                      <span>Loading child tests...</span>
+                    </div>
+                  ) : mockTestsList.length === 0 ? (
+                    <div className="p-2.5 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800 text-center">
+                      No tests created yet under this series.
+                    </div>
+                  ) : (
+                    <div className="max-h-48 overflow-y-auto custom-scrollbar border border-slate-200 rounded-lg p-2 space-y-1 bg-slate-50/50">
+                      {mockTestsList.map((t) => {
+                        const isChecked = (formData.mock_tests || []).includes(t._id);
+                        return (
+                          <label
+                            key={t._id}
+                            className={`flex items-start gap-2 p-2 rounded cursor-pointer transition-colors ${
+                              isChecked ? 'bg-indigo-50/80 border border-indigo-200 font-semibold text-indigo-900' : 'hover:bg-white border border-transparent text-slate-700'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleMockTest(t._id)}
+                              className="mt-0.5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            />
+                            <div className="min-w-0 flex-1">
+                              <div className="text-[11px] font-bold truncate">{t.title}</div>
+                              <div className="text-[10px] text-slate-500 flex items-center gap-2 mt-0.5">
+                                <span className="capitalize">{t.test_type?.replace('_', ' ')}</span>
+                                <span>•</span>
+                                <span className={t.is_paid ? 'text-amber-600 font-bold' : 'text-emerald-600 font-bold'}>
+                                  {t.is_paid ? 'PAID' : 'FREE'}
+                                </span>
+                              </div>
+                            </div>
+                          </label>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
         </div>

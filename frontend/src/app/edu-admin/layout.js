@@ -11,6 +11,7 @@ import AdminLoader from '@/components/admin/AdminLoader';
 export default function AdminLayout({ children }) {
   const { data: session, status } = useSession();
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
   // Monitor daily midnight (12:00 AM) session expiry and sync token
   React.useEffect(() => {
@@ -152,21 +153,26 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f0f1] text-slate-800 flex flex-col overflow-hidden font-sans antialiased">
+    <div className="min-h-screen bg-[#f0f0f1] text-slate-800 flex flex-col overflow-hidden font-sans antialiased w-full max-w-full">
       {/* Top Header Bar */}
-      <AdminHeader session={session} />
+      <AdminHeader
+        session={session}
+        onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
+      />
 
       {/* Body Area with Sidebar + Content */}
-      <div className="flex-1 flex flex-row min-w-0 h-[calc(100vh-44px)] overflow-hidden">
-        {/* Compact Collapsible Sidebar (165px) with RBAC filtering */}
+      <div className="flex-1 flex flex-row min-w-0 h-[calc(100vh-44px)] overflow-hidden w-full max-w-full">
+        {/* Compact Collapsible Sidebar (165px on desktop, slide drawer on mobile) */}
         <AdminSidebar
           userRole={userRole}
           isCollapsed={isCollapsed}
           setIsCollapsed={setIsCollapsed}
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          setIsMobileSidebarOpen={setIsMobileSidebarOpen}
         />
 
-        {/* Dynamic Page Container with Stable Scrollbar to prevent horizontal shaking */}
-        <main className="flex-1 overflow-y-scroll p-4 sm:p-5 bg-[#f0f0f1] custom-scrollbar [scrollbar-gutter:stable]">
+        {/* Dynamic Page Container with Stable Scrollbar */}
+        <main className="flex-1 overflow-y-auto p-3 sm:p-5 bg-[#f0f0f1] custom-scrollbar [scrollbar-gutter:stable] min-w-0 max-w-full">
           {children}
         </main>
       </div>

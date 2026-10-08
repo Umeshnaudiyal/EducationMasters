@@ -3,6 +3,7 @@ import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import Subject from '../models/subject.model.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
+import { cleanHtmlContent, stripHtmlToPlainText } from '../utils/cleanHtml.js';
 
 const validateSubjectData = async (data, { isNew = false, currentId = null } = {}) => {
   const errors = {};
@@ -102,17 +103,20 @@ export const createSubject = asyncHandler(async (req, res) => {
   const highest = await Subject.findOne({ sql_id: { $ne: null } }).sort({ sql_id: -1 }).select('sql_id').lean();
   const nextSqlId = (highest?.sql_id || 0) + 1;
 
+  const cleanDesc = cleanHtmlContent(description || '');
+  const metaDesc = seo?.meta_description || stripHtmlToPlainText(description || '');
+
   const subject = await Subject.create({
     sql_id: nextSqlId,
     name: name.trim(),
     slug: cleanSlug,
     image: image ? image.trim() : '',
-    description: description || '',
+    description: cleanDesc,
     seo: {
       allow_indexing: seo?.allow_indexing !== undefined ? Boolean(seo.allow_indexing) : true,
-      meta_title: seo?.meta_title || name.trim(),
-      meta_keywords: seo?.meta_keywords || '',
-      meta_description: seo?.meta_description || description || '',
+      meta_title: stripHtmlToPlainText(seo?.meta_title || name.trim()),
+      meta_keywords: stripHtmlToPlainText(seo?.meta_keywords || ''),
+      meta_description: stripHtmlToPlainText(metaDesc),
     },
   });
 
@@ -140,14 +144,14 @@ export const updateSubject = asyncHandler(async (req, res) => {
   if (name !== undefined) subject.name = name.trim();
   if (slug !== undefined) subject.slug = slugify(slug);
   if (image !== undefined) subject.image = image ? image.trim() : '';
-  if (description !== undefined) subject.description = description;
+  if (description !== undefined) subject.description = cleanHtmlContent(description || '');
 
   if (seo) {
     subject.seo = {
       allow_indexing: seo.allow_indexing !== undefined ? Boolean(seo.allow_indexing) : subject.seo?.allow_indexing ?? true,
-      meta_title: seo.meta_title !== undefined ? seo.meta_title : subject.seo?.meta_title ?? '',
-      meta_keywords: seo.meta_keywords !== undefined ? seo.meta_keywords : subject.seo?.meta_keywords ?? '',
-      meta_description: seo.meta_description !== undefined ? seo.meta_description : subject.seo?.meta_description ?? '',
+      meta_title: seo.meta_title !== undefined ? stripHtmlToPlainText(seo.meta_title) : subject.seo?.meta_title ?? '',
+      meta_keywords: seo.meta_keywords !== undefined ? stripHtmlToPlainText(seo.meta_keywords) : subject.seo?.meta_keywords ?? '',
+      meta_description: seo.meta_description !== undefined ? stripHtmlToPlainText(seo.meta_description) : subject.seo?.meta_description ?? '',
     };
   }
 

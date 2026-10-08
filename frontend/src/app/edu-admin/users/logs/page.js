@@ -888,7 +888,7 @@ export default function UserSessionLogsPage() {
           <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 bg-white shrink-0">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-bold text-sm shadow-2xs">
-                {calendarData?.user?.name ? calendarData.user.name.charAt(0).toUpperCase() : 'U'}
+                {calendarData?.user?.name ? String(calendarData.user.name).charAt(0).toUpperCase() : 'U'}
               </div>
               <div>
                 <h3 className="text-sm sm:text-base font-bold text-slate-900 leading-tight">
@@ -1023,43 +1023,43 @@ export default function UserSessionLogsPage() {
                     const isFuture = d.status === 'future';
 
                     // Determine exact session badge style
-                    let badgeType = 'active'; // 'active' | 'logged_out' | 'expired'
+                    let badgeType = 'active'; // 'active' | 'logged_out' | 'system_logout'
+                    const lastSession = d.sessions && d.sessions.length > 0 ? d.sessions[d.sessions.length - 1] : null;
+
+                    const isSystemLogout = Boolean(
+                      d.isSystemLogout ||
+                      d.logoutBy === 'system' ||
+                      lastSession?.logout_by === 'system' ||
+                      lastSession?.action === 'system_logout' ||
+                      lastSession?.action === 'auto_logout' ||
+                      lastSession?.action === 'session_expired' ||
+                      lastSession?.status === 'expired' ||
+                      (d.lastLogout && (
+                        (new Date(d.lastLogout).getHours() === 0 && new Date(d.lastLogout).getMinutes() === 0) ||
+                        (new Date(d.lastLogout).getHours() === 23 && new Date(d.lastLogout).getMinutes() === 59)
+                      )) ||
+                      (!isToday && d.firstLogin && !d.lastLogout)
+                    );
+
                     if (d.status === 'active') {
                       badgeType = 'active';
-                    } else if (d.sessions && d.sessions.length > 0) {
-                      const lastSession = d.sessions[d.sessions.length - 1];
-                      if (
-                        lastSession.action === 'session_expired' ||
-                        lastSession.status === 'expired'
-                      ) {
-                        badgeType = 'expired';
-                      } else if (lastSession.logout_time || lastSession.action === 'logout') {
-                        badgeType = 'logged_out';
-                      } else if (lastSession.status === 'active') {
-                        badgeType = 'active';
-                      } else if (!isToday && !d.lastLogout) {
-                        badgeType = 'expired';
-                      } else {
-                        badgeType = 'logged_out';
-                      }
-                    } else if (!isToday && d.firstLogin && !d.lastLogout) {
-                      badgeType = 'expired';
-                    } else if (d.lastLogout) {
+                    } else if (isSystemLogout) {
+                      badgeType = 'system_logout';
+                    } else if (d.lastLogout || lastSession?.logout_time || lastSession?.action === 'logout') {
                       badgeType = 'logged_out';
+                    } else {
+                      badgeType = isToday ? 'active' : 'system_logout';
                     }
 
-                    // Card container styling matching Screenshot #2
+                    // Card container styling matching Screenshot
                     let cardClasses = 'border-slate-100 bg-white text-slate-400';
                     if (isPresent) {
                       if (badgeType === 'active') {
                         cardClasses =
                           'border-emerald-300 bg-emerald-50/35 hover:bg-emerald-50/60 hover:border-emerald-400 hover:shadow-xs cursor-pointer';
-                      } else if (badgeType === 'logged_out') {
+                      } else if (badgeType === 'logged_out' || badgeType === 'system_logout') {
                         cardClasses =
                           'border-blue-200 bg-blue-50/35 hover:bg-blue-50/60 hover:border-blue-300 hover:shadow-xs cursor-pointer';
-                      } else if (badgeType === 'expired') {
-                        cardClasses =
-                          'border-rose-200 bg-rose-50/35 hover:bg-rose-50/60 hover:border-rose-300 hover:shadow-xs cursor-pointer';
                       }
                     } else if (isOff) {
                       cardClasses = 'border-slate-100 bg-white text-slate-400';
@@ -1119,7 +1119,7 @@ export default function UserSessionLogsPage() {
                               </span>
                             </div>
 
-                            {/* Status Badge matching Screenshot #2 */}
+                            {/* Status Badge */}
                             <div>
                               {badgeType === 'active' ? (
                                 <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-100 text-emerald-800 shadow-2xs">
@@ -1129,15 +1129,15 @@ export default function UserSessionLogsPage() {
                                   </span>
                                   <span>Active</span>
                                 </div>
-                              ) : badgeType === 'logged_out' ? (
+                              ) : badgeType === 'system_logout' ? (
+                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-700">
+                                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
+                                  <span>System logout</span>
+                                </div>
+                              ) : (
                                 <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-100 text-blue-700">
                                   <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
                                   <span>Logged out</span>
-                                </div>
-                              ) : (
-                                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-rose-100 text-rose-700">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-                                  <span>Expired</span>
                                 </div>
                               )}
                             </div>
@@ -1174,38 +1174,62 @@ export default function UserSessionLogsPage() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
-                      {selectedDayDetail.sessions?.map((s, idx) => (
-                        <div
-                          key={idx}
-                          className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1 text-[11px]"
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="font-bold text-slate-800 capitalize">
-                              Session #{idx + 1} ({s.action || 'login'})
-                            </span>
-                            <span
-                              className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                                s.status === 'active'
-                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                  : 'bg-slate-100 text-slate-700 border border-slate-200'
-                              }`}
-                            >
-                              {s.status}
-                            </span>
+                      {selectedDayDetail.sessions?.map((s, idx) => {
+                        const isSystem = Boolean(
+                          s.logout_by === 'system' ||
+                          s.action === 'system_logout' ||
+                          s.action === 'auto_logout' ||
+                          s.action === 'session_expired' ||
+                          (s.logout_time && (
+                            (new Date(s.logout_time).getHours() === 0 && new Date(s.logout_time).getMinutes() === 0) ||
+                            (new Date(s.logout_time).getHours() === 23 && new Date(s.logout_time).getMinutes() === 59)
+                          ))
+                        );
+
+                        return (
+                          <div
+                            key={idx}
+                            className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs space-y-1 text-[11px]"
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-800 capitalize">
+                                Session #{idx + 1} ({isSystem ? 'System Logout' : (s.action || 'login')})
+                              </span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
+                                  s.status === 'active'
+                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                    : isSystem
+                                    ? 'bg-blue-50 text-blue-700 border border-blue-200'
+                                    : 'bg-slate-100 text-slate-700 border border-slate-200'
+                                }`}
+                              >
+                                {s.status === 'active' ? 'Active' : isSystem ? 'System Logout' : 'Logged Out'}
+                              </span>
+                            </div>
+                            <p className="text-slate-600">
+                              <strong>Login:</strong> {formatDateTimeDisplay(s.login_time)}
+                            </p>
+                            <p className="text-slate-600">
+                              <strong>Logout:</strong>{' '}
+                              {s.logout_time ? (
+                                <span>
+                                  {formatDateTimeDisplay(s.logout_time)}{' '}
+                                  {isSystem && (
+                                    <span className="text-[10px] text-blue-600 font-semibold">(System logout)</span>
+                                  )}
+                                </span>
+                              ) : (
+                                'Active Session'
+                              )}
+                            </p>
+                            <p className="text-slate-500 text-[10px]">
+                              <strong>Device:</strong> {s.device || 'Desktop'} • <strong>IP:</strong>{' '}
+                              {s.ip_address || 'Unknown'}
+                            </p>
                           </div>
-                          <p className="text-slate-600">
-                            <strong>Login:</strong> {formatDateTimeDisplay(s.login_time)}
-                          </p>
-                          <p className="text-slate-600">
-                            <strong>Logout:</strong>{' '}
-                            {s.logout_time ? formatDateTimeDisplay(s.logout_time) : 'Active Session'}
-                          </p>
-                          <p className="text-slate-500 text-[10px]">
-                            <strong>Device:</strong> {s.device || 'Desktop'} • <strong>IP:</strong>{' '}
-                            {s.ip_address || 'Unknown'}
-                          </p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}

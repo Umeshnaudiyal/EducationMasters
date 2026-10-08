@@ -21,9 +21,26 @@ import subjectRoutes from './subject.routes.js';
 import topicRoutes from './topic.routes.js';
 import topicGroupRoutes from './topicGroup.routes.js';
 import searchRoutes from './search.routes.js';
+import subscriberRoutes from './subscriber.routes.js';
+import mockTestSeriesRoutes from './mockTestSeries.routes.js';
+import mockTestRoutes from './mockTest.routes.js';
+import mockTestPlanRoutes from './mockTestPlan.routes.js';
+import paymentRoutes from './payment.routes.js';
+import stickyNoteRoutes from './stickyNote.routes.js';
+
+import { getPublicAuthorsList } from '../controllers/user.controller.js';
 
 const router = express.Router();
 
+router.use('/sticky-notes', stickyNoteRoutes);
+router.use('/sticky-note', stickyNoteRoutes);
+router.use('/payments', paymentRoutes);
+router.use('/mock-test-series', mockTestSeriesRoutes);
+router.use('/mock-tests', mockTestRoutes);
+router.use('/mock-test-plans', mockTestPlanRoutes);
+router.use('/subscribers', subscriberRoutes);
+router.use('/subscriber', subscriberRoutes);
+router.get('/authors', getPublicAuthorsList);
 router.use('/search', searchRoutes);
 router.use('/admit-cards', admitCardRoutes);
 router.use('/admit-card', admitCardRoutes);
@@ -31,6 +48,7 @@ router.use('/results', resultRoutes);
 router.use('/result', resultRoutes);
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
+router.use('/author', userRoutes);
 router.use('/blogs', blogRoutes);
 router.use('/jobs', jobRoutes);
 router.use('/job', jobRoutes);

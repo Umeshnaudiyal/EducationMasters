@@ -59,6 +59,28 @@ const nextConfig = {
         destination: '/:slug',
         permanent: true,
       },
+      {
+        source: '/mock-test',
+        destination: '/mock-tests',
+        permanent: true,
+      },
+    ];
+  },
+  async rewrites() {
+    const backendUrl = process.env.BACKEND_INTERNAL_URL || 'http://localhost:5001';
+    return [
+      {
+        source: '/apis/:path*',
+        destination: `${backendUrl}/apis/:path*`,
+      },
+      {
+        source: '/api/:path*',
+        destination: `${backendUrl}/api/:path*`,
+      },
+      {
+        source: '/uploads/:path*',
+        destination: `${backendUrl}/uploads/:path*`,
+      },
     ];
   },
 };

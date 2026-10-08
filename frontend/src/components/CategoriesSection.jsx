@@ -113,19 +113,65 @@ const POPULAR_CATEGORIES = [
   }
 ];
 
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+
 export default function CategoriesSection({ onSelectCategory }) {
+  const catSectionRef = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            gsap.fromTo(
+              '.category-card-item',
+              { y: 35, opacity: 0, scale: 0.95 },
+              {
+                y: 0,
+                opacity: 1,
+                scale: 1,
+                stagger: 0.05,
+                duration: 0.5,
+                ease: 'back.out(1.2)',
+                clearProps: 'transform,opacity',
+              }
+            );
+            observer.disconnect();
+          }
+        });
+      },
+      { threshold: 0.1 }
+    );
+
+    if (catSectionRef.current) {
+      observer.observe(catSectionRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
+
   return (
-    <section className="py-12 sm:py-16 bg-slate-50/50 text-slate-800 border-b border-slate-200/60">
+    <section ref={catSectionRef} className="py-12 sm:py-16 bg-slate-50/50 text-slate-800 border-b border-slate-200/60">
       <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
 
         {/* Section Header */}
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#213547] tracking-tight">
-            Popular Categories
-          </h2>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium">
-            Start Learning and update yourself for Govt. jobs Exam
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-center sm:text-left">
+          <div className="space-y-1.5">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#213547] tracking-tight">
+              Popular Categories
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium">
+              Start Learning and update yourself for Govt. jobs Exam
+            </p>
+          </div>
+          <Link
+            href="/categories"
+            className="inline-flex items-center justify-center sm:justify-end gap-1.5 text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition shrink-0"
+          >
+            <span>View All Categories</span>
+            <span className="text-base leading-none">&rarr;</span>
+          </Link>
         </div>
 
         {/* 6-Column × 2-Row Category Grid */}
@@ -135,14 +181,14 @@ export default function CategoriesSection({ onSelectCategory }) {
               key={cat.id}
               href={cat.href}
               scroll={false}
-              className="bg-white rounded-2xl p-5 text-center border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 cursor-pointer flex flex-col items-center justify-start h-full group no-underline text-slate-900"
+              className="category-card-item bg-white rounded-2xl p-5 text-center border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1.5 hover:scale-[1.02] cursor-pointer flex flex-col items-center justify-start h-full group no-underline text-slate-900"
             >
               {/* Category Image Icon */}
               <div className="w-20 h-20 sm:w-24 sm:h-24 mb-3 flex items-center justify-center">
                 <img
                   src={cat.imgSrc}
                   alt={cat.titleAccent}
-                  className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300"
+                  className="w-full h-full object-contain group-hover:scale-110 transition-transform duration-300"
                 />
               </div>
 
@@ -165,3 +211,4 @@ export default function CategoriesSection({ onSelectCategory }) {
     </section>
   );
 }
+

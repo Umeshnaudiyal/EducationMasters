@@ -280,17 +280,17 @@ export default function BlogsAdminPage() {
         </div>
 
         {/* Top Right Search Posts Form */}
-        <form onSubmit={handleFilterSubmit} className="flex items-center gap-1.5 self-end md:self-auto">
+        <form onSubmit={handleFilterSubmit} className="w-full md:w-auto flex items-center gap-1.5">
           <input
             type="text"
-            placeholder=""
+            placeholder="Search posts..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1] w-44 sm:w-56"
+            className="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1] flex-1 md:w-56 shadow-2xs"
           />
           <button
             type="submit"
-            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors whitespace-nowrap shadow-2xs"
+            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors whitespace-nowrap shadow-2xs shrink-0 cursor-pointer"
           >
             Search Posts
           </button>
@@ -298,12 +298,12 @@ export default function BlogsAdminPage() {
       </div>
 
       {/* Category Filter Toolbar */}
-      <div className="flex items-center justify-between gap-2 py-0.5">
-        <form onSubmit={handleFilterSubmit} className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
+        <form onSubmit={handleFilterSubmit} className="w-full sm:w-auto flex items-center gap-1.5">
           <select
             value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
-            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] min-w-[140px]"
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] flex-1 sm:flex-initial min-w-[140px]"
           >
             <option value="">All Categories</option>
             <option value="railway">Railway</option>
@@ -318,16 +318,150 @@ export default function BlogsAdminPage() {
           </select>
           <button
             type="submit"
-            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs"
+            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs shrink-0 cursor-pointer"
           >
             Filter
           </button>
         </form>
       </div>
 
-      {/* Data Table (Exact Matching Columns: [ ] | Title | Author | Category | Status | Action) */}
+      {/* Main Content Container: Mobile Cards (block md:hidden) + Desktop Table (hidden md:block) */}
       <div className="bg-white border border-slate-300 rounded shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        
+        {/* Mobile View: Touch-Optimized Clean Cards */}
+        <div className="block md:hidden divide-y divide-slate-200">
+          {loading ? (
+            <div className="py-10 text-center">
+              <AdminLoader
+                text="Loading Articles..."
+                subtext="Retrieving blog posts from database"
+                minHeight="min-h-[200px]"
+              />
+            </div>
+          ) : blogs.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              No blog posts found for the selected filter.
+            </div>
+          ) : (
+            blogs.map((b, idx) => {
+              const mediaSource = b.featured_media || b.image || b.thumbnail;
+              const fullMediaUrl = getImageUrl(mediaSource, '/logo.webp');
+              const authorName = b.author?.name || b.author?.nicename || 'Prakarsh Sharma';
+              const categoryNames =
+                b.categories && b.categories.length > 0
+                  ? b.categories.map((c) => c.name || c).join(', ')
+                  : 'Article';
+
+              return (
+                <div key={b._id || idx} className="p-3 space-y-2.5 bg-white">
+                  {/* Top Row: Thumbnail + Title + Meta */}
+                  <div className="flex items-start gap-2.5">
+                    <Link
+                      href={`/${b.slug || b._id}`}
+                      target="_blank"
+                      title="Preview Post"
+                      className="w-16 h-12 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center"
+                    >
+                      <img
+                        src={fullMediaUrl}
+                        alt={b.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          if (!e.currentTarget.dataset.fallback) {
+                            e.currentTarget.dataset.fallback = 'true';
+                            e.currentTarget.src = '/logo.webp';
+                          } else {
+                            e.currentTarget.style.display = 'none';
+                          }
+                        }}
+                      />
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/${b.slug || b._id}`}
+                        target="_blank"
+                        className="font-semibold text-[#0073aa] hover:underline text-xs line-clamp-2 leading-snug"
+                      >
+                        {b.title}
+                      </Link>
+                      <div className="text-[10.5px] text-slate-500 mt-1 flex flex-wrap items-center gap-x-1.5">
+                        <span className="font-medium text-slate-700">{authorName}</span>
+                        <span>•</span>
+                        <span className="text-slate-600 truncate max-w-[140px]">{categoryNames}</span>
+                        {b.state?.name && (
+                          <>
+                            <span>•</span>
+                            <span className="text-blue-600 font-medium">{b.state.name}</span>
+                          </>
+                        )}
+                        <span>•</span>
+                        <span>{formatTimeAgo(b.created_at || b.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Bar: Status Pill Select + Edit + Trash */}
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={
+                          b.status === 'publish' || b.status === 'published' || b.status === 'active'
+                            ? 'publish'
+                            : b.status === 'pending' || b.status === 'pending_review'
+                            ? 'pending'
+                            : b.status === 'trash'
+                            ? 'trash'
+                            : 'draft'
+                        }
+                        disabled={updatingId === b._id}
+                        onChange={(e) => handleStatusChange(b._id, e.target.value, b.title)}
+                        className={`text-[11px] font-semibold rounded-md px-2 py-1 border cursor-pointer appearance-none pr-5 focus:outline-none shadow-2xs ${
+                          b.status === 'publish' || b.status === 'published' || b.status === 'active'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : b.status === 'pending' || b.status === 'pending_review'
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : b.status === 'trash'
+                            ? 'bg-rose-50 text-rose-700 border-rose-300'
+                            : 'bg-slate-100 text-slate-700 border-slate-300'
+                        } ${updatingId === b._id ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        {!isAuthor && <option value="publish">Published</option>}
+                        <option value="pending">Pending</option>
+                        <option value="draft">Draft</option>
+                        <option value="trash">Trash</option>
+                      </select>
+                      <ChevronDown
+                        size={11}
+                        className="absolute right-1 pointer-events-none text-slate-500"
+                      />
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5">
+                      <Link
+                        href={`/edu-admin/blog/edit/${b.slug || b._id}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00a0d2] hover:bg-[#008ebb] text-white rounded text-xs font-semibold shadow-2xs"
+                      >
+                        <Edit size={11} />
+                        <span>Edit</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal(b._id, b.title)}
+                        className="p-1.5 bg-[#dc3232] hover:bg-[#b32d2e] text-white rounded shadow-2xs cursor-pointer"
+                        title="Trash"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table: 100% Exact Desktop Layout (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 border-collapse">
             <thead className="bg-[#f6f7f7] border-b border-slate-300 text-xs font-semibold text-slate-800">
               <tr>
@@ -425,8 +559,16 @@ export default function BlogsAdminPage() {
                             >
                               {b.title}
                             </Link>
-                            <div className="text-[11px] text-slate-500 mt-0.5">
-                              Posted: {formatTimeAgo(b.created_at || b.createdAt)} | Edited: {formatDate(b.updatedAt || b.updated_at || b.created_at)}
+                            <div className="text-[11px] text-slate-500 mt-0.5 flex flex-wrap items-center gap-x-1.5">
+                              <span>Posted: {formatTimeAgo(b.created_at || b.createdAt)}</span>
+                              <span>|</span>
+                              <span>Edited: {formatDate(b.updatedAt || b.updated_at || b.created_at)}</span>
+                              {b.state?.name && (
+                                <>
+                                  <span>|</span>
+                                  <span className="text-blue-600 font-medium">📍 {b.state.name}</span>
+                                </>
+                              )}
                             </div>
                           </div>
                         </div>

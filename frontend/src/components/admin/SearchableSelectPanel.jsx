@@ -121,16 +121,51 @@ export default function SearchableSelectPanel({
     setSearch('');
   };
 
-  // Determine current selected label
+  // Determine current selected string and resolve readable label
+  const [resolvedLabel, setResolvedLabel] = useState('');
+
   const currentValStr = typeof selectedValue === 'object' && selectedValue !== null
-    ? selectedValue[valueField] || selectedValue._id || ''
+    ? selectedValue[valueField] || selectedValue[displayField] || selectedValue.name || selectedValue._id || ''
     : String(selectedValue || '');
 
   // Check if selected item is already present in items
-  const isSelectedInList = items.some((item) => {
-    const itemVal = typeof item === 'object' ? item[valueField] || item.name || item._id : item;
-    return String(itemVal) === currentValStr;
+  const matchedItem = items.find((item) => {
+    if (typeof item === 'object' && item !== null) {
+      return (
+        String(item[valueField]) === currentValStr ||
+        String(item.name) === currentValStr ||
+        String(item._id) === currentValStr
+      );
+    }
+    return String(item) === currentValStr;
   });
+
+  const isSelectedInList = Boolean(matchedItem);
+
+  useEffect(() => {
+    if (matchedItem && typeof matchedItem === 'object') {
+      setResolvedLabel(matchedItem[displayField] || matchedItem.name || '');
+    } else if (/^[0-9a-fA-F]{24}$/.test(currentValStr) && endpoint) {
+      // It's a raw ObjectId - try fetching to resolve its human readable name
+      let isMounted = true;
+      fetch(`${BACKEND_URL}${endpoint}?id=${currentValStr}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!isMounted) return;
+          if (data?.data && (data.data.name || data.data.title)) {
+            setResolvedLabel(data.data.name || data.data.title);
+          } else if (Array.isArray(data?.data) && data.data[0]?.name) {
+            setResolvedLabel(data.data[0].name);
+          }
+        })
+        .catch(() => {});
+      return () => {
+        isMounted = false;
+      };
+    } else {
+      setResolvedLabel(currentValStr);
+    }
+  }, [currentValStr, matchedItem, endpoint, displayField]);
 
   const isDefaultSelected = defaultOption && (
     currentValStr === defaultOption.value ||
@@ -212,7 +247,7 @@ export default function SearchableSelectPanel({
             {/* Pinned Selected Value if not in loaded list and not default */}
             {!isSelectedInList && !isDefaultSelected && currentValStr && (
               <label
-                onClick={() => onSelect(currentValStr, { name: currentValStr })}
+                onClick={() => onSelect(currentValStr, { name: resolvedLabel || currentValStr })}
                 className="flex items-center justify-between px-2 py-1.5 rounded text-xs cursor-pointer transition-colors bg-blue-50 text-[#2271b1] font-semibold"
               >
                 <div className="flex items-center gap-2 min-w-0">
@@ -220,10 +255,10 @@ export default function SearchableSelectPanel({
                     type="radio"
                     name={`radio-${title}`}
                     checked={true}
-                    onChange={() => onSelect(currentValStr, { name: currentValStr })}
+                    onChange={() => onSelect(currentValStr, { name: resolvedLabel || currentValStr })}
                     className="accent-[#2271b1] cursor-pointer"
                   />
-                  <span className="truncate">{currentValStr}</span>
+                  <span className="truncate">{resolvedLabel || currentValStr}</span>
                 </div>
                 <Check size={12} className="text-[#2271b1] shrink-0" />
               </label>

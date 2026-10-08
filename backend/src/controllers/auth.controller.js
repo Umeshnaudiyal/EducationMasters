@@ -61,6 +61,36 @@ export const getUserCalendarHistory = asyncHandler(async (req, res) => {
   res.status(200).json(new ApiResponse(200, result, 'User calendar history fetched successfully'));
 });
 
+export const registerWithOtp = asyncHandler(async (req, res) => {
+  const result = await authService.registerWithOtp(req.body);
+  res.status(201).json(new ApiResponse(201, result, result.message || 'OTP sent successfully'));
+});
+
+export const googleAuth = asyncHandler(async (req, res) => {
+  const clientMeta = {
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || 'Unknown',
+    userAgent: req.headers['user-agent'] || 'Unknown',
+  };
+
+  const result = await authService.googleAuth(req.body, clientMeta);
+  res.status(200).json(new ApiResponse(200, result, result.message || 'Google Auth processed'));
+});
+
+export const sendPhoneOtp = asyncHandler(async (req, res) => {
+  const result = await authService.sendPhoneOtp(req.body);
+  res.status(200).json(new ApiResponse(200, result, result.message || 'OTP sent'));
+});
+
+export const verifyPhoneOtp = asyncHandler(async (req, res) => {
+  const clientMeta = {
+    ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || 'Unknown',
+    userAgent: req.headers['user-agent'] || 'Unknown',
+  };
+
+  const result = await authService.verifyPhoneOtp(req.body, clientMeta);
+  res.status(200).json(new ApiResponse(200, result, result.message || 'OTP verified successfully'));
+});
+
 export const getMe = asyncHandler(async (req, res) => {
   res.status(200).json(
     new ApiResponse(
@@ -72,6 +102,10 @@ export const getMe = asyncHandler(async (req, res) => {
           nicename: req.user.nicename,
           email: req.user.email,
           role: req.user.role,
+          phone: req.user.phone,
+          image: req.user.image,
+          active: req.user.active,
+          is_phone_verified: req.user.is_phone_verified,
           login_time: req.user.login_time,
           logout_time: req.user.logout_time,
           last_login_time: req.user.last_login_time,

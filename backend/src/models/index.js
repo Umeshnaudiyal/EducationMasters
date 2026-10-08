@@ -21,6 +21,12 @@ import Topic from './topic.model.js';
 import TopicGroup from './topicGroup.model.js';
 import User from './user.model.js';
 import UserLog from './userLog.model.js';
+import MockTestSeries from './mockTestSeries.model.js';
+import MockTest from './mockTest.model.js';
+import MockTestPlan from './mockTestPlan.model.js';
+import MockTestAttempt from './mockTestAttempt.model.js';
+import Payment from './payment.model.js';
+import StickyNote from './stickyNote.model.js';
 
 export {
   AdmitCard,
@@ -46,4 +52,10 @@ export {
   TopicGroup,
   User,
   UserLog,
+  MockTestSeries,
+  MockTest,
+  MockTestPlan,
+  MockTestAttempt,
+  Payment,
+  StickyNote,
 };

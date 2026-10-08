@@ -1,6 +1,10 @@
 import express from 'express';
 import {
   register,
+  registerWithOtp,
+  googleAuth,
+  sendPhoneOtp,
+  verifyPhoneOtp,
   login,
   logout,
   getMe,
@@ -14,6 +18,10 @@ import { protect } from '../middlewares/auth.middleware.js';
 const router = express.Router();
 
 router.post('/register', register);
+router.post('/register-with-otp', registerWithOtp);
+router.post('/google', googleAuth);
+router.post('/send-otp', sendPhoneOtp);
+router.post('/verify-otp', verifyPhoneOtp);
 router.post('/login', login);
 router.post('/logout', logout);
 router.get('/me', protect, getMe);

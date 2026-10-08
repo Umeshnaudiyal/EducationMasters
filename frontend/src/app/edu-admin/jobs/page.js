@@ -342,17 +342,17 @@ export default function JobsAdminPage() {
         </div>
 
         {/* Top Right Search Posts Input Box */}
-        <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 self-end md:self-auto">
+        <form onSubmit={handleSearchSubmit} className="w-full md:w-auto flex items-center gap-1.5">
           <input
             type="text"
-            placeholder=""
+            placeholder="Search jobs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1] w-44 sm:w-56 shadow-2xs"
+            className="px-2 py-1 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1] flex-1 md:w-56 shadow-2xs"
           />
           <button
             type="submit"
-            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors whitespace-nowrap shadow-2xs cursor-pointer"
+            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors whitespace-nowrap shadow-2xs cursor-pointer shrink-0"
           >
             Search Posts
           </button>
@@ -360,12 +360,12 @@ export default function JobsAdminPage() {
       </div>
 
       {/* Bulk Actions Toolbar */}
-      <div className="flex items-center justify-between gap-2 py-0.5">
-        <div className="flex items-center gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2 py-0.5">
+        <div className="w-full sm:w-auto flex items-center gap-1.5">
           <select
             value={bulkAction}
             onChange={(e) => setBulkAction(e.target.value)}
-            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] shadow-2xs min-w-[130px]"
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] shadow-2xs flex-1 sm:flex-initial min-w-[130px]"
           >
             <option value="">Bulk Actions</option>
             <option value="trash">Move to Trash</option>
@@ -373,16 +373,147 @@ export default function JobsAdminPage() {
           <button
             type="button"
             onClick={handleBulkApply}
-            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs cursor-pointer"
+            className="px-2.5 py-1 bg-[#f6f7f7] hover:bg-slate-100 text-slate-700 border border-slate-300 rounded text-xs font-normal transition-colors shadow-2xs cursor-pointer shrink-0"
           >
             Apply
           </button>
         </div>
       </div>
 
-      {/* Data Table (Exact Matching Columns: [ ] | # | Job | Author | Category | Status | Action) */}
+      {/* Main Content Container: Mobile Cards (block md:hidden) + Desktop Table (hidden md:block) */}
       <div className="bg-white border border-slate-300 rounded shadow-2xs overflow-hidden">
-        <div className="overflow-x-auto">
+        
+        {/* Mobile View: Touch-Optimized Clean Cards */}
+        <div className="block md:hidden divide-y divide-slate-200">
+          {loading ? (
+            <div className="py-10 text-center">
+              <AdminLoader text="Loading Job Posts..." subtext="Retrieving govt job records from database" minHeight="min-h-[160px]" />
+            </div>
+          ) : jobs.length === 0 ? (
+            <div className="py-12 text-center text-slate-400 text-xs">
+              No jobs found for the selected filter.
+            </div>
+          ) : (
+            jobs.map((j, idx) => {
+              const mediaSource = j.featured_media || j.image;
+              const fullMediaUrl = getImageUrl(mediaSource, '/logo.webp');
+              const authorName = j.author?.name || j.author?.nicename || 'Mohit';
+              const categoryNames =
+                j.categories && j.categories.length > 0
+                  ? j.categories.map((c) => c.name || c).join(', ')
+                  : 'Jobs';
+              const isChecked = selectedIds.includes(j._id);
+
+              return (
+                <div key={j._id || idx} className="p-3 space-y-2.5 bg-white">
+                  {/* Top Row: Checkbox + Thumbnail + Title */}
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={() => toggleSelect(j._id)}
+                      className="rounded border-slate-300 text-[#2271b1] focus:ring-[#2271b1] mt-1 shrink-0"
+                    />
+                    <Link
+                      href={`/job/${j.slug || j._id}`}
+                      target="_blank"
+                      title="Preview Job"
+                      className="w-16 h-12 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center shadow-2xs"
+                    >
+                      <img
+                        src={fullMediaUrl}
+                        alt={j.title}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          if (!e.currentTarget.dataset.fallback) {
+                            e.currentTarget.dataset.fallback = 'true';
+                            e.currentTarget.src = '/logo.webp';
+                          } else {
+                            e.currentTarget.style.display = 'none';
+                          }
+                        }}
+                      />
+                    </Link>
+                    <div className="flex-1 min-w-0">
+                      <Link
+                        href={`/job/${j.slug || j._id}`}
+                        target="_blank"
+                        className="font-semibold text-[#0073aa] hover:underline text-xs line-clamp-2 leading-snug"
+                      >
+                        {j.title}
+                      </Link>
+                      <div className="text-[10.5px] text-slate-500 mt-1 flex flex-wrap items-center gap-x-1.5">
+                        <span className="font-medium text-slate-700">{authorName}</span>
+                        <span>•</span>
+                        <span className="text-slate-600 truncate max-w-[140px]">{categoryNames}</span>
+                        <span>•</span>
+                        <span>{formatTimeAgo(j.created_at || j.createdAt)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Bottom Action Bar: Status Select + Edit + Trash */}
+                  <div className="flex items-center justify-between gap-2 pt-1.5 border-t border-slate-100">
+                    <div className="relative inline-flex items-center">
+                      <select
+                        value={
+                          j.status === 'publish' || j.status === 'published' || j.status === 'active'
+                            ? 'publish'
+                            : j.status === 'pending' || j.status === 'pending_review'
+                            ? 'pending'
+                            : j.status === 'trash'
+                            ? 'trash'
+                            : 'draft'
+                        }
+                        disabled={updatingId === j._id}
+                        onChange={(e) => handleStatusChange(j._id, e.target.value, j.title)}
+                        className={`text-[11px] font-semibold rounded-md px-2 py-1 border cursor-pointer appearance-none pr-5 focus:outline-none shadow-2xs ${
+                          j.status === 'publish' || j.status === 'published' || j.status === 'active'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                            : j.status === 'pending' || j.status === 'pending_review'
+                            ? 'bg-amber-50 text-amber-700 border-amber-300'
+                            : j.status === 'trash'
+                            ? 'bg-rose-50 text-rose-700 border-rose-300'
+                            : 'bg-slate-100 text-slate-700 border-slate-300'
+                        } ${updatingId === j._id ? 'opacity-50 pointer-events-none' : ''}`}
+                      >
+                        {!isAuthor && <option value="publish">Published</option>}
+                        <option value="pending">Pending</option>
+                        <option value="draft">Draft</option>
+                        <option value="trash">Trash</option>
+                      </select>
+                      <ChevronDown
+                        size={11}
+                        className="absolute right-1 pointer-events-none text-slate-500"
+                      />
+                    </div>
+
+                    <div className="inline-flex items-center gap-1.5">
+                      <Link
+                        href={`/edu-admin/job/edit/${j.slug || j._id}`}
+                        className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#00a0d2] hover:bg-[#008ebb] text-white rounded text-xs font-semibold shadow-2xs"
+                      >
+                        <Edit size={11} />
+                        <span>Edit</span>
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => openDeleteModal(j._id, j.title)}
+                        className="p-1.5 bg-[#dc3232] hover:bg-[#b32d2e] text-white rounded shadow-2xs cursor-pointer"
+                        title="Trash"
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Table: 100% Exact Desktop Layout (hidden on mobile) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs text-slate-700 border-collapse">
             <thead className="bg-[#f6f7f7] border-b border-slate-300 text-xs font-semibold text-slate-800">
               <tr>

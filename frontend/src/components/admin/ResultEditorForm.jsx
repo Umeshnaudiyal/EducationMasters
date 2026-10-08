@@ -291,7 +291,17 @@ export default function ResultEditorForm({ slugOrId = null, isEdit = false }) {
 
             // Form Fields
             setPostName(r.post || r.title || '');
-            setDeptName(r.dept || (typeof r.department === 'string' ? r.department : r.department?.name) || '');
+
+            let resolvedDept = '';
+            if (typeof r.department === 'object' && r.department?.name) {
+              resolvedDept = r.department.name;
+            } else if (r.dept && !/^[0-9a-fA-F]{24}$/.test(String(r.dept).trim())) {
+              resolvedDept = r.dept;
+            } else if (typeof r.department === 'string' && !/^[0-9a-fA-F]{24}$/.test(r.department.trim())) {
+              resolvedDept = r.department;
+            }
+            setDeptName(resolvedDept);
+
             setDesigName(r.desig || '');
             setResultStatus(r.result_status || 'Declared / Out');
             setExamDate(formatInputDate(r.exam_date));
@@ -317,7 +327,9 @@ export default function ResultEditorForm({ slugOrId = null, isEdit = false }) {
             }
 
             // Department, Country & State Dropdowns
-            if (r.department) {
+            if (resolvedDept) {
+              setSelectedDepartment(resolvedDept);
+            } else if (r.department) {
               setSelectedDepartment(typeof r.department === 'object' ? r.department.name : r.department);
             } else if (r.dept) {
               setSelectedDepartment(r.dept);
@@ -366,12 +378,15 @@ export default function ResultEditorForm({ slugOrId = null, isEdit = false }) {
       const targetId = actualId || slugOrId;
       const isEditing = Boolean(targetId || isEdit);
 
+      const rawDept = deptName || (selectedDepartment !== '— Please Choose —' && selectedDepartment !== '-- Please Choose --' && selectedDepartment !== '— Select Department —' ? selectedDepartment : '');
+      const cleanDept = rawDept ? rawDept.trim() : '';
+
       const payload = {
         title: title.trim(),
         slug: slug.trim() || undefined,
         status: finalStatus,
         post: postName || title.trim(),
-        dept: deptName,
+        dept: cleanDept || null,
         desig: desigName,
         result_status: resultStatus,
         exam_date: examDate,
@@ -385,9 +400,9 @@ export default function ResultEditorForm({ slugOrId = null, isEdit = false }) {
         inst_impl: importantInstructions,
         faq_content: faqContent,
         featured_media: featuredMedia?._id || undefined,
-        department: selectedDepartment === '— Please Choose —' ? null : selectedDepartment,
-        country: selectedCountry || 'India',
-        state: selectedState === '-- All India --' ? null : selectedState,
+        department: cleanDept || null,
+        country: (!selectedCountry || selectedCountry === '— Please Choose —' || selectedCountry === '-- Please Choose --') ? 'India' : selectedCountry,
+        state: (!selectedState || selectedState === '-- All India --' || selectedState === '— All India —' || selectedState === '— Please Choose —') ? null : selectedState,
         metadata: {
           m_title: metaTitle || title,
           m_desc: metaDescription,
@@ -610,7 +625,11 @@ export default function ResultEditorForm({ slugOrId = null, isEdit = false }) {
                   <input
                     type="text"
                     value={deptName}
-                    onChange={(e) => setDeptName(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDeptName(val);
+                      setSelectedDepartment(val.trim() ? val : '— Please Choose —');
+                    }}
                     placeholder="Enter the name of Department"
                     className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#2271b1]"
                   />
@@ -1126,10 +1145,14 @@ export default function ResultEditorForm({ slugOrId = null, isEdit = false }) {
               title="Department"
               endpoint="/apis/v1/departments"
               selectedValue={selectedDepartment}
-              onSelect={(val) => {
-                setSelectedDepartment(val);
-                if (val !== '— Please Choose —' && !deptName) {
-                  setDeptName(val);
+              onSelect={(val, item) => {
+                if (val === '— Please Choose —' || val === '-- Please Choose --' || !val) {
+                  setSelectedDepartment('— Please Choose —');
+                  setDeptName('');
+                } else {
+                  const resolvedName = (typeof item === 'object' && item?.name) ? item.name : val;
+                  setSelectedDepartment(resolvedName);
+                  setDeptName(resolvedName);
                 }
               }}
               defaultOption={{ label: '— Please Choose —', value: '— Please Choose —' }}
