@@ -67,7 +67,7 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const rawBackend = process.env.NEXT_PUBLIC_BACKEND_URL;
+    const rawBackend = "https://education-masters-cv8z.vercel.app/";
     const backendUrl = rawBackend.replace(/\/apis?\/?$/, ''); // strips trailing /api or /apis if present
 
     return [
