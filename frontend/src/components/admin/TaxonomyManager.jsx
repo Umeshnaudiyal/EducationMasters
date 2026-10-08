@@ -56,7 +56,7 @@ function TaxonomyThumbnail({ src, alt, size = 14, className = 'w-9 h-9' }) {
 export default function TaxonomyManager({
   title = 'Items',
   singularTitle = 'Item',
-  apiEndpoint = '/api/v1/exams',
+  apiEndpoint = '/apis/v1/exams',
   columns = [],
   customFields = null, // Render function for extra fields (e.g. subject dropdown, state data)
   initialFormData = {},
@@ -135,7 +135,7 @@ export default function TaxonomyManager({
       });
 
       const token = getActiveToken();
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}?${query}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}${apiEndpoint}?${query}`, {
         cache: 'no-store',
         headers: {
           'Content-Type': 'application/json',
@@ -291,8 +291,8 @@ export default function TaxonomyManager({
     try {
       setSaving(true);
       const url = editingId
-        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}/${editingId}`
-        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}`;
+        ? `${process.env.NEXT_PUBLIC_API_URL || ''}${apiEndpoint}/${editingId}`
+        : `${process.env.NEXT_PUBLIC_API_URL || ''}${apiEndpoint}`;
 
       const method = editingId ? 'PUT' : 'POST';
       const token = getActiveToken();
@@ -350,7 +350,7 @@ export default function TaxonomyManager({
       setDeleting(true);
       const token = getActiveToken();
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}/${itemToDelete._id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || ''}${apiEndpoint}/${itemToDelete._id}`,
         {
           method: 'DELETE',
           headers: {
@@ -408,7 +408,7 @@ export default function TaxonomyManager({
         setBulkLoading(true);
         const token = getActiveToken();
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}${apiEndpoint}/bulk-action`,
+          `${process.env.NEXT_PUBLIC_API_URL || ''}${apiEndpoint}/bulk-action`,
           {
             method: 'POST',
             headers: {

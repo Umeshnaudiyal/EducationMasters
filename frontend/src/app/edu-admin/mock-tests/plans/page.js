@@ -28,7 +28,7 @@ import { getAuthToken } from '@/utils/auth';
 import { slugify } from '@/utils/slug';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function MockTestPlansManagePage() {
   const { data: session } = useSession();
@@ -81,7 +81,7 @@ export default function MockTestPlansManagePage() {
     try {
       setLoading(true);
       const token = getAuthToken(session);
-      const res = await fetch(`${API_BASE}/api/v1/mock-test-plans/admin/all`, {
+      const res = await fetch(`${API_BASE}/apis/v1/mock-test-plans/admin/all`, {
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });
       const data = await res.json();
@@ -276,8 +276,8 @@ export default function MockTestPlansManagePage() {
       setSaving(true);
       const token = getAuthToken(session);
       const url = editingPlan
-        ? `${API_BASE}/api/v1/mock-test-plans/${editingPlan._id}`
-        : `${API_BASE}/api/v1/mock-test-plans`;
+        ? `${API_BASE}/apis/v1/mock-test-plans/${editingPlan._id}`
+        : `${API_BASE}/apis/v1/mock-test-plans`;
       const method = editingPlan ? 'PUT' : 'POST';
 
       const payload = {
@@ -337,7 +337,7 @@ export default function MockTestPlansManagePage() {
     const newStatus = plan.status === 'active' ? 'inactive' : 'active';
     try {
       const token = getAuthToken(session);
-      const res = await fetch(`${API_BASE}/api/v1/mock-test-plans/${plan._id}`, {
+      const res = await fetch(`${API_BASE}/apis/v1/mock-test-plans/${plan._id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -366,7 +366,7 @@ export default function MockTestPlansManagePage() {
     try {
       setDeleteModal((prev) => ({ ...prev, isLoading: true }));
       const token = getAuthToken(session);
-      const res = await fetch(`${API_BASE}/api/v1/mock-test-plans/${deleteModal.item._id}`, {
+      const res = await fetch(`${API_BASE}/apis/v1/mock-test-plans/${deleteModal.item._id}`, {
         method: 'DELETE',
         headers: token ? { Authorization: `Bearer ${token}` } : {},
       });

@@ -9,7 +9,7 @@ export default function TopicsAdminPage() {
   useEffect(() => {
     const fetchSubjects = async () => {
       try {
-        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=100`);
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/subjects?limit=100`);
         const data = await res.json();
         if (data.success) {
           setSubjects(data.data || []);
@@ -25,7 +25,7 @@ export default function TopicsAdminPage() {
     <TaxonomyManager
       title="Topics"
       singularTitle="Topic"
-      apiEndpoint="/api/v1/topics"
+      apiEndpoint="/apis/v1/topics"
       initialFormData={{
         subject: '',
       }}

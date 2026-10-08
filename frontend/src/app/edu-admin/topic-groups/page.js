@@ -8,7 +8,7 @@ export default function TopicGroupsAdminPage() {
     <TaxonomyManager
       title="Topic Groups"
       singularTitle="Topic Group"
-      apiEndpoint="/api/v1/topic-groups"
+      apiEndpoint="/apis/v1/topic-groups"
       columns={[
         {
           header: 'Description',

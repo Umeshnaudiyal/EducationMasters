@@ -1,7 +1,7 @@
 import React from 'react';
 import MockTestsClient from './MockTestsClient';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 export const metadata = {
   title: 'Online Mock Tests & Test Series 2026 | Education Masters',
@@ -11,7 +11,7 @@ export const metadata = {
 
 async function getMockSeriesData() {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/mock-test-series?status=published&limit=50`, {
+    const res = await fetch(`${API_BASE}/apis/v1/mock-test-series?status=published&limit=50`, {
       next: { revalidate: 30 },
     });
     const data = await res.json();

@@ -113,11 +113,11 @@ export default function LeaderboardView({
       if (selectedMedium) params.append('language', selectedMedium);
 
       if (testId) {
-        url = `${API_BASE}/api/v1/mock-tests/${testId}/leaderboard?${params.toString()}`;
+        url = `${API_BASE}/apis/v1/mock-tests/${testId}/leaderboard?${params.toString()}`;
       } else if (seriesId) {
-        url = `${API_BASE}/api/v1/mock-tests/series/${seriesId}/leaderboard?${params.toString()}`;
+        url = `${API_BASE}/apis/v1/mock-tests/series/${seriesId}/leaderboard?${params.toString()}`;
       } else {
-        url = `${API_BASE}/api/v1/mock-tests/leaderboard/global?${params.toString()}`;
+        url = `${API_BASE}/apis/v1/mock-tests/leaderboard/global?${params.toString()}`;
       }
 
       const res = await fetch(url);

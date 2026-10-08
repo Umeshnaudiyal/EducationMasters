@@ -33,7 +33,7 @@ import { getAuthToken } from '@/utils/auth';
 import { slugify } from '@/utils/slug';
 import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function MockTestEditor({ seriesId, initialTest = null, isEdit = false }) {
   const router = useRouter();
@@ -170,15 +170,15 @@ export default function MockTestEditor({ seriesId, initialTest = null, isEdit = 
     const fetchMeta = async () => {
       try {
         if (seriesId) {
-          const res = await fetch(`${API_BASE}/api/v1/mock-test-series/${seriesId}`);
+          const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/${seriesId}`);
           const data = await res.json();
           if (data.success) setSeries(data.data);
         }
 
         const [subsRes, statesRes, examsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/v1/subjects?limit=100`),
-          fetch(`${API_BASE}/api/v1/states?limit=100`),
-          fetch(`${API_BASE}/api/v1/exams?limit=100`),
+          fetch(`${API_BASE}/apis/v1/subjects?limit=100`),
+          fetch(`${API_BASE}/apis/v1/states?limit=100`),
+          fetch(`${API_BASE}/apis/v1/exams?limit=100`),
         ]);
 
         const subsData = await subsRes.json();
@@ -200,7 +200,7 @@ export default function MockTestEditor({ seriesId, initialTest = null, isEdit = 
     if (filterSubject && filterSubject !== 'all') {
       const fetchTopics = async () => {
         try {
-          const res = await fetch(`${API_BASE}/api/v1/topics?subject=${filterSubject}&limit=100`);
+          const res = await fetch(`${API_BASE}/apis/v1/topics?subject=${filterSubject}&limit=100`);
           const data = await res.json();
           if (data.success) setTopics(data.data || []);
         } catch (err) {
@@ -232,7 +232,7 @@ export default function MockTestEditor({ seriesId, initialTest = null, isEdit = 
       if (filterExam && filterExam !== 'all') params.set('exam', filterExam);
       if (filterLevel && filterLevel !== 'all') params.set('level', filterLevel);
 
-      const res = await fetch(`${API_BASE}/api/v1/questions?${params.toString()}`);
+      const res = await fetch(`${API_BASE}/apis/v1/questions?${params.toString()}`);
       const data = await res.json();
 
       if (data.success) {
@@ -412,8 +412,8 @@ export default function MockTestEditor({ seriesId, initialTest = null, isEdit = 
       };
 
       const url = isEdit
-        ? `${API_BASE}/api/v1/mock-tests/${initialTest._id}`
-        : `${API_BASE}/api/v1/mock-tests`;
+        ? `${API_BASE}/apis/v1/mock-tests/${initialTest._id}`
+        : `${API_BASE}/apis/v1/mock-tests`;
       const method = isEdit ? 'PUT' : 'POST';
 
       const res = await fetch(url, {

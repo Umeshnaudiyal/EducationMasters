@@ -29,7 +29,7 @@ import { getImageUrl } from '@/utils/image';
 import { getAuthToken } from '@/utils/auth';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 export default function MockTestSeriesListPage() {
   const { data: session } = useSession();
@@ -64,7 +64,7 @@ export default function MockTestSeriesListPage() {
   useEffect(() => {
     const fetchExams = async () => {
       try {
-        const res = await fetch(`${API_BASE}/api/v1/exams?limit=100`);
+        const res = await fetch(`${API_BASE}/apis/v1/exams?limit=100`);
         const data = await res.json();
         if (data.success) {
           setExams(data.data || []);
@@ -88,7 +88,7 @@ export default function MockTestSeriesListPage() {
       if (activeSearch) params.set('search', activeSearch);
       if (examFilter && examFilter !== 'all') params.set('exam', examFilter);
 
-      const res = await fetch(`${API_BASE}/api/v1/mock-test-series?${params.toString()}`);
+      const res = await fetch(`${API_BASE}/apis/v1/mock-test-series?${params.toString()}`);
       const data = await res.json();
 
       if (data.success) {
@@ -158,7 +158,7 @@ export default function MockTestSeriesListPage() {
     try {
       setBulkLoading(true);
       const token = getAuthToken(session);
-      const res = await fetch(`${API_BASE}/api/v1/mock-test-series/bulk-action`, {
+      const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/bulk-action`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -190,7 +190,7 @@ export default function MockTestSeriesListPage() {
       const token = getAuthToken(session);
 
       if (deleteModal.isBulk) {
-        const res = await fetch(`${API_BASE}/api/v1/mock-test-series/bulk-action`, {
+        const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/bulk-action`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -207,7 +207,7 @@ export default function MockTestSeriesListPage() {
           setServerMessage({ type: 'error', text: data.message || 'Failed to delete series.' });
         }
       } else if (deleteModal.item) {
-        const res = await fetch(`${API_BASE}/api/v1/mock-test-series/${deleteModal.item._id}`, {
+        const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/${deleteModal.item._id}`, {
           method: 'DELETE',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });

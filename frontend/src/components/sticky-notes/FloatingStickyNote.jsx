@@ -24,6 +24,10 @@ export default function FloatingStickyNote() {
     closePoppedNote,
     isMinimized,
     toggleMinimizePoppedNote,
+    userPinnedNoteId,
+    togglePinNote,
+    pinNote,
+    unpinNote,
     viewedNoteIds,
     toggleViewed,
     markAsViewed,
@@ -32,13 +36,17 @@ export default function FloatingStickyNote() {
   } = useStickyNotes();
 
   const [copied, setCopied] = useState(false);
-  const [isPinned, setIsPinned] = useState(true);
   const [bellActive, setBellActive] = useState(false);
+
+  const isPinned = Boolean(
+    selectedNote && userPinnedNoteId && String(userPinnedNoteId) === String(selectedNote._id)
+  );
 
   // Dragging State
   const [position, setPosition] = useState({ x: null, y: null });
   const [isDragging, setIsDragging] = useState(false);
   const dragRef = useRef({ startX: 0, startY: 0, initialLeft: 0, initialTop: 0 });
+  const hasMovedRef = useRef(false);
   const cardRef = useRef(null);
 
   // Auto mark as viewed when opened
@@ -77,6 +85,7 @@ export default function FloatingStickyNote() {
     const rect = cardRef.current?.getBoundingClientRect();
     if (!rect) return;
 
+    hasMovedRef.current = false;
     dragRef.current = {
       startX: clientX,
       startY: clientY,
@@ -101,10 +110,13 @@ export default function FloatingStickyNote() {
       if (!isDragging) return;
       const dx = clientX - dragRef.current.startX;
       const dy = clientY - dragRef.current.startY;
-      const cardWidth = cardRef.current?.offsetWidth || 340;
-      const cardHeight = cardRef.current?.offsetHeight || 280;
-      const newX = Math.max(8, Math.min(window.innerWidth - cardWidth - 8, dragRef.current.initialLeft + dx));
-      const newY = Math.max(8, Math.min(window.innerHeight - cardHeight - 8, dragRef.current.initialTop + dy));
+      if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+        hasMovedRef.current = true;
+      }
+      const cardWidth = cardRef.current?.offsetWidth || 320;
+      const cardHeight = cardRef.current?.offsetHeight || 260;
+      const newX = Math.max(6, Math.min(window.innerWidth - cardWidth - 6, dragRef.current.initialLeft + dx));
+      const newY = Math.max(6, Math.min(window.innerHeight - cardHeight - 6, dragRef.current.initialTop + dy));
       setPosition({ x: newX, y: newY });
     };
 
@@ -139,23 +151,37 @@ export default function FloatingStickyNote() {
   const colorTheme = NOTE_COLOR_STYLES[selectedNote.color] || NOTE_COLOR_STYLES.yellow;
   const isViewed = viewedNoteIds.has(String(selectedNote._id));
 
-  // If minimized into a floating bottom pill
+  // If minimized into a floating bottom pill (Movable anywhere on mobile & desktop!)
   if (isMinimized) {
     return (
       <div
+        ref={cardRef}
+        onMouseDown={handleMouseDown}
+        onTouchStart={handleTouchStart}
         style={
           position.x !== null && position.y !== null
             ? { left: `${position.x}px`, top: `${position.y}px` }
-            : { bottom: '24px', right: '24px' }
+            : { bottom: '16px', right: '16px' }
         }
-        className="fixed z-[96] flex items-center gap-2 rounded-full border border-slate-200/90 bg-white/95 px-3 py-2 shadow-xl backdrop-blur-md cursor-pointer animate-pop-in touch-manipulation"
-        onClick={toggleMinimizePoppedNote}
-        title="Click to expand sticky note"
+        className={`fixed z-[96] flex items-center gap-1.5 sm:gap-2 rounded-full border border-slate-200/90 bg-white/95 px-3 py-1.5 sm:px-3.5 sm:py-2 shadow-xl backdrop-blur-md animate-pop-in touch-manipulation select-none transition-shadow max-w-[calc(100vw-24px)] ${
+          isDragging ? 'shadow-3xl cursor-grabbing scale-[1.02]' : 'cursor-grab hover:shadow-2xl'
+        }`}
+        onClick={() => {
+          if (!hasMovedRef.current) {
+            toggleMinimizePoppedNote();
+          }
+        }}
+        title="Drag to move, click to expand sticky note"
       >
-        <span className={`h-3.5 w-3.5 rounded-full ${colorTheme.dot} shadow-xs ring-2 ring-white`} />
-        <span className="text-xs font-bold text-slate-800 line-clamp-1 max-w-[160px]">
+        <span className={`h-3 w-3 sm:h-3.5 sm:w-3.5 rounded-full ${colorTheme.dot} shadow-xs ring-2 ring-white shrink-0`} />
+        <span className="text-[11px] sm:text-xs font-bold text-slate-800 line-clamp-1 max-w-[130px] sm:max-w-[180px]">
           {selectedNote.title}
         </span>
+        {isPinned && (
+          <span className="flex h-4 w-4 items-center justify-center rounded-full bg-amber-100 text-amber-800 shrink-0" title="Pinned note">
+            <Pin size={9} className="rotate-45" />
+          </span>
+        )}
         <button
           type="button"
           onClick={(e) => {
@@ -182,7 +208,7 @@ export default function FloatingStickyNote() {
     );
   }
 
-  // Floating Window Styles matching Image 1 exactly!
+  // Floating Window Responsive Container (Adapts seamlessly from phone to desktop)
   return (
     <div
       ref={cardRef}
@@ -192,13 +218,13 @@ export default function FloatingStickyNote() {
         position.x !== null && position.y !== null
           ? { left: `${position.x}px`, top: `${position.y}px` }
           : {
-              bottom: '24px',
-              right: isDrawerOpen ? '500px' : '24px',
+              bottom: '16px',
+              right: isDrawerOpen ? '500px' : '16px',
               transition: isDragging ? 'none' : 'right 0.28s ease',
             }
       }
-      className={`fixed z-[96] w-[330px] sm:w-[370px] max-w-[calc(100vw-32px)] rounded-[24px] border border-amber-200/60 shadow-2xl backdrop-blur-md overflow-hidden animate-pop-in select-none transition-shadow touch-manipulation ${
-        isDragging ? 'shadow-3xl cursor-grabbing scale-[1.02]' : 'cursor-default'
+      className={`fixed z-[96] w-[calc(100vw-24px)] sm:w-[370px] max-w-[390px] max-h-[85vh] flex flex-col rounded-[22px] sm:rounded-[24px] border border-amber-200/60 shadow-2xl backdrop-blur-md overflow-hidden animate-pop-in select-none transition-shadow touch-manipulation ${
+        isDragging ? 'shadow-3xl cursor-grabbing scale-[1.01]' : 'cursor-default'
       } ${
         selectedNote.color === 'yellow'
           ? 'bg-[#fffdf2]'
@@ -215,9 +241,9 @@ export default function FloatingStickyNote() {
           : 'bg-[#f4fdff]'
       }`}
     >
-      {/* Top Rounded Accent Bar (Matching Image 1) */}
+      {/* Top Rounded Accent Bar */}
       <div
-        className={`h-2.5 w-full rounded-t-[24px] ${
+        className={`h-2 sm:h-2.5 w-full rounded-t-[22px] sm:rounded-t-[24px] shrink-0 ${
           selectedNote.color === 'yellow'
             ? 'bg-amber-400'
             : selectedNote.color === 'purple'
@@ -234,7 +260,7 @@ export default function FloatingStickyNote() {
         }`}
       />
 
-      <div className="p-4 sm:p-5">
+      <div className="p-3.5 sm:p-5 flex flex-col flex-1 overflow-hidden">
         {/* Top Control Bar with Circular Indicator & Actions */}
         <div className="flex items-center justify-between">
           {/* Top Left Circle Indicator */}
@@ -319,18 +345,16 @@ export default function FloatingStickyNote() {
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
-                setIsPinned((prev) => {
-                  const next = !prev;
-                  if (!next) {
-                    closePoppedNote();
-                  }
-                  return next;
-                });
+                togglePinNote(selectedNote._id);
               }}
               className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors cursor-pointer ${
-                isPinned ? 'text-amber-700 bg-amber-50' : 'hover:bg-black/5 hover:text-slate-800'
+                isPinned ? 'text-amber-800 bg-amber-100 ring-1 ring-amber-300' : 'hover:bg-black/5 hover:text-slate-800'
               }`}
-              title={isPinned ? 'Note pinned to screen (Click to unpin & close)' : 'Pin note to screen'}
+              title={
+                isPinned
+                  ? 'Pinned: Note will remain visible across page reloads (Click to unpin)'
+                  : 'Pin note: Keep visible on screen even after refreshing'
+              }
             >
               <Pin size={14} className={isPinned ? 'rotate-45' : ''} />
             </button>
@@ -363,11 +387,11 @@ export default function FloatingStickyNote() {
           </div>
         </div>
 
-        {/* Note Body Area (Matching Image 1) */}
-        <div className="mt-4 select-text">
+        {/* Note Body Area (Scrollable if long notice on small mobile screens) */}
+        <div className="mt-3 sm:mt-4 select-text flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[55vh] sm:max-h-[60vh]">
           {/* Title */}
           <h2
-            className={`text-lg font-bold tracking-tight ${
+            className={`text-base sm:text-lg font-bold tracking-tight leading-snug ${
               selectedNote.color === 'yellow'
                 ? 'text-[#92400e]'
                 : selectedNote.color === 'purple'
@@ -388,7 +412,7 @@ export default function FloatingStickyNote() {
 
           {/* Content */}
           <div
-            className={`mt-2.5 text-sm font-medium leading-relaxed whitespace-pre-line ${
+            className={`mt-2 sm:mt-2.5 text-xs sm:text-sm font-medium leading-relaxed whitespace-pre-line ${
               selectedNote.color === 'yellow'
                 ? 'text-[#a16207]'
                 : selectedNote.color === 'purple'
@@ -409,10 +433,10 @@ export default function FloatingStickyNote() {
 
           {/* Action Link (If provided) */}
           {selectedNote.linkUrl && (
-            <div className="mt-3.5 pt-2">
+            <div className="mt-3 sm:mt-3.5 pt-1 sm:pt-2">
               <Link
                 href={selectedNote.linkUrl}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3.5 py-1.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-slate-900 px-3 py-1.5 sm:px-3.5 sm:py-1.5 text-xs font-bold text-white shadow-xs hover:bg-slate-800 transition-colors"
               >
                 <span>{selectedNote.linkLabel || 'Open Notice Link'}</span>
                 <ExternalLink size={12} />
@@ -421,8 +445,8 @@ export default function FloatingStickyNote() {
           )}
         </div>
 
-        {/* Bottom Bar: Complete Checkmark Button & Relative Timestamp (Matching Image 1) */}
-        <div className="mt-5 flex items-center justify-between border-t border-black/5 pt-3">
+        {/* Bottom Bar: Complete Checkmark Button & Relative Timestamp */}
+        <div className="mt-3.5 sm:mt-5 flex items-center justify-between border-t border-black/5 pt-2.5 sm:pt-3 shrink-0">
           {/* Complete / Viewed Button */}
           <button
             type="button"

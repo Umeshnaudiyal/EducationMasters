@@ -157,7 +157,7 @@ export default function UnlockPassModal({
       }
 
       // 1. Create order on backend
-      const res = await fetch(`${API_BASE}/api/v1/payments/create-order`, {
+      const res = await fetch(`${API_BASE}/apis/v1/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -209,7 +209,7 @@ export default function UnlockPassModal({
         handler: async function (response) {
           try {
             setLoading(true);
-            const verifyRes = await fetch(`${API_BASE}/api/v1/payments/verify-payment`, {
+            const verifyRes = await fetch(`${API_BASE}/apis/v1/payments/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

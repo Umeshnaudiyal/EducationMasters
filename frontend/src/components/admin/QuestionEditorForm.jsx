@@ -135,11 +135,11 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
     const loadDropdowns = async () => {
       try {
         const [subRes, stRes, exRes, topRes, msRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=200`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states?all=true`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/exams?limit=200`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/topics?limit=300`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-test-series?limit=200&status=all`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/subjects?limit=200`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/states?all=true`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/exams?limit=200`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/topics?limit=300`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/mock-test-series?limit=200&status=all`),
         ]);
 
         const [subData, stData, exData, topData, msData] = await Promise.all([
@@ -239,7 +239,7 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
     try {
       setLoadingTests(true);
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-tests?series=${seriesId}&status=all&limit=100`
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/mock-tests?series=${seriesId}&status=all&limit=100`
       );
       const data = await res.json();
       if (data.success) {
@@ -284,7 +284,7 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
     }
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states/districts?stateId=${stateId}`
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/states/districts?stateId=${stateId}`
       );
       const data = await res.json();
       if (data.success) {
@@ -411,8 +411,8 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
       const token = getAuthToken(session);
 
       const url = isEdit && initialData?._id
-        ? `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${initialData._id}`
-        : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions`;
+        ? `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${initialData._id}`
+        : `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions`;
 
       const method = isEdit ? 'PUT' : 'POST';
 
@@ -466,7 +466,7 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
       setIsDeleting(true);
       const token = getAuthToken(session);
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${initialData._id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${initialData._id}`,
         {
           method: 'DELETE',
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },

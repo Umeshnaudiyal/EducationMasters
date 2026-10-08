@@ -9,7 +9,7 @@ export default function SubjectsAdminPage() {
     <TaxonomyManager
       title="Subjects"
       singularTitle="Subject"
-      apiEndpoint="/api/v1/subjects"
+      apiEndpoint="/apis/v1/subjects"
       columns={[
         {
           header: 'Description',

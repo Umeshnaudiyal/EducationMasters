@@ -33,7 +33,7 @@ import { getAuthToken } from '@/utils/auth';
 import { slugify } from '@/utils/slug';
 import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function MockTestSeriesForm({ initialData = null, isEdit = false }) {
   const router = useRouter();
@@ -105,8 +105,8 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
         const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
 
         const [examsRes, catsRes] = await Promise.all([
-          fetch(`${API_BASE}/api/v1/exams?limit=100`).catch(() => ({ json: () => ({ success: false }) })),
-          fetch(`${API_BASE}/api/v1/categories?limit=100`).catch(() => ({ json: () => ({ success: false }) })),
+          fetch(`${API_BASE}/apis/v1/exams?limit=100`).catch(() => ({ json: () => ({ success: false }) })),
+          fetch(`${API_BASE}/apis/v1/categories?limit=100`).catch(() => ({ json: () => ({ success: false }) })),
         ]);
 
         const examsData = await examsRes.json();
@@ -117,7 +117,7 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
 
         let poolPlans = [];
         try {
-          const plansRes = await fetch(`${API_BASE}/api/v1/mock-test-plans/admin/all`, { headers: authHeaders });
+          const plansRes = await fetch(`${API_BASE}/apis/v1/mock-test-plans/admin/all`, { headers: authHeaders });
           const plansData = await plansRes.json();
           if (plansData.success && Array.isArray(plansData.data)) {
             poolPlans = plansData.data;
@@ -128,7 +128,7 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
 
         if (poolPlans.length === 0) {
           try {
-            const fallbackRes = await fetch(`${API_BASE}/api/v1/mock-test-plans`);
+            const fallbackRes = await fetch(`${API_BASE}/apis/v1/mock-test-plans`);
             const fallbackData = await fallbackRes.json();
             if (fallbackData.success && Array.isArray(fallbackData.data)) {
               poolPlans = fallbackData.data;
@@ -368,8 +368,8 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
       };
 
       const url = isEdit
-        ? `${API_BASE}/api/v1/mock-test-series/${initialData._id}`
-        : `${API_BASE}/api/v1/mock-test-series`;
+        ? `${API_BASE}/apis/v1/mock-test-series/${initialData._id}`
+        : `${API_BASE}/apis/v1/mock-test-series`;
       const method = isEdit ? 'PUT' : 'POST';
 
       const res = await fetch(url, {

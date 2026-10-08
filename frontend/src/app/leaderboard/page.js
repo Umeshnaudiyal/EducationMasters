@@ -123,11 +123,11 @@ function LeaderboardInner() {
 
       let url = '';
       if (activeTestId) {
-        url = `${API_BASE}/api/v1/mock-tests/${activeTestId}/leaderboard?${params.toString()}`;
+        url = `${API_BASE}/apis/v1/mock-tests/${activeTestId}/leaderboard?${params.toString()}`;
       } else {
         if (selectedSeries !== 'all') params.append('seriesId', selectedSeries);
         if (selectedPeriod !== 'all') params.append('period', selectedPeriod);
-        url = `${API_BASE}/api/v1/mock-tests/leaderboard/global?${params.toString()}`;
+        url = `${API_BASE}/apis/v1/mock-tests/leaderboard/global?${params.toString()}`;
       }
 
       const res = await fetch(url);

@@ -17,7 +17,9 @@ export function StickyNotesProvider({ children }) {
   const [viewedNoteIds, setViewedNoteIds] = useState(new Set());
   const [dismissedNoteIds, setDismissedNoteIds] = useState(new Set());
 
-  // Load viewed & dismissed IDs from localStorage on mount
+  const [userPinnedNoteId, setUserPinnedNoteId] = useState(null);
+
+  // Load viewed, dismissed, and user pinned note IDs from localStorage on mount
   useEffect(() => {
     try {
       const storedViewed = localStorage.getItem('em_viewed_sticky_notes');
@@ -27,6 +29,10 @@ export function StickyNotesProvider({ children }) {
       const storedDismissed = localStorage.getItem('em_dismissed_sticky_notes');
       if (storedDismissed) {
         setDismissedNoteIds(new Set(JSON.parse(storedDismissed)));
+      }
+      const storedPinned = localStorage.getItem('em_user_pinned_note_id');
+      if (storedPinned) {
+        setUserPinnedNoteId(storedPinned);
       }
     } catch (err) {
       console.error('Error reading sticky note preferences from localStorage:', err);
@@ -60,30 +66,20 @@ export function StickyNotesProvider({ children }) {
     );
   }, [notes, dismissedNoteIds]);
 
-  const autoPoppedRef = useRef(false);
+  const hasRestoredPinnedRef = useRef(false);
 
-  // Auto-pop pinned note ONLY ONCE on initial load if none selected yet
+  // Restore user-pinned note on page reload ONLY if user explicitly pinned it previously
   useEffect(() => {
-    if (autoPoppedRef.current) return;
+    if (hasRestoredPinnedRef.current) return;
 
-    // Check if user already dismissed or closed the auto-pinned note this session
-    try {
-      if (sessionStorage.getItem('em_pinned_note_closed')) {
-        autoPoppedRef.current = true;
-        return;
-      }
-    } catch (e) {
-      // ignore
-    }
-
-    if (activeNotes.length > 0) {
-      const pinned = activeNotes.find((n) => n.isPinned);
-      if (pinned) {
-        autoPoppedRef.current = true;
-        setSelectedNote(pinned);
+    if (userPinnedNoteId && activeNotes.length > 0) {
+      const pinnedNote = activeNotes.find((n) => String(n._id) === String(userPinnedNoteId));
+      if (pinnedNote) {
+        hasRestoredPinnedRef.current = true;
+        setSelectedNote(pinnedNote);
       }
     }
-  }, [activeNotes]);
+  }, [userPinnedNoteId, activeNotes]);
 
   // Archived notes
   const archivedNotes = useMemo(() => {
@@ -107,22 +103,64 @@ export function StickyNotesProvider({ children }) {
     setIsDrawerOpen((prev) => !prev);
   }, []);
 
-  // Pop out a sticky note onto the main screen
+  // Pin a note to the screen (persisted across refresh)
+  const pinNote = useCallback((id) => {
+    if (!id) return;
+    const strId = String(id);
+    setUserPinnedNoteId(strId);
+    try {
+      localStorage.setItem('em_user_pinned_note_id', strId);
+    } catch (e) {
+      console.error('Error saving pinned note:', e);
+    }
+  }, []);
+
+  // Unpin a note from the screen
+  const unpinNote = useCallback((id) => {
+    setUserPinnedNoteId((current) => {
+      if (!id || String(current) === String(id)) {
+        try {
+          localStorage.removeItem('em_user_pinned_note_id');
+        } catch (e) {
+          console.error('Error removing pinned note:', e);
+        }
+        return null;
+      }
+      return current;
+    });
+  }, []);
+
+  const togglePinNote = useCallback((id) => {
+    if (!id) return;
+    const strId = String(id);
+    setUserPinnedNoteId((current) => {
+      if (String(current) === strId) {
+        try {
+          localStorage.removeItem('em_user_pinned_note_id');
+        } catch (e) {}
+        return null;
+      } else {
+        try {
+          localStorage.setItem('em_user_pinned_note_id', strId);
+        } catch (e) {}
+        return strId;
+      }
+    });
+  }, []);
+
+  // Pop out a sticky note onto the main screen (does not auto-pin unless user clicks pin)
   const popOutNote = useCallback((note) => {
     setSelectedNote(note);
     setIsMinimized(false);
   }, []);
 
   const closePoppedNote = useCallback(() => {
+    if (selectedNote) {
+      unpinNote(selectedNote._id);
+    }
     setSelectedNote(null);
     setIsMinimized(false);
-    autoPoppedRef.current = true;
-    try {
-      sessionStorage.setItem('em_pinned_note_closed', 'true');
-    } catch (e) {
-      // ignore
-    }
-  }, []);
+  }, [selectedNote, unpinNote]);
 
   const toggleMinimizePoppedNote = useCallback(() => {
     setIsMinimized((prev) => !prev);
@@ -214,6 +252,10 @@ export function StickyNotesProvider({ children }) {
     toggleDrawer,
     selectedNote,
     isMinimized,
+    userPinnedNoteId,
+    pinNote,
+    unpinNote,
+    togglePinNote,
     popOutNote,
     closePoppedNote,
     toggleMinimizePoppedNote,

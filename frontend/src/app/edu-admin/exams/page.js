@@ -8,7 +8,7 @@ export default function ExamsAdminPage() {
     <TaxonomyManager
       title="Exams"
       singularTitle="Exam"
-      apiEndpoint="/api/v1/exams"
+      apiEndpoint="/apis/v1/exams"
       columns={[
         {
           header: 'Description',

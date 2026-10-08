@@ -97,7 +97,7 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
 
       try {
         const res = await fetch(
-          `${API_BASE}/api/v1/payments/user-status?email=${encodeURIComponent(userEmail || '')}&userId=${userId || ''}`
+          `${API_BASE}/apis/v1/payments/user-status?email=${encodeURIComponent(userEmail || '')}&userId=${userId || ''}`
         );
         const data = await res.json();
         if (data.success && data.data?.hasPass) {
@@ -129,7 +129,7 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
         if (userId) params.append('userId', userId);
         if (series._id) params.append('series', series._id);
 
-        const res = await fetch(`${API_BASE}/api/v1/mock-tests/user/attempts?${params.toString()}`);
+        const res = await fetch(`${API_BASE}/apis/v1/mock-tests/user/attempts?${params.toString()}`);
         const data = await res.json();
         if (data.success && data.data?.attemptMap) {
           setUserAttemptsMap(data.data.attemptMap);

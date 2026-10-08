@@ -24,7 +24,7 @@ import {
 import { getAuthToken } from '@/utils/auth';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function SeriesTestsManagePage() {
   const params = useParams();
@@ -51,7 +51,7 @@ export default function SeriesTestsManagePage() {
     if (!seriesId) return;
     try {
       setLoading(true);
-      const res = await fetch(`${API_BASE}/api/v1/mock-test-series/${seriesId}`);
+      const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/${seriesId}`);
       const data = await res.json();
       if (data.success && data.data) {
         setSeries(data.data);
@@ -106,7 +106,7 @@ export default function SeriesTestsManagePage() {
       const token = getAuthToken(session);
       await Promise.all(
         selectedIds.map((id) =>
-          fetch(`${API_BASE}/api/v1/mock-tests/${id}`, {
+          fetch(`${API_BASE}/apis/v1/mock-tests/${id}`, {
             method: 'PUT',
             headers: {
               'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ export default function SeriesTestsManagePage() {
       if (deleteModal.isBulk) {
         await Promise.all(
           selectedIds.map((id) =>
-            fetch(`${API_BASE}/api/v1/mock-tests/${id}`, {
+            fetch(`${API_BASE}/apis/v1/mock-tests/${id}`, {
               method: 'DELETE',
               headers: token ? { Authorization: `Bearer ${token}` } : {},
             })
@@ -147,7 +147,7 @@ export default function SeriesTestsManagePage() {
         setServerMessage({ type: 'success', text: `${selectedIds.length} tests deleted successfully.` });
         setSelectedIds([]);
       } else if (deleteModal.item) {
-        const res = await fetch(`${API_BASE}/api/v1/mock-tests/${deleteModal.item._id}`, {
+        const res = await fetch(`${API_BASE}/apis/v1/mock-tests/${deleteModal.item._id}`, {
           method: 'DELETE',
           headers: token ? { Authorization: `Bearer ${token}` } : {},
         });

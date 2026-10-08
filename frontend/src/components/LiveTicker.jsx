@@ -317,6 +317,13 @@ export default function LiveTicker() {
   // Duplicate items for continuous marquee loop
   const displayTickerItems = tickerItems.length > 0 ? tickerItems.concat(tickerItems) : [];
 
+  // Compute dynamic duration so marquee maintains a uniform, steady reading pace regardless of item count
+  const animationDuration = useMemo(() => {
+    const count = tickerItems.length || 4;
+    // 4.2 seconds per unique item gives an ideal constant speed of ~50px/sec
+    return Math.max(18, count * 4.2);
+  }, [tickerItems.length]);
+
   return (
     <div
       ref={containerRef}
@@ -324,13 +331,13 @@ export default function LiveTicker() {
         isOpen ? 'z-50' : 'z-30'
       }`}
     >
-      <div className="mx-auto flex max-w-7xl items-center gap-3 pl-3 pr-0 sm:px-6 lg:px-8">
+      <div className="mx-auto flex max-w-7xl items-center gap-2 sm:gap-3 px-2 sm:px-6 lg:px-8">
         {/* Live Updates Interactive Trigger Button */}
         <div
           onMouseEnter={handleMouseEnter}
           onMouseLeave={handleMouseLeave}
           onClick={() => setIsOpen((prev) => !prev)}
-          className={`group relative flex shrink-0 items-center gap-2 border-r border-slate-200 py-2.5 pr-3 sm:pr-4 cursor-pointer transition-all duration-200 ${isOpen ? 'bg-rose-50/60 text-rose-600' : 'hover:bg-slate-50'
+          className={`group relative flex shrink-0 items-center gap-1 sm:gap-1.5 border-r border-slate-200 py-2.5 pr-2 sm:pr-4 cursor-pointer transition-all duration-200 ${isOpen ? 'bg-rose-50/60 text-rose-600' : 'hover:bg-slate-50'
             }`}
           role="button"
           tabIndex={0}
@@ -339,23 +346,21 @@ export default function LiveTicker() {
           title="Hover or click to view live updates radar"
         >
           {/* Pulsing Live Radar Animated Icon */}
-          <span className="relative flex h-6 w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600 ring-2 ring-rose-100 transition-transform duration-300 group-hover:scale-110">
+          <span className="relative flex h-5 w-5 sm:h-6 sm:w-6 items-center justify-center rounded-full bg-rose-50 text-rose-600 ring-2 ring-rose-100 transition-transform duration-300 group-hover:scale-110">
             <span className="live-ping absolute h-3 w-3 rounded-full bg-rose-400 opacity-75" />
-            <AnimatedRadio size={14} className="relative text-rose-600" />
+            <AnimatedRadio size={13} className="relative text-rose-600" />
           </span>
 
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <span className="hidden text-xs font-extrabold tracking-tight text-slate-900 transition-colors group-hover:text-rose-600 sm:inline">
               Live Updates
             </span>
-            <span className="text-xs font-extrabold tracking-tight text-slate-900 transition-colors group-hover:text-rose-600 sm:hidden">
+            <span className="text-[11px] font-extrabold tracking-tight text-slate-900 transition-colors group-hover:text-rose-600 sm:hidden">
               Live
             </span>
 
-
-
             <ChevronDown
-              size={13}
+              size={12}
               className={`text-slate-400 transition-transform duration-200 group-hover:text-rose-600 ${isOpen ? 'rotate-180 text-rose-600' : ''
                 }`}
             />
@@ -363,8 +368,11 @@ export default function LiveTicker() {
         </div>
 
         {/* Continuous Marquee Ticker Track */}
-        <div className="ticker-mask flex-1 overflow-hidden py-2.5">
-          <div className="ticker-track flex w-max items-center gap-7 whitespace-nowrap">
+        <div className="ticker-mask flex-1 overflow-hidden py-2.5 min-w-0">
+          <div
+            className="ticker-track flex w-max items-center gap-7 whitespace-nowrap"
+            style={{ animationDuration: `${animationDuration}s` }}
+          >
             {displayTickerItems.map((item, index) => (
               <Link
                 key={`${item.href}-${index}`}
@@ -383,25 +391,24 @@ export default function LiveTicker() {
           </div>
         </div>
 
-        {/* Verified Notices / Sticky Notes Quick Trigger */}
+        {/* Verified Notices / Sticky Notes Quick Trigger (Visible on all devices including mobile!) */}
         <div
           onClick={() => {
             setIsOpen(false);
             openDrawer();
           }}
-          className="group hidden shrink-0 items-center gap-2 border-l border-slate-200 py-2.5 pl-4 text-xs font-bold text-slate-600 hover:text-[#0b66c3] lg:flex cursor-pointer transition-colors"
+          className="group flex shrink-0 items-center gap-1.5 border-l border-slate-200 py-2.5 pl-2 sm:pl-3.5 pr-0.5 sm:pr-0 text-xs font-bold text-slate-600 hover:text-[#0b66c3] cursor-pointer transition-colors"
           title="Click to view official sticky notes & verified directives"
         >
-          <span className="relative flex items-center justify-center">
+          <span className="relative flex h-6 w-6 items-center justify-center rounded-lg hover:bg-slate-100 transition-colors">
             <AnimatedBell size={15} className="text-[#0b66c3]" />
             {unreadCount > 0 && (
-              <span className="absolute -top-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-500 px-1 text-[9px] font-black text-white shadow-xs">
+              <span className="absolute -top-1 -right-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-500 px-0.5 text-[8.5px] font-black text-white shadow-xs">
                 {unreadCount}
               </span>
             )}
           </span>
-          <span className="hidden xl:inline">Verified notices</span>
-          <span className="xl:hidden">Notices</span>
+          <span className="hidden md:inline">Notices</span>
         </div>
       </div>
 
@@ -781,7 +788,10 @@ export default function LiveTicker() {
       {/* Styles for Infinite Marquee, Popups, and Scrollbars */}
       <style>{`
         .ticker-track {
-          animation: ticker-scroll 28s linear infinite;
+          animation-name: ticker-scroll;
+          animation-timing-function: linear;
+          animation-iteration-count: infinite;
+          will-change: transform;
         }
         .ticker-mask:hover .ticker-track {
           animation-play-state: paused;
@@ -806,8 +816,8 @@ export default function LiveTicker() {
           animation: live-ping-pulse 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
         }
         @keyframes ticker-scroll {
-          from { transform: translateX(0); }
-          to { transform: translateX(-50%); }
+          from { transform: translate3d(0, 0, 0); }
+          to { transform: translate3d(-50%, 0, 0); }
         }
         @keyframes live-ping-pulse {
           0% { transform: scale(1); opacity: 0.75; }

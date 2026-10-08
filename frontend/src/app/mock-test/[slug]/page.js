@@ -2,11 +2,11 @@ import React from 'react';
 import { notFound } from 'next/navigation';
 import SingleSeriesClient from './SingleSeriesClient';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
 
 async function getSeriesData(slug) {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/mock-test-series/${slug}`, {
+    const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/${slug}`, {
       next: { revalidate: 30 },
     });
     const data = await res.json();
@@ -19,7 +19,7 @@ async function getSeriesData(slug) {
 
 async function getAllPublishedSeries() {
   try {
-    const res = await fetch(`${API_BASE}/api/v1/mock-test-series?status=published&limit=20`, {
+    const res = await fetch(`${API_BASE}/apis/v1/mock-test-series?status=published&limit=20`, {
       next: { revalidate: 30 },
     });
     const data = await res.json();

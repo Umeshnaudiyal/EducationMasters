@@ -76,11 +76,11 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
     const fetchInitialData = async () => {
       try {
         const [stRes, subRes, exRes, topRes, msRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states?all=true`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=200`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/exams?limit=200`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/topics?limit=300`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-test-series?limit=200&status=all`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/states?all=true`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/subjects?limit=200`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/exams?limit=200`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/topics?limit=300`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/mock-test-series?limit=200&status=all`),
         ]);
 
         const [stData, subData, exData, topData, msData] = await Promise.all([
@@ -115,7 +115,7 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
     const fetchDistricts = async () => {
       try {
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states/districts?stateId=${batchState}`
+          `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/states/districts?stateId=${batchState}`
         );
         const data = await res.json();
         if (data.success) {
@@ -150,7 +150,7 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
       try {
         setLoadingTests(true);
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-tests?series=${batchMockTestSeries}&status=all&limit=100`
+          `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/mock-tests?series=${batchMockTestSeries}&status=all&limit=100`
         );
         const data = await res.json();
         if (data.success) {
@@ -590,7 +590,7 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
       };
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/import-excel`,
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/import-excel`,
         {
           method: 'POST',
           headers: {

@@ -76,7 +76,7 @@ export default function MockTestsClient({ initialSeries = [] }) {
     let isMounted = true;
     async function fetchLatestSeries() {
       try {
-        const res = await fetch('/api/v1/mock-test-series?status=published&limit=100');
+        const res = await fetch('/apis/v1/mock-test-series?status=published&limit=100');
         const data = await res.json();
         if (data.success && isMounted && Array.isArray(data.data)) {
           setSeriesList(data.data);

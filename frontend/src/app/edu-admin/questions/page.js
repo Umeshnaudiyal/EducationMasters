@@ -79,9 +79,9 @@ export default function QuestionsListPage() {
     const fetchOptions = async () => {
       try {
         const [subRes, stRes, msRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=200`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states?all=true`),
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-test-series?limit=200&status=all`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/subjects?limit=200`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/states?all=true`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/mock-test-series?limit=200&status=all`),
         ]);
         const subData = await subRes.json();
         const stData = await stRes.json();
@@ -113,7 +113,7 @@ export default function QuestionsListPage() {
 
       const token = getAuthToken(session);
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions?${query}`,
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions?${query}`,
         {
           cache: 'no-store',
           headers: {
@@ -202,7 +202,7 @@ export default function QuestionsListPage() {
       const token = getAuthToken(session);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/bulk-action`,
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/bulk-action`,
         {
           method: 'POST',
           headers: {
@@ -244,7 +244,7 @@ export default function QuestionsListPage() {
       const isPermanently = activeTab === 'trash';
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${itemToDelete._id}${
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${itemToDelete._id}${
           isPermanently ? '?force=true' : ''
         }`,
         {
@@ -278,7 +278,7 @@ export default function QuestionsListPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${id}/restore`,
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${id}/restore`,
         {
           method: 'PUT',
           headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -312,7 +312,7 @@ export default function QuestionsListPage() {
     try {
       const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${id}`,
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${id}`,
         {
           method: 'PUT',
           headers: {

@@ -235,7 +235,7 @@ export default function SubscriptionBanner({
         : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
       const cleanMobile = formData.whatsapp.replace(/\D/g, '').slice(0, 10);
 
-      const res = await fetch(`${baseUrl}/api/v1/subscribers/subscribe`, {
+      const res = await fetch(`${baseUrl}/apis/v1/subscribers/subscribe`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import MockTestEditor from '@/components/admin/MockTestEditor';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function EditMockTestPage() {
   const params = useParams();
@@ -21,7 +21,7 @@ export default function EditMockTestPage() {
     const fetchTest = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/api/v1/mock-tests/${testId}`);
+        const res = await fetch(`${API_BASE}/apis/v1/mock-tests/${testId}`);
         const data = await res.json();
         if (data.success && data.data) {
           setTestData(data.data);

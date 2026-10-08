@@ -18,7 +18,7 @@ export default function EditQuestionPage({ params }) {
       try {
         setLoading(true);
         const res = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/questions/${id}`
+          `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${id}`
         );
         const data = await res.json();
         if (data.success) {

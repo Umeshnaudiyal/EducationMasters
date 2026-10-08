@@ -5,7 +5,7 @@ import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import MockTestSeriesForm from '@/components/admin/MockTestSeriesForm';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 export default function EditMockTestSeriesPage() {
   const params = useParams();
@@ -19,7 +19,7 @@ export default function EditMockTestSeriesPage() {
     const fetchSeries = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/api/v1/mock-test-series/${id}`);
+        const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/${id}`);
         const data = await res.json();
         if (data.success && data.data) {
           setSeriesData(data.data);
