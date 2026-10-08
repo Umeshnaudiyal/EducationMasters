@@ -801,7 +801,8 @@ export default function Header({ onOpenMockModal }) {
       />
 
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#162534] text-white z-[100] shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col justify-between overflow-y-auto border-r border-slate-700/60 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        className={`fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#162534] text-white z-[100] shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col justify-between overflow-y-auto no-scrollbar border-r border-slate-700/60 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
         <div>

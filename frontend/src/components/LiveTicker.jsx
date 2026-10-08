@@ -781,7 +781,7 @@ export default function LiveTicker() {
       {/* Styles for Infinite Marquee, Popups, and Scrollbars */}
       <style>{`
         .ticker-track {
-          animation: ticker-scroll 95s linear infinite;
+          animation: ticker-scroll 28s linear infinite;
         }
         .ticker-mask:hover .ticker-track {
           animation-play-state: paused;

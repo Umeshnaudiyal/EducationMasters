@@ -661,7 +661,7 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-2.5 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
 
       {/* Background Click to Dismiss (Only if not mandatory/locked) */}
       <div
@@ -669,38 +669,38 @@ export default function AuthModal() {
         onClick={isMandatory ? undefined : () => closeAuthModal(false)}
       />
 
-      {/* Main Modal Card (Flex-Col with Fixed Header and Footer for Perfect Mobile Experience) */}
-      <div className="relative w-full max-w-[460px] sm:max-w-[500px] bg-white rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_-15px_rgba(15,23,42,0.35),0_0_0_1px_rgba(226,232,240,0.9)] flex flex-col max-h-[94dvh] sm:max-h-[90vh] overflow-hidden z-10 animate-in zoom-in-95 duration-200">
+      {/* Main Modal Card (Sleek, perfectly proportioned, and responsive) */}
+      <div className="relative w-full max-w-[440px] sm:max-w-[480px] bg-white rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_-15px_rgba(15,23,42,0.35),0_0_0_1px_rgba(226,232,240,0.9)] flex flex-col max-h-[92dvh] sm:max-h-[90vh] overflow-hidden z-10 animate-in zoom-in-95 duration-200">
 
         {/* Header Section (Fixed at Top, Never Scrolls Away) */}
-        <div className="relative px-4 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between border-b border-slate-100 bg-white/95 backdrop-blur-xs shrink-0 z-20">
+        <div className="relative px-5 sm:px-6 py-3 sm:py-3.5 flex items-center justify-between border-b border-slate-100 bg-white/95 backdrop-blur-xs shrink-0 z-20">
           <div className="flex items-center">
             <img
               src="/logo.webp"
               alt="Education Masters"
-              className="h-7 sm:h-8.5 w-auto object-contain hover:scale-102 transition-transform duration-200"
+              className="h-7.5 sm:h-8.5 w-auto object-contain hover:scale-102 transition-transform duration-200"
             />
           </div>
 
           {/* Locked Badge if Mandatory, or Close Button if Normal */}
           {isMandatory ? (
-            <div className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1 bg-amber-500/10 text-amber-900 rounded-full border border-amber-300/80 text-[10.5px] sm:text-xs font-bold tracking-tight shadow-2xs">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-amber-500/10 text-amber-900 rounded-full border border-amber-300/80 text-xs font-bold tracking-tight shadow-2xs">
               <AnimatedLock size={12} className="text-amber-600 shrink-0" />
               <span>Free Sign In Required</span>
             </div>
           ) : (
             <button
               onClick={() => closeAuthModal(false)}
-              className="p-1.5 sm:p-2 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-all duration-150 cursor-pointer flex items-center justify-center"
+              className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 active:bg-slate-200 transition-all duration-150 cursor-pointer flex items-center justify-center"
               aria-label="Close"
             >
-              <X className="w-4.5 h-4.5 sm:w-5 sm:h-5" />
+              <X className="w-5 h-5" />
             </button>
           )}
         </div>
 
         {/* Modal Scrollable Body */}
-        <div className="px-4 sm:px-6 py-3.5 sm:py-4.5 flex-1 overflow-y-auto overscroll-contain space-y-3 sm:space-y-3.5 scrollbar-thin scrollbar-thumb-slate-200">
+        <div className="px-5 sm:px-6 py-3.5 sm:py-4 flex-1 overflow-y-auto overscroll-contain space-y-3 sm:space-y-3.5 no-scrollbar">
 
           {/* Mandatory Lock Context Banner with Feature Value Pills */}
           {isMandatory && (
@@ -770,9 +770,9 @@ export default function AuthModal() {
                     setTab('register');
                     clearMessages();
                   }}
-                  className={`group flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${tab === 'register'
-                      ? 'bg-white text-blue-600 shadow-xs border border-slate-200/50'
-                      : 'text-slate-600 hover:text-slate-900'
+                  className={`group flex-1 py-2 sm:py-2 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${tab === 'register'
+                    ? 'bg-white text-blue-600 shadow-xs border border-slate-200/50'
+                    : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
                   <AnimatedUser size={15} className={tab === 'register' ? 'text-blue-600' : 'text-slate-400'} />
@@ -784,9 +784,9 @@ export default function AuthModal() {
                     setTab('login');
                     clearMessages();
                   }}
-                  className={`group flex-1 py-1.5 sm:py-2 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${tab === 'login'
-                      ? 'bg-white text-blue-600 shadow-xs border border-slate-200/50'
-                      : 'text-slate-600 hover:text-slate-900'
+                  className={`group flex-1 py-2 sm:py-2 rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer ${tab === 'login'
+                    ? 'bg-white text-blue-600 shadow-xs border border-slate-200/50'
+                    : 'text-slate-600 hover:text-slate-900'
                     }`}
                 >
                   <AnimatedLogIn size={15} className={tab === 'login' ? 'text-blue-600' : 'text-slate-400'} />
@@ -800,7 +800,7 @@ export default function AuthModal() {
                   type="button"
                   onClick={handleOfficialGoogleSignIn}
                   disabled={isGoogleLoading || isLoading}
-                  className="group w-full py-2.5 sm:py-3 px-3 rounded-xl border border-slate-200 bg-white hover:bg-slate-50/90 hover:border-slate-300 active:scale-[0.99] text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2.5 shadow-2xs hover:shadow-xs transition-all duration-150 disabled:opacity-60 cursor-pointer"
+                  className="group w-full py-2.5 sm:py-3 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-[0.99] text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xs hover:shadow-xs transition-all duration-150 disabled:opacity-60 cursor-pointer"
                 >
                   {isGoogleLoading ? (
                     <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
@@ -1008,25 +1008,25 @@ export default function AuthModal() {
           {/* STEP 2: PHONE & 6-DIGIT OTP VERIFICATION SCREEN */}
           {/* ============================================================ */}
           {step === 2 && (
-            <div className="space-y-3.5 sm:space-y-4 animate-in fade-in duration-200">
+            <div className="space-y-4 sm:space-y-5 animate-in fade-in duration-200 flex-1 flex flex-col justify-center">
 
-              <div className="text-center space-y-1.5">
-                <div className="w-11 h-11 sm:w-13 sm:h-13 mx-auto rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-2xs">
-                  <AnimatedKeyRound size={22} className="text-blue-600" />
+              <div className="text-center space-y-2">
+                <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-2xs">
+                  <AnimatedKeyRound size={24} className="text-blue-600" />
                 </div>
-                <h4 className="text-sm sm:text-lg font-extrabold text-slate-900 tracking-tight">
+                <h4 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
                   {otpUserPhone && otpUserPhone.length >= 10
                     ? 'Verify OTP to Activate Account'
                     : 'Mobile Number Verification'}
                 </h4>
-                <p className="text-[11px] sm:text-xs text-slate-600 max-w-xs mx-auto leading-snug">
+                <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
                   {otpUserPhone && otpUserPhone.length >= 10
                     ? 'Please enter the 6-digit verification code sent to your mobile number:'
                     : 'Please provide your 10-digit mobile number to receive your one-time activation code:'}
                 </p>
                 {otpUserPhone && otpUserPhone.length >= 10 && (
-                  <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-slate-100 rounded-full text-[11px] sm:text-xs font-bold text-slate-800 border border-slate-200">
-                    <AnimatedPhone size={12} className="text-blue-600" />
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-800 border border-slate-200">
+                    <AnimatedPhone size={13} className="text-blue-600" />
                     <span>+91 {otpUserPhone}</span>
                     <button
                       type="button"
@@ -1035,7 +1035,7 @@ export default function AuthModal() {
                         setOtpDigits(['', '', '', '', '', '']);
                         setOtpPreview('');
                       }}
-                      className="text-[10.5px] text-blue-600 hover:text-blue-800 underline font-bold cursor-pointer ml-0.5"
+                      className="text-xs text-blue-600 hover:text-blue-800 underline font-bold cursor-pointer ml-1"
                     >
                       (Change)
                     </button>
@@ -1045,14 +1045,14 @@ export default function AuthModal() {
 
               {/* If Phone Number has not been entered / OTP not yet sent */}
               {(!otpUserPhone || otpUserPhone.length < 10) ? (
-                <form onSubmit={handleSendStep2PhoneOtp} className="space-y-3 max-w-sm mx-auto">
-                  <div className="space-y-1 text-left">
+                <form onSubmit={handleSendStep2PhoneOtp} className="space-y-3.5 max-w-sm mx-auto w-full">
+                  <div className="space-y-1.5 text-left">
                     <label className="block text-xs font-bold text-slate-800">
                       10-Digit Mobile Number <span className="text-rose-500">*</span>
                     </label>
                     <div className="group relative flex items-center">
-                      <div className="absolute left-3 flex items-center gap-1 text-xs font-bold text-slate-600 pr-1.5 border-r border-slate-200 group-focus-within:text-blue-600 transition-colors pointer-events-none">
-                        <AnimatedPhone size={13} />
+                      <div className="absolute left-3.5 flex items-center gap-1 text-xs font-bold text-slate-600 pr-2 border-r border-slate-200 group-focus-within:text-blue-600 transition-colors pointer-events-none">
+                        <AnimatedPhone size={14} />
                         <span>+91</span>
                       </div>
                       <input
@@ -1063,7 +1063,7 @@ export default function AuthModal() {
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
                         placeholder="98765 43210"
-                        className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-18 pr-3 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
+                        className="w-full bg-slate-50/90 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-sm pl-19 pr-3.5 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
                       />
                     </div>
                   </div>
@@ -1071,7 +1071,7 @@ export default function AuthModal() {
                   <button
                     type="submit"
                     disabled={isLoading || phone.replace(/[^0-9]/g, '').length < 10}
-                    className="group w-full py-2.5 sm:py-3 px-5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition duration-150 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                    className="group w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-blue-500/20 flex items-center justify-center gap-2 transition duration-150 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
                   >
                     {isLoading ? (
                       <>
@@ -1081,19 +1081,19 @@ export default function AuthModal() {
                     ) : (
                       <>
                         <span>Send Verification OTP</span>
-                        <AnimatedArrowRight size={15} className="text-white group-hover:translate-x-1 transition-transform" />
+                        <AnimatedArrowRight size={16} className="text-white group-hover:translate-x-1 transition-transform" />
                       </>
                     )}
                   </button>
 
-                  <div className="text-center pt-0.5">
+                  <div className="text-center pt-1">
                     <button
                       type="button"
                       onClick={() => {
                         setStep(1);
                         clearMessages();
                       }}
-                      className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 font-semibold transition cursor-pointer"
+                      className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 font-semibold transition cursor-pointer"
                     >
                       <ArrowLeft className="w-3.5 h-3.5" />
                       <span>Back to Registration / Login</span>
@@ -1102,22 +1102,22 @@ export default function AuthModal() {
                 </form>
               ) : (
                 /* 6-Digit OTP Form */
-                <div className="max-w-sm mx-auto space-y-3">
+                <div className="max-w-sm mx-auto w-full space-y-3.5">
                   {/* Dev Preview Helper Badge */}
                   {otpPreview && (
-                    <div className="p-2 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between shadow-2xs">
-                      <span className="font-semibold flex items-center gap-1">
-                        <AnimatedZap size={13} className="text-amber-500" /> Dev OTP:
+                    <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-center justify-between shadow-2xs">
+                      <span className="font-semibold flex items-center gap-1.5">
+                        <AnimatedZap size={14} className="text-amber-500" /> Dev OTP:
                       </span>
-                      <span className="font-mono font-black text-xs sm:text-sm tracking-widest bg-amber-200/80 text-amber-950 px-2 py-0.5 rounded border border-amber-300">
+                      <span className="font-mono font-black text-xs sm:text-sm tracking-widest bg-amber-200/80 text-amber-950 px-2.5 py-0.5 rounded border border-amber-300">
                         {otpPreview}
                       </span>
                     </div>
                   )}
 
-                  <form onSubmit={handleVerifyOtp} className="space-y-3">
+                  <form onSubmit={handleVerifyOtp} className="space-y-3.5">
                     <div>
-                      <div className="flex justify-center gap-1.5 sm:gap-2.5" onPaste={handleOtpPaste}>
+                      <div className="flex justify-center gap-2 sm:gap-2.5" onPaste={handleOtpPaste}>
                         {otpDigits.map((digit, idx) => (
                           <input
                             key={idx}
@@ -1131,15 +1131,15 @@ export default function AuthModal() {
                             onChange={(e) => handleOtpDigitChange(idx, e.target.value)}
                             onKeyDown={(e) => handleOtpKeyDown(idx, e)}
                             autoFocus={idx === 0}
-                            className="w-9 h-11 sm:w-11.5 sm:h-13 text-center text-base sm:text-xl font-black rounded-xl border border-slate-300 bg-slate-50/90 focus:bg-white focus:border-blue-600 focus:ring-3 focus:ring-blue-100 focus:outline-none transition-all shadow-inner"
+                            className="w-10 h-12 sm:w-12 sm:h-13 text-center text-lg sm:text-xl font-black rounded-xl border border-slate-300 bg-slate-50/90 focus:bg-white focus:border-blue-600 focus:ring-4 focus:ring-blue-100 focus:outline-none transition-all shadow-inner"
                           />
                         ))}
                       </div>
                     </div>
 
                     {/* Inactive Notice Warning Box */}
-                    <div className="p-2 sm:p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-[10.5px] sm:text-xs leading-snug flex items-start gap-1.5">
-                      <ShieldAlert className="w-3.5 h-3.5 text-amber-600 shrink-0 mt-0.5" />
+                    <div className="p-2.5 rounded-xl bg-amber-50/80 border border-amber-200 text-amber-900 text-xs leading-snug flex items-start gap-2">
+                      <ShieldAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
                       <div>
                         <span className="font-bold">Notice:</span> Account activates automatically upon OTP verification.
                       </div>
@@ -1147,7 +1147,7 @@ export default function AuthModal() {
 
                     {/* Resend & Timer */}
                     <div className="flex items-center justify-between text-xs pt-0.5">
-                      <span className="text-slate-500 flex items-center gap-1 font-medium text-[11px] sm:text-xs">
+                      <span className="text-slate-500 flex items-center gap-1.5 font-medium text-xs">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         {resendTimer > 0 ? (
                           <span>Resend in <strong className="text-slate-700">{resendTimer}s</strong></span>
@@ -1160,9 +1160,9 @@ export default function AuthModal() {
                         type="button"
                         onClick={handleResendOtp}
                         disabled={!canResend || isLoading}
-                        className={`text-[11px] sm:text-xs font-bold transition cursor-pointer ${canResend
-                            ? 'text-blue-600 hover:text-blue-800 underline'
-                            : 'text-slate-400 cursor-not-allowed'
+                        className={`text-xs font-bold transition cursor-pointer ${canResend
+                          ? 'text-blue-600 hover:text-blue-800 underline'
+                          : 'text-slate-400 cursor-not-allowed'
                           }`}
                       >
                         Resend OTP
@@ -1173,7 +1173,7 @@ export default function AuthModal() {
                     <button
                       type="submit"
                       disabled={isLoading}
-                      className="group w-full py-2.5 sm:py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:via-teal-500 hover:to-emerald-600 text-white font-extrabold text-xs sm:text-sm shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 transition duration-150 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
+                      className="group w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-700 hover:from-emerald-500 hover:via-teal-500 hover:to-emerald-600 text-white font-extrabold text-sm sm:text-base shadow-lg shadow-emerald-500/20 flex items-center justify-center gap-2 transition duration-150 active:scale-[0.99] disabled:opacity-60 cursor-pointer"
                     >
                       {isLoading ? (
                         <>
@@ -1182,21 +1182,21 @@ export default function AuthModal() {
                         </>
                       ) : (
                         <>
-                          <AnimatedShieldCheck size={16} className="text-white" />
+                          <AnimatedShieldCheck size={18} className="text-white" />
                           <span>Verify OTP &amp; Access Portal</span>
                         </>
                       )}
                     </button>
 
                     {/* Back to Step 1 */}
-                    <div className="text-center pt-0.5">
+                    <div className="text-center pt-1">
                       <button
                         type="button"
                         onClick={() => {
                           setStep(1);
                           clearMessages();
                         }}
-                        className="inline-flex items-center gap-1 text-xs text-slate-500 hover:text-slate-800 font-semibold transition cursor-pointer"
+                        className="inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-slate-800 font-semibold transition cursor-pointer"
                       >
                         <ArrowLeft className="w-3.5 h-3.5" />
                         <span>Back to Registration / Login</span>
@@ -1213,9 +1213,9 @@ export default function AuthModal() {
         </div>
 
         {/* Fixed Footer Section (Always Visible at Bottom, Never Cutoff) */}
-        <div className="px-4 sm:px-6 py-2 sm:py-2.5 bg-slate-50/95 border-t border-slate-100 flex items-center justify-between text-[10px] sm:text-xs text-slate-400 shrink-0 z-20">
-          <span className="flex items-center gap-1 font-medium text-slate-600">
-            <AnimatedShieldCheck size={13} className="text-emerald-600" />
+        <div className="px-5 sm:px-6 py-3 sm:py-3 bg-slate-50/95 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0 z-20">
+          <span className="flex items-center gap-1.5 font-medium text-slate-700">
+            <AnimatedShieldCheck size={14} className="text-emerald-600" />
             <span>256-Bit SSL Encrypted</span>
           </span>
           <span className="font-medium text-slate-400">© {new Date().getFullYear()} Education Masters</span>
