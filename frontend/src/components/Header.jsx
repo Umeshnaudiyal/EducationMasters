@@ -2,9 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { useSession, signOut } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
-import { X, ChevronRight, Loader2, Sparkles } from 'lucide-react';
+import { X, ChevronRight, Loader2, Sparkles, Trophy, FolderTree } from 'lucide-react';
 import {
   AnimatedMenu,
   AnimatedSearch,
@@ -25,9 +25,9 @@ import {
 } from './AnimatedIcons';
 import { useAuthModal } from '@/context/AuthModalContext';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
-  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
-  : 'http://localhost:5001/apis/v1';
+const API_BASE = typeof window !== 'undefined'
+  ? '/apis/v1'
+  : (process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1');
 
 const ROTATING_PLACEHOLDERS = [
   'Search "Union Bank 2026 Result"...',
@@ -59,6 +59,7 @@ export default function Header({ onOpenMockModal }) {
   const { data: session } = useSession();
   const { openAuthModal } = useAuthModal();
   const router = useRouter();
+  const pathname = usePathname();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -75,6 +76,27 @@ export default function Header({ onOpenMockModal }) {
   const inputRef = useRef(null);
   const mobileInputRef = useRef(null);
   const debounceTimerRef = useRef(null);
+
+  // Auto-close drawers & modals when route changes
+  useEffect(() => {
+    setIsSidebarOpen(false);
+    setIsMobileSearchOpen(false);
+    setIsSearchFocused(false);
+  }, [pathname]);
+
+  // Lock background body scroll when drawer or mobile search is open
+  useEffect(() => {
+    if (isSidebarOpen || isMobileSearchOpen) {
+      const originalOverflow = document.body.style.overflow;
+      const originalTouchAction = document.body.style.touchAction;
+      document.body.style.overflow = 'hidden';
+      document.body.style.touchAction = 'none';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+        document.body.style.touchAction = originalTouchAction;
+      };
+    }
+  }, [isSidebarOpen, isMobileSearchOpen]);
 
   // Load recent searches from localStorage
   useEffect(() => {
@@ -250,25 +272,21 @@ export default function Header({ onOpenMockModal }) {
           {/* LEFT: Hamburger Menu Button + Enhanced Brand Logo */}
           <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(true)}
-              className="group P-4 w-8.5 h-8.5  rounded-xl text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/80 transition cursor-pointer flex items-center justify-center shrink-0 shadow-xs"
+              className="group w-9 h-9 min-w-[36px] rounded-xl text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/80 transition touch-manipulation cursor-pointer flex items-center justify-center shrink-0 shadow-xs"
               aria-label="Open Sidebar Menu"
               title="Open Navigation Menu"
             >
-              <AnimatedMenu size={20} className="text-slate-200 group-hover:text-white transition-transform group-hover:scale-105" />
+              <AnimatedMenu size={19} className="text-slate-200 group-hover:text-white transition-transform group-hover:scale-105 pointer-events-none" />
             </button>
 
             <Link
               href="/"
               className="flex items-center gap-1.5 sm:gap-2 group min-w-0"
             >
-              {/* Glowing EM Emblem */}
-              {/* <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg sm:rounded-xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-0.5 shadow-[0_0_12px_rgba(6,182,212,0.35)] flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform duration-300 ring-1 ring-white/20">
-                <span className="text-white font-black text-[11px] sm:text-xs tracking-tighter leading-none">EM</span>
-              </div> */}
-
               {/* Enhanced Typography */}
-              <span className="font-extrabold text-[17px] min-[380px]:text-base sm:text-xl md:text-2xl text-white tracking-tight leading-none group-hover:text-cyan-200 transition-colors truncate">
+              <span className="font-extrabold text-[17px] min-[360px]:text-[18px] min-[400px]:text-[19px] sm:text-xl md:text-2xl text-white tracking-tight leading-none group-hover:text-cyan-200 transition-colors truncate">
                 Education<span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-sky-300 to-blue-400 font-black">Masters</span>
               </span>
             </Link>
@@ -313,7 +331,7 @@ export default function Header({ onOpenMockModal }) {
                         setSearchQuery('');
                         inputRef.current?.focus();
                       }}
-                      className="p-1 text-slate-400 hover:text-slate-600 hover:rotate-90 rounded-full hover:bg-slate-100 transition duration-200"
+                      className="p-1 text-slate-400 hover:text-slate-600 hover:rotate-90 rounded-full hover:bg-slate-100 transition duration-200 cursor-pointer"
                       title="Clear Search"
                     >
                       <X className="w-3.5 h-3.5" />
@@ -322,9 +340,9 @@ export default function Header({ onOpenMockModal }) {
 
                   <button
                     type="submit"
-                    className="group bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:via-blue-600 hover:to-indigo-600 active:scale-95 text-white font-bold text-xs px-4 py-1.5 rounded-full shadow-xs transition-all duration-200 shrink-0 flex items-center gap-1.5"
+                    className="group bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-700 hover:from-blue-500 hover:via-blue-600 hover:to-indigo-600 active:scale-95 text-white font-bold text-xs px-4 py-1.5 rounded-full shadow-xs transition-all duration-200 shrink-0 flex items-center gap-1.5 cursor-pointer"
                   >
-                    <AnimatedSearch size={13} className="text-white/90" />
+                    <AnimatedSearch size={13} className="text-white/90 pointer-events-none" />
                     <span>Search</span>
                   </button>
                 </div>
@@ -344,12 +362,12 @@ export default function Header({ onOpenMockModal }) {
                           key={pill.id}
                           type="button"
                           onClick={() => setActiveFilter(pill.id)}
-                          className={`group px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center space-x-1.5 transition ${isActive
+                          className={`group px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center space-x-1.5 transition cursor-pointer ${isActive
                             ? 'bg-blue-600 text-white shadow-2xs'
                             : 'bg-white text-slate-600 hover:bg-slate-200/70 border border-slate-200/70'
                             }`}
                         >
-                          <Icon size={12} className="shrink-0" />
+                          <Icon size={12} className="shrink-0 pointer-events-none" />
                           <span>{pill.label}</span>
                         </button>
                       );
@@ -406,7 +424,7 @@ export default function Header({ onOpenMockModal }) {
                           <div>
                             <div className="flex items-center justify-between px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                               <span className="flex items-center gap-1.5"><AnimatedHistory size={13} className="text-slate-400" /> Recent Searches</span>
-                              <button onClick={clearAllRecentSearches} className="hover:text-rose-500 transition">Clear all</button>
+                              <button onClick={clearAllRecentSearches} className="hover:text-rose-500 transition cursor-pointer">Clear all</button>
                             </div>
                             <div className="space-y-0.5">
                               {recentSearches.map((term, idx) => (
@@ -424,7 +442,7 @@ export default function Header({ onOpenMockModal }) {
                                   </span>
                                   <button
                                     onClick={(e) => removeRecentSearch(e, term)}
-                                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 transition"
+                                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-rose-600 transition cursor-pointer"
                                   >
                                     <X className="w-3.5 h-3.5" />
                                   </button>
@@ -471,7 +489,7 @@ export default function Header({ onOpenMockModal }) {
                     className="group px-4 py-2.5 bg-blue-50/90 hover:bg-blue-100/90 border-t border-blue-100 cursor-pointer text-xs font-semibold text-blue-700 flex items-center justify-between transition"
                   >
                     <span className="flex items-center space-x-1.5">
-                      <AnimatedSearch size={14} className="text-blue-600" />
+                      <AnimatedSearch size={14} className="text-blue-600 pointer-events-none" />
                       <span>
                         {searchQuery.trim()
                           ? `See all results for "${searchQuery}"`
@@ -491,52 +509,65 @@ export default function Header({ onOpenMockModal }) {
           </div>
 
           {/* ========================================================================= */}
-          {/* RIGHT: ACTION BUTTONS (Polished & Refined Mobile + Desktop) */}
+          {/* RIGHT: ACTION BUTTONS (Polished, Non-Overflowing Mobile + Desktop) */}
           {/* ========================================================================= */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
 
             {/* 1. Mobile Search Trigger Button */}
             <button
+              type="button"
               onClick={() => {
                 setIsMobileSearchOpen(true);
                 setTimeout(() => mobileInputRef.current?.focus(), 150);
               }}
-              className="group md:hidden w-8.5 h-8.5 rounded-xl text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/80 transition cursor-pointer flex items-center justify-center shrink-0 shadow-xs"
+              className="group md:hidden w-9 h-9 min-w-[36px] rounded-xl text-slate-200 hover:text-white bg-slate-800/80 hover:bg-slate-700 active:scale-95 border border-slate-700/80 transition touch-manipulation cursor-pointer flex items-center justify-center shrink-0 shadow-xs"
               aria-label="Search"
               title="Search Exams & Results"
             >
-              <AnimatedSearch size={16} />
+              <AnimatedSearch size={16} className="text-slate-300 group-hover:text-white pointer-events-none" />
             </button>
 
-            {/* 2. Typing Test CTA */}
+            {/* 2. Typing Test CTA (Responsive on tablet & desktop, clean on mobile) */}
             <Link
               href="/typing-test"
-              className="group w-8.5 h-8.5 sm:w-auto sm:h-auto p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-tr from-[#00b4c6] to-[#00d8ec] hover:from-[#00a3b3] hover:to-[#00c4d6] text-white font-bold text-xs shadow-[0_2px_10px_rgba(0,196,214,0.35)] active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0"
+              className="group hidden min-[540px]:flex sm:flex w-9 h-9 sm:w-auto sm:h-auto p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-tr from-[#00b4c6] to-[#00d8ec] hover:from-[#00a3b3] hover:to-[#00c4d6] text-white font-bold text-xs shadow-[0_2px_10px_rgba(0,196,214,0.35)] active:scale-95 transition-all touch-manipulation items-center justify-center gap-1.5 shrink-0 cursor-pointer"
               title="Typing Speed Test"
             >
-              <AnimatedKeyboard size={15} className="text-white shrink-0" />
+              <AnimatedKeyboard size={15} className="text-white shrink-0 pointer-events-none" />
               <span className="whitespace-nowrap hidden sm:inline">Typing Test</span>
             </Link>
 
             {/* 3. Mock Test CTA */}
-            <button
-              onClick={onOpenMockModal}
-              className="group w-8.5 h-8.5 sm:w-auto sm:h-auto p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-tr from-[#f59e0b] to-[#fbbf24] hover:from-[#d97706] hover:to-[#f59e0b] text-slate-950 font-bold text-xs shadow-[0_2px_10px_rgba(251,191,36,0.35)] active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
-              title="Mock Test"
-            >
-              <AnimatedFileText size={15} className="text-slate-950 shrink-0" />
-              <span className="whitespace-nowrap hidden sm:inline">Mock Test</span>
-            </button>
+            {onOpenMockModal ? (
+              <button
+                type="button"
+                onClick={onOpenMockModal}
+                className="group flex w-9 h-9 sm:w-auto sm:h-auto p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-tr from-[#f59e0b] to-[#fbbf24] hover:from-[#d97706] hover:to-[#f59e0b] text-slate-950 font-bold text-xs shadow-[0_2px_10px_rgba(251,191,36,0.35)] active:scale-95 transition-all touch-manipulation items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                title="Mock Test"
+              >
+                <AnimatedFileText size={15} className="text-slate-950 shrink-0 pointer-events-none" />
+                <span className="whitespace-nowrap hidden sm:inline">Mock Test</span>
+              </button>
+            ) : (
+              <Link
+                href="/mock-tests"
+                className="group flex w-9 h-9 sm:w-auto sm:h-auto p-1.5 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-tr from-[#f59e0b] to-[#fbbf24] hover:from-[#d97706] hover:to-[#f59e0b] text-slate-950 font-bold text-xs shadow-[0_2px_10px_rgba(251,191,36,0.35)] active:scale-95 transition-all touch-manipulation items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                title="Mock Test"
+              >
+                <AnimatedFileText size={15} className="text-slate-950 shrink-0 pointer-events-none" />
+                <span className="whitespace-nowrap hidden sm:inline">Mock Test</span>
+              </Link>
+            )}
 
             {/* 4. Login / User Panel Link */}
             {session?.user ? (
               <Link
                 href="/edu-admin"
-                className="group w-8.5 h-8.5 sm:w-auto sm:h-auto p-2 sm:px-3 sm:py-1.5 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-500/30 shadow-[0_2px_10px_rgba(16,185,129,0.25)] active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                className="group w-9 h-9 sm:w-auto sm:h-auto px-2 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-tr from-emerald-500/20 to-teal-500/20 text-emerald-300 border border-emerald-500/40 hover:border-emerald-400 hover:bg-emerald-500/30 shadow-[0_2px_10px_rgba(16,185,129,0.25)] active:scale-95 transition-all touch-manipulation flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                 title={`Go to User Panel (${session.user.name || 'User'})`}
               >
-                <AnimatedUser size={15} className="text-emerald-400 shrink-0" />
-                <span className="hidden sm:inline max-w-[120px] md:max-w-[160px] truncate font-semibold text-xs">
+                <AnimatedUser size={15} className="text-emerald-400 shrink-0 pointer-events-none" />
+                <span className="hidden sm:inline max-w-[100px] truncate font-semibold text-xs">
                   {session.user.name || 'Panel'}
                 </span>
               </Link>
@@ -544,10 +575,10 @@ export default function Header({ onOpenMockModal }) {
               <button
                 type="button"
                 onClick={() => openAuthModal({ mode: 'login' })}
-                className="group px-3 sm:px-4 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs shadow-[0_2px_10px_rgba(16,185,129,0.35)] active:scale-95 transition-all flex items-center gap-1.5 shrink-0 cursor-pointer"
+                className="group px-2.5 sm:px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold text-xs shadow-[0_2px_10px_rgba(16,185,129,0.35)] active:scale-95 transition-all touch-manipulation flex items-center gap-1.5 shrink-0 cursor-pointer"
               >
-                <AnimatedLogIn size={15} className="shrink-0" />
-                <span>Login</span>
+                <AnimatedLogIn size={15} className="shrink-0 pointer-events-none" />
+                <span className="whitespace-nowrap">Login</span>
               </button>
             )}
 
@@ -560,13 +591,18 @@ export default function Header({ onOpenMockModal }) {
       {/* 2. MOBILE SPOTLIGHT SEARCH MODAL (Apple / Raycast Style) */}
       {/* ========================================================================= */}
       {isMobileSearchOpen && (
-        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[80] md:hidden p-2.5 sm:p-4 flex flex-col justify-start animate-in fade-in duration-200">
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsMobileSearchOpen(false);
+          }}
+          className="fixed inset-0 bg-slate-950/80 backdrop-blur-md z-[110] md:hidden p-2.5 sm:p-4 flex flex-col justify-start animate-in fade-in duration-200"
+        >
           <div className="bg-white rounded-2xl sm:rounded-3xl overflow-hidden shadow-2xl flex flex-col max-h-[90vh] border border-slate-200 animate-in zoom-in-95 duration-200">
 
             {/* Search Input Bar */}
             <form onSubmit={handleSearchSubmit} className="p-2.5 sm:p-3.5 border-b border-slate-200 flex items-center gap-2 bg-slate-50/90">
               <div className="p-1 text-blue-600 shrink-0">
-                <AnimatedSearch size={18} />
+                <AnimatedSearch size={18} className="pointer-events-none" />
               </div>
               <input
                 ref={mobileInputRef}
@@ -586,7 +622,7 @@ export default function Header({ onOpenMockModal }) {
                     setSearchQuery('');
                     mobileInputRef.current?.focus();
                   }}
-                  className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition shrink-0"
+                  className="p-1 text-slate-400 hover:text-slate-600 rounded-full hover:bg-slate-200 transition shrink-0 cursor-pointer"
                 >
                   <X className="w-3.5 h-3.5" />
                 </button>
@@ -594,7 +630,7 @@ export default function Header({ onOpenMockModal }) {
               <button
                 type="button"
                 onClick={() => setIsMobileSearchOpen(false)}
-                className="text-xs font-bold text-slate-700 hover:text-slate-900 px-2.5 py-1.5 bg-slate-200/80 hover:bg-slate-300 rounded-lg transition shrink-0"
+                className="text-xs font-bold text-slate-700 hover:text-slate-900 px-2.5 py-1.5 bg-slate-200/80 hover:bg-slate-300 rounded-lg transition shrink-0 cursor-pointer touch-manipulation"
               >
                 Close
               </button>
@@ -610,12 +646,12 @@ export default function Header({ onOpenMockModal }) {
                     key={pill.id}
                     type="button"
                     onClick={() => setActiveFilter(pill.id)}
-                    className={`group px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center space-x-1.5 transition shrink-0 ${isActive
+                    className={`group px-2.5 py-1 rounded-full text-[11px] font-semibold flex items-center space-x-1.5 transition shrink-0 cursor-pointer touch-manipulation ${isActive
                       ? 'bg-blue-600 text-white shadow-2xs'
                       : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
                       }`}
                   >
-                    <Icon size={12} className="shrink-0" />
+                    <Icon size={12} className="shrink-0 pointer-events-none" />
                     <span>{pill.label}</span>
                   </button>
                 );
@@ -633,7 +669,7 @@ export default function Header({ onOpenMockModal }) {
                         setIsMobileSearchOpen(false);
                         navigateToUrl(item.url, item.title);
                       }}
-                      className="p-2.5 hover:bg-blue-50/80 active:bg-blue-100/70 rounded-xl flex items-center justify-between transition cursor-pointer"
+                      className="p-2.5 hover:bg-blue-50/80 active:bg-blue-100/70 rounded-xl flex items-center justify-between transition cursor-pointer touch-manipulation"
                     >
                       <div className="min-w-0 flex-1 pr-2">
                         <span
@@ -659,7 +695,7 @@ export default function Header({ onOpenMockModal }) {
                     <button
                       type="button"
                       onClick={handleSearchSubmit}
-                      className="text-xs font-semibold text-blue-600 hover:underline pt-1"
+                      className="text-xs font-semibold text-blue-600 hover:underline pt-1 cursor-pointer touch-manipulation"
                     >
                       Press to search all government exams &rarr;
                     </button>
@@ -672,7 +708,7 @@ export default function Header({ onOpenMockModal }) {
                     <div>
                       <div className="flex items-center justify-between px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                         <span className="flex items-center gap-1.5"><AnimatedHistory size={13} className="text-slate-400" /> Recent Searches</span>
-                        <button onClick={clearAllRecentSearches} className="hover:text-rose-500 transition text-[10px]">Clear all</button>
+                        <button onClick={clearAllRecentSearches} className="hover:text-rose-500 transition text-[10px] cursor-pointer">Clear all</button>
                       </div>
                       <div className="space-y-0.5">
                         {recentSearches.map((term, idx) => (
@@ -682,7 +718,7 @@ export default function Header({ onOpenMockModal }) {
                               setSearchQuery(term);
                               mobileInputRef.current?.focus();
                             }}
-                            className="group px-2.5 py-1.5 rounded-xl hover:bg-slate-100 flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium"
+                            className="group px-2.5 py-1.5 rounded-xl hover:bg-slate-100 flex items-center justify-between cursor-pointer text-xs text-slate-700 font-medium touch-manipulation"
                           >
                             <span className="flex items-center gap-2 truncate">
                               <AnimatedClock size={13} className="text-slate-400 shrink-0" />
@@ -690,7 +726,7 @@ export default function Header({ onOpenMockModal }) {
                             </span>
                             <button
                               onClick={(e) => removeRecentSearch(e, term)}
-                              className="text-slate-400 hover:text-rose-600 p-1 shrink-0"
+                              className="text-slate-400 hover:text-rose-600 p-1 shrink-0 cursor-pointer"
                             >
                               <X className="w-3.5 h-3.5" />
                             </button>
@@ -713,7 +749,7 @@ export default function Header({ onOpenMockModal }) {
                             setIsMobileSearchOpen(false);
                             navigateToUrl(item.url, item.title);
                           }}
-                          className="group px-2.5 py-1.5 rounded-xl hover:bg-blue-50 active:bg-blue-100 flex items-center justify-between cursor-pointer transition"
+                          className="group px-2.5 py-1.5 rounded-xl hover:bg-blue-50 active:bg-blue-100 flex items-center justify-between cursor-pointer transition touch-manipulation"
                         >
                           <div className="flex items-center space-x-2 min-w-0 flex-1 pr-2">
                             <span
@@ -738,10 +774,10 @@ export default function Header({ onOpenMockModal }) {
             {/* Bottom Submit Action */}
             <div
               onClick={handleSearchSubmit}
-              className="p-3 bg-blue-50 hover:bg-blue-100 border-t border-blue-100 cursor-pointer text-xs font-bold text-blue-700 flex items-center justify-between transition"
+              className="p-3 bg-blue-50 hover:bg-blue-100 border-t border-blue-100 cursor-pointer text-xs font-bold text-blue-700 flex items-center justify-between transition touch-manipulation"
             >
               <span className="flex items-center gap-1.5 truncate">
-                <AnimatedSearch size={14} className="text-blue-600 shrink-0" />
+                <AnimatedSearch size={14} className="text-blue-600 shrink-0 pointer-events-none" />
                 <span className="truncate">
                   {searchQuery.trim()
                     ? `Explore all results for "${searchQuery}"`
@@ -759,12 +795,13 @@ export default function Header({ onOpenMockModal }) {
       {/* ========================================================================= */}
       <div
         onClick={() => setIsSidebarOpen(false)}
-        className={`fixed inset-0 bg-black/65 backdrop-blur-xs z-[60] transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+        className={`fixed inset-0 bg-black/65 backdrop-blur-xs z-[90] transition-opacity duration-300 ${isSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
           }`}
+        aria-hidden="true"
       />
 
       <aside
-        className={`fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#162534] text-white z-[70] shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col justify-between overflow-y-auto border-r border-slate-700/60 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+        className={`fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#162534] text-white z-[100] shadow-2xl transition-transform duration-300 ease-in-out transform flex flex-col justify-between overflow-y-auto border-r border-slate-700/60 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
           }`}
       >
         <div>
@@ -780,11 +817,12 @@ export default function Header({ onOpenMockModal }) {
             </div>
 
             <button
+              type="button"
               onClick={() => setIsSidebarOpen(false)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition cursor-pointer touch-manipulation"
               aria-label="Close Sidebar"
             >
-              <X className="w-5 h-5" />
+              <X className="w-5 h-5 pointer-events-none" />
             </button>
           </div>
 
@@ -806,7 +844,7 @@ export default function Header({ onOpenMockModal }) {
             ) : (
               <div className="p-3 bg-gradient-to-r from-blue-900/40 to-slate-800/60 border border-blue-500/20 rounded-2xl">
                 <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400 pointer-events-none" />
                   <span>Free Student Portal</span>
                 </p>
                 <p className="text-[11px] text-slate-400 mt-1">Sign in for unlimited MCQs, AI diagnostics, & mock test tracking.</p>
@@ -817,7 +855,7 @@ export default function Header({ onOpenMockModal }) {
                       setIsSidebarOpen(false);
                       openAuthModal({ mode: 'login' });
                     }}
-                    className="flex-1 py-1.5 bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs rounded-lg text-center transition"
+                    className="flex-1 py-1.5 bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs rounded-lg text-center transition cursor-pointer touch-manipulation"
                   >
                     Login
                   </button>
@@ -827,7 +865,7 @@ export default function Header({ onOpenMockModal }) {
                       setIsSidebarOpen(false);
                       openAuthModal({ mode: 'register' });
                     }}
-                    className="flex-1 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-lg text-center transition"
+                    className="flex-1 py-1.5 bg-slate-700 hover:bg-slate-600 text-white font-bold text-xs rounded-lg text-center transition cursor-pointer touch-manipulation"
                   >
                     Register
                   </button>
@@ -847,19 +885,19 @@ export default function Header({ onOpenMockModal }) {
               <Link
                 href="/"
                 onClick={() => setIsSidebarOpen(false)}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-blue-600/20 hover:text-white transition"
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-blue-600/20 hover:text-white transition touch-manipulation"
               >
-                <AnimatedBookOpen size={18} className="text-cyan-400 shrink-0" />
+                <AnimatedBookOpen size={18} className="text-cyan-400 shrink-0 pointer-events-none" />
                 <span>Home Page</span>
               </Link>
 
               <Link
                 href="/jobs"
                 onClick={() => setIsSidebarOpen(false)}
-                className="group flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-emerald-600/20 hover:text-emerald-300 transition"
+                className="group flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-emerald-600/20 hover:text-emerald-300 transition touch-manipulation"
               >
                 <div className="flex items-center gap-3">
-                  <AnimatedAward size={18} className="text-emerald-400 shrink-0" />
+                  <AnimatedAward size={18} className="text-emerald-400 shrink-0 pointer-events-none" />
                   <span>Latest Jobs</span>
                 </div>
                 <span className="text-[10px] font-bold bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">Hot</span>
@@ -868,19 +906,19 @@ export default function Header({ onOpenMockModal }) {
               <Link
                 href="/admit-cards"
                 onClick={() => setIsSidebarOpen(false)}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-blue-600/20 hover:text-blue-300 transition"
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-blue-600/20 hover:text-blue-300 transition touch-manipulation"
               >
-                <AnimatedFileText size={18} className="text-blue-400 shrink-0" />
+                <AnimatedFileText size={18} className="text-blue-400 shrink-0 pointer-events-none" />
                 <span>Admit Cards</span>
               </Link>
 
               <Link
                 href="/results"
                 onClick={() => setIsSidebarOpen(false)}
-                className="group flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-purple-600/20 hover:text-purple-300 transition"
+                className="group flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-purple-600/20 hover:text-purple-300 transition touch-manipulation"
               >
                 <div className="flex items-center gap-3">
-                  <AnimatedSparkles size={18} className="text-purple-400 shrink-0" />
+                  <AnimatedSparkles size={18} className="text-purple-400 shrink-0 pointer-events-none" />
                   <span>Exam Results</span>
                 </div>
                 <span className="text-[10px] font-bold bg-purple-500/20 text-purple-400 px-1.5 py-0.5 rounded">New</span>
@@ -896,35 +934,62 @@ export default function Header({ onOpenMockModal }) {
               <Link
                 href="/typing-test"
                 onClick={() => setIsSidebarOpen(false)}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-cyan-600/20 hover:text-cyan-300 transition"
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-cyan-600/20 hover:text-cyan-300 transition touch-manipulation"
               >
-                <AnimatedKeyboard size={18} className="text-cyan-400 shrink-0" />
+                <AnimatedKeyboard size={18} className="text-cyan-400 shrink-0 pointer-events-none" />
                 <span>Typing Speed Test</span>
               </Link>
 
-              <button
-                type="button"
-                onClick={() => {
-                  setIsSidebarOpen(false);
-                  if (onOpenMockModal) onOpenMockModal();
-                }}
-                className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-amber-600/20 hover:text-amber-300 transition text-left cursor-pointer"
+              <Link
+                href="/mock-tests"
+                onClick={() => setIsSidebarOpen(false)}
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-amber-600/20 hover:text-amber-300 transition touch-manipulation"
               >
-                <AnimatedFileText size={18} className="text-amber-400 shrink-0" />
+                <AnimatedFileText size={18} className="text-amber-400 shrink-0 pointer-events-none" />
                 <span>Mock Tests</span>
-              </button>
+              </Link>
+
+              <Link
+                href="/leaderboard"
+                onClick={() => setIsSidebarOpen(false)}
+                className="group flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-amber-500/20 hover:text-amber-300 transition touch-manipulation"
+              >
+                <div className="flex items-center gap-3">
+                  <Trophy size={18} className="text-amber-400 shrink-0 pointer-events-none" />
+                  <span>Live Leaderboard</span>
+                </div>
+                <span className="text-[10px] font-bold bg-amber-500/20 text-amber-400 px-1.5 py-0.5 rounded">All-India</span>
+              </Link>
 
               <Link
                 href="/mcq-questions"
                 onClick={() => setIsSidebarOpen(false)}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-indigo-600/20 hover:text-indigo-300 transition"
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-indigo-600/20 hover:text-indigo-300 transition touch-manipulation"
               >
-                <AnimatedZap size={18} className="text-indigo-400 shrink-0" />
+                <AnimatedZap size={18} className="text-indigo-400 shrink-0 pointer-events-none" />
                 <span>Daily GK & MCQs</span>
+              </Link>
+
+              <Link
+                href="/subjects"
+                onClick={() => setIsSidebarOpen(false)}
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-blue-600/20 hover:text-blue-300 transition touch-manipulation"
+              >
+                <AnimatedBookOpen size={18} className="text-blue-400 shrink-0 pointer-events-none" />
+                <span>All Subjects</span>
+              </Link>
+
+              <Link
+                href="/categories"
+                onClick={() => setIsSidebarOpen(false)}
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-cyan-600/20 hover:text-cyan-300 transition touch-manipulation"
+              >
+                <FolderTree size={18} className="text-cyan-400 shrink-0 pointer-events-none" />
+                <span>All Categories</span>
               </Link>
             </div>
 
-            {/* 3. User Panel or Login portal */}
+            {/* 3. Account & Portal */}
             <div className="space-y-1">
               <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider px-2 mb-2">
                 Account & Portal
@@ -934,10 +999,10 @@ export default function Header({ onOpenMockModal }) {
                 <Link
                   href="/edu-admin"
                   onClick={() => setIsSidebarOpen(false)}
-                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-emerald-300 bg-emerald-950/30 border border-emerald-800/40 hover:bg-emerald-900/40 transition"
+                  className="group flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-emerald-300 bg-emerald-950/30 border border-emerald-800/40 hover:bg-emerald-900/40 transition touch-manipulation"
                 >
-                  <AnimatedUser size={18} className="text-emerald-400 shrink-0" />
-                  <span className="truncate">Open User Panel ({session.user.name})</span>
+                  <AnimatedUser size={18} className="text-emerald-400 shrink-0 pointer-events-none" />
+                  <span className="truncate">{session.user.name}</span>
                 </Link>
               ) : (
                 <button
@@ -946,9 +1011,9 @@ export default function Header({ onOpenMockModal }) {
                     setIsSidebarOpen(false);
                     openAuthModal({ mode: 'login' });
                   }}
-                  className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-emerald-600/20 hover:text-emerald-300 transition cursor-pointer text-left"
+                  className="group w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold text-slate-200 hover:bg-emerald-600/20 hover:text-emerald-300 transition cursor-pointer text-left touch-manipulation"
                 >
-                  <AnimatedLogIn size={18} className="text-emerald-400 shrink-0" />
+                  <AnimatedLogIn size={18} className="text-emerald-400 shrink-0 pointer-events-none" />
                   <span>Login / Register Portal</span>
                 </button>
               )}
@@ -960,13 +1025,14 @@ export default function Header({ onOpenMockModal }) {
         <div className="p-4 border-t border-slate-800 bg-[#111e2b] space-y-3">
           {session?.user ? (
             <button
+              type="button"
               onClick={() => {
                 setIsSidebarOpen(false);
                 signOut();
               }}
-              className="group w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer"
+              className="group w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer touch-manipulation"
             >
-              <AnimatedLogOut size={16} />
+              <AnimatedLogOut size={16} className="pointer-events-none" />
               <span>Logout ({session.user.name})</span>
             </button>
           ) : (
@@ -976,9 +1042,9 @@ export default function Header({ onOpenMockModal }) {
                 setIsSidebarOpen(false);
                 openAuthModal({ mode: 'login' });
               }}
-              className="group w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer"
+              className="group w-full py-2.5 rounded-xl bg-[#10b981] hover:bg-[#059669] text-white font-bold text-xs flex items-center justify-center gap-2 transition shadow-md cursor-pointer touch-manipulation"
             >
-              <AnimatedLogIn size={16} />
+              <AnimatedLogIn size={16} className="pointer-events-none" />
               <span>Sign In to Your Account</span>
             </button>
           )}

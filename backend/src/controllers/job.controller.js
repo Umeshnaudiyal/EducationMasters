@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import { Job, State, Category, User, Country } from '../models/index.js';
+import { Job, State, Category, User, Country, Department } from '../models/index.js';
 import { cleanHtmlContent } from '../utils/cleanHtml.js';
 import ApiError from '../utils/apiError.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
@@ -168,7 +168,8 @@ export const getJobs = async (req, res, next) => {
         .populate('featured_media', 'path file alt name')
         .populate('country', 'name slug code')
         .populate('state', 'name slug')
-        .sort({ created_at: -1, sql_id: -1, _id: -1 })
+        .populate('department', 'name slug')
+        .sort({ createdAt: -1, created_at: -1, _id: -1 })
         .skip(skip)
         .limit(limit)
         .lean(),
@@ -187,6 +188,17 @@ export const getJobs = async (req, res, next) => {
           if (stateDoc) {
             job.state = stateDoc;
           }
+        }
+        if (!job.department && job.dept) {
+          if (/^[0-9a-fA-F]{24}$/.test(String(job.dept).trim())) {
+            const deptDoc = await Department.findById(job.dept.trim()).select('name slug').lean();
+            if (deptDoc) {
+              job.department = deptDoc;
+              job.dept = deptDoc.name;
+            }
+          }
+        } else if (job.department && typeof job.department === 'object' && job.department.name) {
+          job.dept = job.department.name;
         }
         return job;
       })
@@ -386,7 +398,8 @@ export const getJobBySlug = async (req, res, next) => {
       .populate('categories', 'name slug')
       .populate('featured_media', 'path file alt name')
       .populate('country', 'name slug code')
-      .populate('state', 'name slug');
+      .populate('state', 'name slug')
+      .populate('department', 'name slug');
 
     if (!job) {
       return res.status(404).json({ success: false, message: 'Job notification not found' });
@@ -399,6 +412,18 @@ export const getJobBySlug = async (req, res, next) => {
       if (stateDoc) {
         jobObj.state = stateDoc;
       }
+    }
+
+    if (!jobObj.department && jobObj.dept) {
+      if (/^[0-9a-fA-F]{24}$/.test(String(jobObj.dept).trim())) {
+        const deptDoc = await Department.findById(jobObj.dept.trim()).select('name slug').lean();
+        if (deptDoc) {
+          jobObj.department = deptDoc;
+          jobObj.dept = deptDoc.name;
+        }
+      }
+    } else if (jobObj.department && typeof jobObj.department === 'object' && jobObj.department.name) {
+      jobObj.dept = jobObj.department.name;
     }
 
     res.status(200).json({ success: true, data: jobObj });
@@ -511,7 +536,23 @@ export const createJob = async (req, res, next) => {
       req.body.state = await resolveStateId(req.body.state);
     }
     if (req.body.department !== undefined || req.body.dept !== undefined) {
-      req.body.department = await resolveDepartmentId(req.body.department || req.body.dept);
+      const deptRef = req.body.department !== undefined ? req.body.department : req.body.dept;
+      if (!deptRef || deptRef === '— Please Choose —' || deptRef === '-- Please Choose --' || deptRef === '— Select Department —') {
+        req.body.department = null;
+        req.body.dept = null;
+      } else {
+        req.body.department = await resolveDepartmentId(deptRef);
+        if (req.body.department) {
+          const deptDoc = await Department.findById(req.body.department).select('name');
+          if (deptDoc) {
+            req.body.dept = deptDoc.name;
+          }
+        } else if (typeof deptRef === 'string' && !/^[0-9a-fA-F]{24}$/.test(deptRef.trim())) {
+          req.body.dept = deptRef.trim();
+        } else {
+          req.body.dept = null;
+        }
+      }
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
@@ -542,6 +583,17 @@ export const createJob = async (req, res, next) => {
         req.body.user_id = req.user.sql_id || undefined;
       }
     }
+
+    const now = new Date();
+    const dateStr = now.toISOString().replace('T', ' ').slice(0, 19);
+    if (!req.body.created_at) {
+      req.body.created_at = dateStr;
+    }
+    if (!req.body.createdAt) {
+      req.body.createdAt = now;
+    }
+    req.body.updated_at = dateStr;
+    req.body.updatedAt = now;
 
     const job = await Job.create(req.body);
     res.status(201).json({ success: true, message: 'Job created successfully', data: job });
@@ -700,11 +752,30 @@ export const updateJob = async (req, res, next) => {
       req.body.state = await resolveStateId(req.body.state);
     }
     if (req.body.department !== undefined || req.body.dept !== undefined) {
-      req.body.department = await resolveDepartmentId(req.body.department || req.body.dept);
+      const deptRef = req.body.department !== undefined ? req.body.department : req.body.dept;
+      if (!deptRef || deptRef === '— Please Choose —' || deptRef === '-- Please Choose --' || deptRef === '— Select Department —') {
+        req.body.department = null;
+        req.body.dept = null;
+      } else {
+        req.body.department = await resolveDepartmentId(deptRef);
+        if (req.body.department) {
+          const deptDoc = await Department.findById(req.body.department).select('name');
+          if (deptDoc) {
+            req.body.dept = deptDoc.name;
+          }
+        } else if (typeof deptRef === 'string' && !/^[0-9a-fA-F]{24}$/.test(deptRef.trim())) {
+          req.body.dept = deptRef.trim();
+        } else {
+          req.body.dept = null;
+        }
+      }
     }
     if (req.body.featured_media !== undefined) {
       req.body.featured_media = sanitizeObjectId(req.body.featured_media);
     }
+
+    req.body.updated_at = new Date().toISOString().replace('T', ' ').slice(0, 19);
+    req.body.updatedAt = new Date();
 
     const job = await Job.findByIdAndUpdate(
       existingJob._id,

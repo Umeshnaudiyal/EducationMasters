@@ -54,11 +54,13 @@ export default function QuestionsListPage() {
   const [activeSearch, setActiveSearch] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('');
   const [selectedState, setSelectedState] = useState('');
+  const [selectedMockSeries, setSelectedMockSeries] = useState('');
   const [selectedDate, setSelectedDate] = useState('');
 
   // Dropdown options
   const [subjectsList, setSubjectsList] = useState([]);
   const [statesList, setStatesList] = useState([]);
+  const [mockSeriesList, setMockSeriesList] = useState([]);
 
   // Selections & bulk actions
   const [selectedIds, setSelectedIds] = useState([]);
@@ -76,14 +78,17 @@ export default function QuestionsListPage() {
   useEffect(() => {
     const fetchOptions = async () => {
       try {
-        const [subRes, stRes] = await Promise.all([
-          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=100`),
+        const [subRes, stRes, msRes] = await Promise.all([
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=200`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states?all=true`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-test-series?limit=200&status=all`),
         ]);
         const subData = await subRes.json();
         const stData = await stRes.json();
+        const msData = await msRes.json();
         if (subData.success) setSubjectsList(subData.data || []);
         if (stData.success) setStatesList(stData.data || []);
+        if (msData.success) setMockSeriesList(msData.data || []);
       } catch (err) {
         console.error('Error fetching filter options:', err);
       }
@@ -102,6 +107,7 @@ export default function QuestionsListPage() {
         search: activeSearch,
         subject: selectedSubject,
         state: selectedState,
+        mock_test_series: selectedMockSeries,
         date: selectedDate,
       });
 
@@ -133,7 +139,7 @@ export default function QuestionsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, pagination.limit, activeTab, activeSearch, selectedSubject, selectedState, selectedDate, session]);
+  }, [pagination.page, pagination.limit, activeTab, activeSearch, selectedSubject, selectedState, selectedMockSeries, selectedDate, session]);
 
   useEffect(() => {
     fetchQuestions();
@@ -501,12 +507,29 @@ export default function QuestionsListPage() {
               setSelectedState(e.target.value);
               setPagination((prev) => ({ ...prev, page: 1 }));
             }}
-            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] max-w-[160px]"
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] max-w-[150px]"
           >
             <option value="">All States</option>
             {statesList.map((st) => (
               <option key={st._id} value={st._id}>
                 {st.name}
+              </option>
+            ))}
+          </select>
+
+          {/* Mock Test Series Filter */}
+          <select
+            value={selectedMockSeries}
+            onChange={(e) => {
+              setSelectedMockSeries(e.target.value);
+              setPagination((prev) => ({ ...prev, page: 1 }));
+            }}
+            className="px-2.5 py-1 bg-white border border-slate-300 rounded text-xs text-slate-700 font-normal focus:outline-none focus:border-[#2271b1] max-w-[160px]"
+          >
+            <option value="">All Mock Series</option>
+            {mockSeriesList.map((ser) => (
+              <option key={ser._id} value={ser._id}>
+                {ser.title}
               </option>
             ))}
           </select>

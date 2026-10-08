@@ -78,6 +78,26 @@ const questionSchema = new mongoose.Schema(
         type: String,
       },
     ],
+    topic: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Topic',
+    },
+    topic_name: {
+      type: String,
+      default: '',
+    },
+    mock_test_series: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'MockTestSeries',
+      },
+    ],
+    mock_tests: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'MockTest',
+      },
+    ],
     options: [
       {
         index: Number,

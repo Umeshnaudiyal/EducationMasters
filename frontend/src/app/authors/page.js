@@ -240,7 +240,6 @@ export default function AuthorsDirectoryPage() {
       {/* 1. Header Navigation */}
       <Header
         onOpenTypingModal={() => setIsTypingModalOpen(true)}
-        onOpenMockModal={() => setIsMockModalOpen(true)}
       />
 
       {/* 2. Live Announcement Ticker */}

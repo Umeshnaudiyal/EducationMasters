@@ -6,7 +6,9 @@ import Link from 'next/link';
 import { Briefcase, Award, BarChart3, ArrowUpRight } from 'lucide-react';
 import { getImageUrl } from '@/utils/image';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1';
+const API_BASE = typeof window !== 'undefined'
+  ? '/apis/v1'
+  : (process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1');
 
 const SUBJECT_MCQS = [
   { name: 'Maths', prefix: 'Math', accent: 's', image: '/maths.png', href: '/mathematics/mcq-questions' },

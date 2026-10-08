@@ -47,6 +47,9 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
   const [subjectsList, setSubjectsList] = useState([]);
   const [topicsList, setTopicsList] = useState([]);
   const [examsList, setExamsList] = useState([]);
+  const [mockSeriesList, setMockSeriesList] = useState([]);
+  const [mockTestsList, setMockTestsList] = useState([]);
+  const [loadingTests, setLoadingTests] = useState(false);
 
   // Batch Defaults (Optional selection applied to imported questions)
   const [batchState, setBatchState] = useState('');
@@ -55,6 +58,8 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
   const [batchSubject, setBatchSubject] = useState('');
   const [batchTopic, setBatchTopic] = useState('');
   const [batchExaminations, setBatchExaminations] = useState([]);
+  const [batchMockTestSeries, setBatchMockTestSeries] = useState('');
+  const [batchMockTests, setBatchMockTests] = useState([]);
   const [batchLanguage, setBatchLanguage] = useState('Hindi');
   const [batchLevel, setBatchLevel] = useState('Medium');
   const [batchStatus, setBatchStatus] = useState('Published');
@@ -70,24 +75,27 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
 
     const fetchInitialData = async () => {
       try {
-        const [stRes, subRes, exRes, topRes] = await Promise.all([
+        const [stRes, subRes, exRes, topRes, msRes] = await Promise.all([
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/states?all=true`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/subjects?limit=200`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/exams?limit=200`),
           fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/topics?limit=300`),
+          fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-test-series?limit=200&status=all`),
         ]);
 
-        const [stData, subData, exData, topData] = await Promise.all([
+        const [stData, subData, exData, topData, msData] = await Promise.all([
           stRes.json(),
           subRes.json(),
           exRes.json(),
           topRes.json(),
+          msRes.json(),
         ]);
 
         if (stData.success) setStatesList(stData.data || []);
         if (subData.success) setSubjectsList(subData.data || []);
         if (exData.success) setExamsList(exData.data || []);
         if (topData.success) setTopicsList(topData.data || []);
+        if (msData.success) setMockSeriesList(msData.data || []);
       } catch (err) {
         console.error('Error fetching modal options:', err);
       }
@@ -130,14 +138,39 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
     });
   }, [topicsList, batchSubject]);
 
-  // Filtered exams for checklist
-  const filteredExams = useMemo(() => {
-    if (!examSearch.trim()) return examsList;
-    const q = examSearch.toLowerCase();
-    return examsList.filter(
-      (e) => e.name?.toLowerCase().includes(q) || e.slug?.toLowerCase().includes(q)
+  // Dynamic fetch tests when batchMockTestSeries changes
+  useEffect(() => {
+    if (!batchMockTestSeries) {
+      setMockTestsList([]);
+      setBatchMockTests([]);
+      return;
+    }
+
+    const fetchTests = async () => {
+      try {
+        setLoadingTests(true);
+        const res = await fetch(
+          `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001'}/api/v1/mock-tests?series=${batchMockTestSeries}&status=all&limit=100`
+        );
+        const data = await res.json();
+        if (data.success) {
+          setMockTestsList(data.data || []);
+        }
+      } catch (err) {
+        console.error('Error fetching mock tests for series:', err);
+      } finally {
+        setLoadingTests(false);
+      }
+    };
+
+    fetchTests();
+  }, [batchMockTestSeries]);
+
+  const toggleMockTestSelection = (testId) => {
+    setBatchMockTests((prev) =>
+      prev.includes(testId) ? prev.filter((id) => id !== testId) : [...prev, testId]
     );
-  }, [examsList, examSearch]);
+  };
 
   // Toggle examination selection
   const toggleExamSelection = (examId) => {
@@ -547,6 +580,8 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
         topic_name: selectedTopicObj ? selectedTopicObj.name : '',
         examinations: batchExaminations,
         examination_names: selectedExamNames,
+        mock_test_series: batchMockTestSeries ? [batchMockTestSeries] : [],
+        mock_tests: batchMockTests,
         language: batchLanguage,
         level: batchLevel,
         status: batchStatus,
@@ -1038,6 +1073,87 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
                           </label>
                         );
                       })
+                    )}
+                  </div>
+                </div>
+
+                {/* Mock Test Allocation Defaults (Testbook Style) */}
+                <div className="border border-indigo-200 rounded-lg p-3.5 bg-indigo-50/40 space-y-3">
+                  <div className="flex items-center justify-between pb-2 border-b border-indigo-200">
+                    <div className="flex items-center gap-1.5">
+                      <Layers size={14} className="text-indigo-600" />
+                      <span className="text-xs font-bold text-indigo-950 uppercase tracking-wider">
+                        Mock Test Allocation Defaults
+                      </span>
+                    </div>
+                    {batchMockTests.length > 0 && (
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-indigo-100 text-indigo-800 border border-indigo-200">
+                        {batchMockTests.length} tests assigned
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="space-y-2.5">
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                        Select Mock Test Series
+                      </label>
+                      <select
+                        value={batchMockTestSeries}
+                        onChange={(e) => setBatchMockTestSeries(e.target.value)}
+                        className="w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:border-indigo-500 outline-hidden text-slate-800 font-medium"
+                      >
+                        <option value="">None (Don't auto-assign to mock tests)</option>
+                        {mockSeriesList.map((ser) => (
+                          <option key={ser._id} value={ser._id}>
+                            {ser.title} {ser.examination_name ? `(${ser.examination_name})` : ''}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    {batchMockTestSeries && (
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Allocate to Child Test(s)
+                        </label>
+
+                        {loadingTests ? (
+                          <div className="py-2 text-center text-slate-400 text-xs flex items-center justify-center gap-1.5">
+                            <Loader2 size={12} className="animate-spin text-indigo-600" />
+                            <span>Loading tests...</span>
+                          </div>
+                        ) : mockTestsList.length === 0 ? (
+                          <div className="p-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-800 text-center">
+                            No child tests created under this series yet.
+                          </div>
+                        ) : (
+                          <div className="max-h-28 overflow-y-auto custom-scrollbar border border-slate-200 rounded-lg p-1.5 space-y-1 bg-white">
+                            {mockTestsList.map((t) => {
+                              const isChecked = batchMockTests.includes(t._id);
+                              return (
+                                <label
+                                  key={t._id}
+                                  className={`flex items-center gap-2 px-2 py-1 rounded cursor-pointer transition-colors ${
+                                    isChecked ? 'bg-indigo-50/80 font-bold text-indigo-900' : 'hover:bg-slate-50 text-slate-700'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isChecked}
+                                    onChange={() => toggleMockTestSelection(t._id)}
+                                    className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                  />
+                                  <span className="text-[11px] truncate flex-1">{t.title}</span>
+                                  <span className={`text-[9px] font-bold px-1.5 py-0.2 rounded ${t.is_paid ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}`}>
+                                    {t.is_paid ? 'PAID' : 'FREE'}
+                                  </span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 </div>

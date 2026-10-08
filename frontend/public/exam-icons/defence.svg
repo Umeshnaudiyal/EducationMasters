@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <circle cx="50" cy="50" r="48" fill="#14532D" stroke="#EAB308" stroke-width="2.5" />
+  <circle cx="50" cy="50" r="44" fill="#166534" stroke="#FEF08A" stroke-width="1" />
+  <!-- Crossed Swords & Star -->
+  <!-- Sword 1 -->
+  <line x1="28" y1="28" x2="72" y2="72" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+  <line x1="24" y1="36" x2="36" y2="24" stroke="#EAB308" stroke-width="4" stroke-linecap="round" />
+  <!-- Sword 2 -->
+  <line x1="72" y1="28" x2="28" y2="72" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" />
+  <line x1="76" y1="36" x2="64" y2="24" stroke="#EAB308" stroke-width="4" stroke-linecap="round" />
+  <!-- Star Center -->
+  <polygon points="50,38 53,46 62,46 55,51 58,60 50,55 42,60 45,51 38,46 47,46" fill="#EAB308" stroke="#FFFFFF" stroke-width="0.5" />
+</svg>

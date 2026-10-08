@@ -13,15 +13,12 @@ import { TypingTestModal, MockTestModal } from '@/components/Modals';
 
 export default function Home() {
   const [isTypingModalOpen, setIsTypingModalOpen] = useState(false);
-  const [isMockModalOpen, setIsMockModalOpen] = useState(false);
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans selection:bg-blue-600 selection:text-white w-full max-w-full overflow-x-hidden">
       
       {/* 1. Glass Nav Header with Predictive Search */}
-      <Header 
-        onOpenMockModal={() => setIsMockModalOpen(true)}
-      />
+      <Header />
 
       {/* 2. Live Announcement Ticker */}
       <LiveTicker />
@@ -53,11 +50,6 @@ export default function Home() {
       <TypingTestModal 
         isOpen={isTypingModalOpen} 
         onClose={() => setIsTypingModalOpen(false)} 
-      />
-
-      <MockTestModal 
-        isOpen={isMockModalOpen} 
-        onClose={() => setIsMockModalOpen(false)} 
       />
 
     </div>

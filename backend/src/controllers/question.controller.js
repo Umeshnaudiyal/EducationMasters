@@ -1,7 +1,31 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/apiResponse.js';
-import ApiError from '../utils/apiError.js';
-import { Question, Subject, State, Exam, District, Topic } from '../models/index.js';
+import { Question, Subject, State, Exam, District, Topic, MockTest, MockTestSeries } from '../models/index.js';
+
+// Helper to update total_tests and free_tests on MockTestSeries
+async function updateSeriesCounters(seriesId) {
+  try {
+    const [totalTests, freeTests, allTests] = await Promise.all([
+      MockTest.countDocuments({ series: seriesId, status: { $in: ['publish', 'published', 'Published'] } }),
+      MockTest.countDocuments({
+        series: seriesId,
+        $or: [{ is_paid: false }, { is_free: true }],
+        status: { $in: ['publish', 'published', 'Published'] },
+      }),
+      MockTest.find({ series: seriesId }).select('questions').lean(),
+    ]);
+
+    const totalQuestions = allTests.reduce((acc, t) => acc + (t.questions?.length || 0), 0);
+
+    await MockTestSeries.findByIdAndUpdate(seriesId, {
+      total_tests: totalTests,
+      free_tests_count: freeTests,
+      total_questions: totalQuestions,
+    });
+  } catch (err) {
+    console.error('Error updating series counters:', err);
+  }
+}
 
 const validateQuestionData = (data, { isNew = false } = {}) => {
   const errors = {};
@@ -150,13 +174,36 @@ export const getQuestions = asyncHandler(async (req, res) => {
     }
   }
 
-  const languageFilter = req.query.language || req.query.lang || '';
+  const languageFilter = req.query.language || req.query.lang || req.query.medium || '';
   if (languageFilter && languageFilter !== 'all') {
     query.language = { $regex: languageFilter, $options: 'i' };
   }
 
+  const topicFilter = req.query.topic || '';
+  if (topicFilter && topicFilter !== 'all') {
+    if (/^[0-9a-fA-F]{24}$/.test(topicFilter)) {
+      query.topic = topicFilter;
+    } else {
+      query.topic_name = { $regex: topicFilter.replace(/-/g, ' '), $options: 'i' };
+    }
+  }
+
+  const mockTestSeriesFilter = req.query.mock_test_series || '';
+  if (mockTestSeriesFilter) {
+    query.mock_test_series = mockTestSeriesFilter;
+  }
+
+  const mockTestFilter = req.query.mock_test || '';
+  if (mockTestFilter) {
+    query.mock_tests = mockTestFilter;
+  }
+
   if (levelFilter && levelFilter !== 'all') {
-    query['level.slug'] = levelFilter;
+    query.$or = [
+      { 'level.slug': levelFilter },
+      { 'level.name': { $regex: levelFilter, $options: 'i' } },
+      { level: { $regex: levelFilter, $options: 'i' } },
+    ];
   }
 
   if (dateFilter) {
@@ -257,9 +304,12 @@ export const getQuestionById = asyncHandler(async (req, res) => {
   const question = await Question.findOne(query)
     .populate('author', 'name email')
     .populate('subject', 'name slug')
+    .populate('topic', 'name slug')
     .populate('state', 'name slug')
     .populate('district', 'name slug')
     .populate('examinations', 'name slug')
+    .populate('mock_test_series', 'title slug image')
+    .populate('mock_tests', 'title slug test_type is_paid is_free')
     .lean();
 
   if (!question) {
@@ -304,6 +354,10 @@ export const createQuestion = asyncHandler(async (req, res) => {
     level,
     subject,
     subject_name,
+    topic,
+    topic_name,
+    mock_test_series,
+    mock_tests,
     state,
     state_name,
     district,
@@ -324,6 +378,14 @@ export const createQuestion = asyncHandler(async (req, res) => {
     if (sDoc) resolvedSubjectName = sDoc.name;
   }
 
+  // Resolve topic name if ID is provided
+  let resolvedTopicName = topic_name || '';
+  let resolvedTopicId = topic || null;
+  if (topic && /^[0-9a-fA-F]{24}$/.test(topic)) {
+    const tDoc = await Topic.findById(topic).lean();
+    if (tDoc) resolvedTopicName = tDoc.name;
+  }
+
   // Resolve state name if ID is provided
   let resolvedStateName = state_name || '';
   let resolvedStateId = state || null;
@@ -339,6 +401,15 @@ export const createQuestion = asyncHandler(async (req, res) => {
     const examDocs = await Exam.find({ _id: { $in: resolvedExamIds } }).select('name').lean();
     resolvedExamNames = examDocs.map((e) => e.name);
   }
+
+  // Resolve mock_test_series & mock_tests
+  let resolvedMockTestSeries = Array.isArray(mock_test_series)
+    ? mock_test_series.filter((s) => /^[0-9a-fA-F]{24}$/.test(s))
+    : (mock_test_series && /^[0-9a-fA-F]{24}$/.test(mock_test_series) ? [mock_test_series] : []);
+
+  let resolvedMockTests = Array.isArray(mock_tests)
+    ? mock_tests.filter((t) => /^[0-9a-fA-F]{24}$/.test(t))
+    : (mock_tests && /^[0-9a-fA-F]{24}$/.test(mock_tests) ? [mock_tests] : []);
 
   // Formatted options
   const formattedOptions = (options || []).map((opt, idx) => {
@@ -389,6 +460,10 @@ export const createQuestion = asyncHandler(async (req, res) => {
     level: level || { name: 'Medium', slug: 'medium' },
     subject: resolvedSubjectId,
     subject_name: resolvedSubjectName,
+    topic: resolvedTopicId,
+    topic_name: resolvedTopicName,
+    mock_test_series: resolvedMockTestSeries,
+    mock_tests: resolvedMockTests,
     state: resolvedStateId,
     state_name: resolvedStateName,
     district: district || null,
@@ -403,6 +478,20 @@ export const createQuestion = asyncHandler(async (req, res) => {
     user_id: authorSqlId,
     status: status || 'Published',
   });
+
+  // If allocated to mock tests, add question ID to those tests and update counters
+  if (resolvedMockTests.length > 0) {
+    for (const testId of resolvedMockTests) {
+      await MockTest.findByIdAndUpdate(testId, {
+        $addToSet: { questions: newQuestion._id },
+      });
+      const tDoc = await MockTest.findById(testId).select('questions series').lean();
+      if (tDoc) {
+        await MockTest.findByIdAndUpdate(testId, { total_questions: tDoc.questions?.length || 0 });
+        if (tDoc.series) await updateSeriesCounters(tDoc.series);
+      }
+    }
+  }
 
   res.status(201).json(new ApiResponse(201, newQuestion, 'Question created successfully'));
 });
@@ -437,6 +526,10 @@ export const updateQuestion = asyncHandler(async (req, res) => {
     language,
     level,
     subject,
+    topic,
+    topic_name,
+    mock_test_series,
+    mock_tests,
     state,
     district,
     city,
@@ -465,6 +558,59 @@ export const updateQuestion = asyncHandler(async (req, res) => {
     } else {
       question.subject = null;
       question.subject_name = '';
+    }
+  }
+
+  if (topic !== undefined) {
+    if (topic && /^[0-9a-fA-F]{24}$/.test(topic)) {
+      const tDoc = await Topic.findById(topic).lean();
+      question.topic = tDoc ? tDoc._id : null;
+      question.topic_name = tDoc ? tDoc.name : '';
+    } else {
+      question.topic = null;
+      question.topic_name = topic_name || '';
+    }
+  }
+
+  if (mock_test_series !== undefined) {
+    const validSeries = Array.isArray(mock_test_series)
+      ? mock_test_series.filter((s) => /^[0-9a-fA-F]{24}$/.test(s))
+      : (mock_test_series && /^[0-9a-fA-F]{24}$/.test(mock_test_series) ? [mock_test_series] : []);
+    question.mock_test_series = validSeries;
+  }
+
+  if (mock_tests !== undefined) {
+    const prevTests = (question.mock_tests || []).map(String);
+    const newTests = Array.isArray(mock_tests)
+      ? mock_tests.filter((t) => /^[0-9a-fA-F]{24}$/.test(t)).map(String)
+      : (mock_tests && /^[0-9a-fA-F]{24}$/.test(mock_tests) ? [String(mock_tests)] : []);
+
+    question.mock_tests = newTests;
+
+    // Tests to remove question from
+    const removedTests = prevTests.filter((tId) => !newTests.includes(tId));
+    for (const testId of removedTests) {
+      await MockTest.findByIdAndUpdate(testId, {
+        $pull: { questions: question._id },
+      });
+      const tDoc = await MockTest.findById(testId).select('questions series').lean();
+      if (tDoc) {
+        await MockTest.findByIdAndUpdate(testId, { total_questions: tDoc.questions?.length || 0 });
+        if (tDoc.series) await updateSeriesCounters(tDoc.series);
+      }
+    }
+
+    // Tests to add question to
+    const addedTests = newTests.filter((tId) => !prevTests.includes(tId));
+    for (const testId of addedTests) {
+      await MockTest.findByIdAndUpdate(testId, {
+        $addToSet: { questions: question._id },
+      });
+      const tDoc = await MockTest.findById(testId).select('questions series').lean();
+      if (tDoc) {
+        await MockTest.findByIdAndUpdate(testId, { total_questions: tDoc.questions?.length || 0 });
+        if (tDoc.series) await updateSeriesCounters(tDoc.series);
+      }
     }
   }
 
@@ -691,6 +837,23 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
     }
   }
 
+  // Resolve Batch Defaults for Mock Tests
+  let batchDefaultMockTestSeriesIds = [];
+  if (Array.isArray(batchDefaults.mock_test_series)) {
+    batchDefaultMockTestSeriesIds = batchDefaults.mock_test_series.filter((id) => /^[0-9a-fA-F]{24}$/.test(id));
+  } else if (batchDefaults.mock_test_series && /^[0-9a-fA-F]{24}$/.test(batchDefaults.mock_test_series)) {
+    batchDefaultMockTestSeriesIds = [batchDefaults.mock_test_series];
+  }
+
+  let batchDefaultMockTestIds = [];
+  if (Array.isArray(batchDefaults.mock_tests)) {
+    batchDefaultMockTestIds = batchDefaults.mock_tests.filter((id) => /^[0-9a-fA-F]{24}$/.test(id));
+  } else if (batchDefaults.mock_tests && /^[0-9a-fA-F]{24}$/.test(batchDefaults.mock_tests)) {
+    batchDefaultMockTestIds = [batchDefaults.mock_tests];
+  } else if (batchDefaults.mock_test && /^[0-9a-fA-F]{24}$/.test(batchDefaults.mock_test)) {
+    batchDefaultMockTestIds = [batchDefaults.mock_test];
+  }
+
   const validDocs = [];
   const errors = [];
 
@@ -801,7 +964,7 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
     const rawCity = String(item.city || item.City || item.location || item.Location || '').trim();
     const finalCity = rawCity || batchDefaults.city || '';
 
-    // Resolve exam (support multiple exams separated by comma in Excel or fallback to batch defaults)
+    // Resolve exam
     const rawExam = String(item.exam || item.examination || item.Exam || item.Examinations || item.examinations || '').trim();
     let matchedExamIds = [...batchDefaultExamIds];
     let matchedExamNames = [...batchDefaultExamNames];
@@ -817,6 +980,20 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
           matchedExamNames.push(foundExam.name);
         }
       }
+    }
+
+    // Mock test series and mock tests
+    const rowMockSeries = String(item.mock_test_series || item['Mock Test Series'] || item.test_series || '').trim();
+    const rowMockTest = String(item.mock_test || item['Mock Test'] || item.test || '').trim();
+
+    let matchedMockSeriesIds = [...batchDefaultMockTestSeriesIds];
+    let matchedMockTestIds = [...batchDefaultMockTestIds];
+
+    if (rowMockSeries && /^[0-9a-fA-F]{24}$/.test(rowMockSeries)) {
+      if (!matchedMockSeriesIds.includes(rowMockSeries)) matchedMockSeriesIds.push(rowMockSeries);
+    }
+    if (rowMockTest && /^[0-9a-fA-F]{24}$/.test(rowMockTest)) {
+      if (!matchedMockTestIds.includes(rowMockTest)) matchedMockTestIds.push(rowMockTest);
     }
 
     // Language
@@ -845,6 +1022,8 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
       subject_name: matchedSubject ? matchedSubject.name : (rawSubject || batchDefaults.subject_name || ''),
       topic: matchedTopic ? matchedTopic._id : null,
       topic_name: matchedTopic ? matchedTopic.name : (rawTopic || batchDefaults.topic_name || ''),
+      mock_test_series: matchedMockSeriesIds,
+      mock_tests: matchedMockTestIds,
       state: matchedState ? matchedState._id : null,
       state_name: matchedState ? matchedState.name : (rawState || batchDefaults.state_name || ''),
       district: matchedDistrict ? matchedDistrict._id : null,
@@ -867,6 +1046,32 @@ export const importExcelQuestions = asyncHandler(async (req, res) => {
   if (validDocs.length > 0) {
     const inserted = await Question.insertMany(validDocs, { ordered: false });
     insertedCount = inserted.length;
+
+    // Allocate newly inserted questions to tests
+    const testToQuestionsMap = new Map();
+    for (const doc of inserted) {
+      if (Array.isArray(doc.mock_tests) && doc.mock_tests.length > 0) {
+        for (const tId of doc.mock_tests) {
+          const strId = String(tId);
+          if (!testToQuestionsMap.has(strId)) {
+            testToQuestionsMap.set(strId, []);
+          }
+          testToQuestionsMap.get(strId).push(doc._id);
+        }
+      }
+    }
+
+    // Update each MockTest
+    for (const [tId, qIds] of testToQuestionsMap.entries()) {
+      await MockTest.findByIdAndUpdate(tId, {
+        $addToSet: { questions: { $each: qIds } },
+      });
+      const tDoc = await MockTest.findById(tId).select('questions series').lean();
+      if (tDoc) {
+        await MockTest.findByIdAndUpdate(tId, { total_questions: tDoc.questions?.length || 0 });
+        if (tDoc.series) await updateSeriesCounters(tDoc.series);
+      }
+    }
   }
 
   res.status(200).json({

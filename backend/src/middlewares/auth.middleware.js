@@ -78,6 +78,8 @@ export const protect = asyncHandler(async (req, res, next) => {
 });
 
 export const verifyToken = protect;
+export const verifyJWT = protect;
+export const authenticate = protect;
 
 /**
  * Role-Based Access Control (RBAC) Middleware

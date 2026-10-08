@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" width="100" height="100">
+  <!-- Outer Ring -->
+  <circle cx="50" cy="50" r="48" fill="#8B0000" stroke="#D4AF37" stroke-width="2.5" />
+  <circle cx="50" cy="50" r="44" fill="#A30000" stroke="#FFE082" stroke-width="1" />
+  
+  <!-- Laurel Wreath Garland (Gold) -->
+  <g fill="#FFD700" stroke="#B8860B" stroke-width="0.3">
+    <!-- Left Leaves -->
+    <path d="M 22 50 Q 20 40 28 34 Q 26 44 22 50 Z" />
+    <path d="M 24 38 Q 24 28 34 24 Q 30 34 24 38 Z" />
+    <path d="M 32 26 Q 36 18 46 17 Q 40 26 32 26 Z" />
+    <path d="M 22 50 Q 20 60 28 66 Q 26 56 22 50 Z" />
+    <path d="M 24 62 Q 24 72 34 76 Q 30 66 24 62 Z" />
+    <path d="M 32 74 Q 36 82 46 83 Q 40 74 32 74 Z" />
+
+    <!-- Right Leaves -->
+    <path d="M 78 50 Q 80 40 72 34 Q 74 44 78 50 Z" />
+    <path d="M 76 38 Q 76 28 66 24 Q 70 34 76 38 Z" />
+    <path d="M 68 26 Q 64 18 54 17 Q 60 26 68 26 Z" />
+    <path d="M 78 50 Q 80 60 72 66 Q 74 56 78 50 Z" />
+    <path d="M 76 62 Q 76 72 66 76 Q 70 66 76 62 Z" />
+    <path d="M 68 74 Q 64 82 54 83 Q 60 74 68 74 Z" />
+  </g>
+
+  <!-- Central Gold Star & Rays -->
+  <circle cx="50" cy="50" r="18" fill="#B8860B" stroke="#FFD700" stroke-width="1.5" />
+  <circle cx="50" cy="50" r="15" fill="#FFE57F" />
+  
+  <!-- 8-Pointed Star -->
+  <polygon points="50,37 53,46 63,46 55,52 58,61 50,56 42,61 45,52 37,46 47,46" fill="#8B0000" stroke="#FFD700" stroke-width="0.5" />
+  <circle cx="50" cy="50" r="4" fill="#FFD700" />
+</svg>

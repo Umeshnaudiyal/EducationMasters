@@ -606,7 +606,6 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
   const Job = (await import('../models/job.model.js')).default;
   const AdmitCard = (await import('../models/admitCard.model.js')).default;
   const Result = (await import('../models/result.model.js')).default;
-  const Question = (await import('../models/question.model.js')).default;
   const Exam = (await import('../models/exam.model.js')).default;
 
   const authorFilter = {
@@ -619,20 +618,17 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
     jobsCount,
     admitCardsCount,
     resultsCount,
-    questionsCount,
     examsCount,
     recentBlogs,
     recentJobs,
     recentAdmitCards,
     recentResults,
-    recentQuestions,
     recentExams,
   ] = await Promise.all([
     Blog.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
     Job.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
     AdmitCard.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
     Result.countDocuments({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
-    Question.countDocuments({ ...authorFilter, deleted_at: null, status: { $nin: ['trash', 'trashed', 'Trashed'] } }),
     Exam.countDocuments({ ...authorFilter }),
     Blog.find({ ...authorFilter, status: { $nin: ['trash', 'trashed', 'Trashed'] } })
       .sort({ createdAt: -1, created_at: -1 })
@@ -658,11 +654,6 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
       .populate('featured_media', 'path file alt name')
       .select('title slug image featured_media description createdAt created_at department')
       .lean(),
-    Question.find({ ...authorFilter, deleted_at: null, status: { $nin: ['trash', 'trashed', 'Trashed'] } })
-      .sort({ createdAt: -1, created_at: -1 })
-      .limit(30)
-      .select('content instruction ans_info marks negative type language level subject_name options correct_answer examination_names createdAt created_at')
-      .lean(),
     Exam.find({ ...authorFilter })
       .sort({ createdAt: -1, created_at: -1 })
       .limit(30)
@@ -670,7 +661,7 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
       .lean(),
   ]);
 
-  const totalPosts = blogsCount + jobsCount + admitCardsCount + resultsCount + questionsCount + examsCount;
+  const totalPosts = blogsCount + jobsCount + admitCardsCount + resultsCount + examsCount;
 
   // Real chart data breakdown
   const chartData = [
@@ -691,15 +682,6 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
       color: '#2563eb',
       secondaryColor: '#3b82f6',
       icon: '📝',
-    },
-    {
-      name: 'MCQ Questions',
-      type: 'questions',
-      count: questionsCount,
-      percent: totalPosts > 0 ? Math.round((questionsCount / totalPosts) * 100) : 0,
-      color: '#8b5cf6',
-      secondaryColor: '#a855f7',
-      icon: '❓',
     },
     {
       name: 'Admit Cards',
@@ -743,7 +725,6 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
           jobs: jobsCount,
           admitCards: admitCardsCount,
           results: resultsCount,
-          questions: questionsCount,
           exams: examsCount,
           total: totalPosts,
         },
@@ -753,7 +734,6 @@ export const getPublicAuthorProfile = asyncHandler(async (req, res) => {
           jobs: recentJobs,
           admitCards: recentAdmitCards,
           results: recentResults,
-          questions: recentQuestions,
           exams: recentExams,
         },
       },

@@ -65,16 +65,11 @@ import {
   AnimatedRotateCcw,
 } from '@/components/AnimatedIcons';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+const BACKEND_URL = typeof window !== 'undefined'
+  ? ''
+  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
 
-const DISCOVER_TAGS = [
-  { name: 'Educational Resources', icon: '📰' },
-  { name: 'Primary & Secondary Schooling (K-12)', icon: '📰' },
-  { name: 'Fun & Trivia', icon: '📰' },
-  { name: 'Knowledge Management', icon: '📚' },
-  { name: 'Competitive Exam Prep', icon: '🎯' },
-  { name: 'Current Affairs 2026', icon: '⚡' },
-];
+
 
 const MOBILE_QUICK_TOPICS = [
   { name: 'All GK', slug: 'general-knowledge', type: 'subject', icon: '⚡' },
@@ -179,7 +174,7 @@ export default function McqQuestionPage({
     try {
       const saved = localStorage.getItem('saved_mcqs');
       if (saved) setSavedQuestions(JSON.parse(saved));
-    } catch (err) {}
+    } catch (err) { }
   }, []);
 
   // Handle ESC key to exit Fullscreen Mode
@@ -384,12 +379,13 @@ export default function McqQuestionPage({
     let isMounted = true;
     const fetchJobs = async () => {
       try {
-        const res = await fetch(`${BACKEND_URL}/apis/v1/jobs/expiring-soon?limit=6`);
+        const stateQuery = taxonomy?.type === 'state' && currentSlug ? `&state=${encodeURIComponent(currentSlug)}` : '';
+        const res = await fetch(`${BACKEND_URL}/apis/v1/jobs/expiring-soon?limit=6${stateQuery}`);
         const data = await res.json();
         if (isMounted && data.success && Array.isArray(data.data) && data.data.length > 0) {
           setExpiringJobs(data.data);
         } else {
-          const fallbackRes = await fetch(`${BACKEND_URL}/apis/v1/jobs?limit=6&status=publish`);
+          const fallbackRes = await fetch(`${BACKEND_URL}/apis/v1/jobs?limit=6&status=publish${stateQuery}`);
           const fallbackData = await fallbackRes.json();
           if (isMounted && fallbackData.success) {
             setExpiringJobs(fallbackData.data || []);
@@ -405,7 +401,7 @@ export default function McqQuestionPage({
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [taxonomy, currentSlug]);
 
   const handlePageChange = (newPage) => {
     if (newPage < 1 || newPage > totalPages || newPage === page) return;
@@ -497,7 +493,7 @@ export default function McqQuestionPage({
       const next = { ...prev, [questionId]: isSaved };
       try {
         localStorage.setItem('saved_mcqs', JSON.stringify(next));
-      } catch (err) {}
+      } catch (err) { }
       showToast({
         type: 'success',
         title: isSaved ? '🔖 Question Saved' : 'Removed from Saved',
@@ -774,8 +770,8 @@ export default function McqQuestionPage({
                             handleSelectTaxonomy(sub.slug);
                           }}
                           className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${isSelected
-                              ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
-                              : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
+                            ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
+                            : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
                             }`}
                         >
                           <span>{sub.name}</span>
@@ -851,8 +847,8 @@ export default function McqQuestionPage({
                             handleSelectTaxonomy(st.slug, 'state');
                           }}
                           className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${isSelected
-                              ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
-                              : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
+                            ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
+                            : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
                             }`}
                         >
                           <span>{st.name}</span>
@@ -928,8 +924,8 @@ export default function McqQuestionPage({
                             handleSelectTaxonomy(ex.slug);
                           }}
                           className={`w-full text-left px-3.5 py-2 transition flex items-center justify-between cursor-pointer ${isSelected
-                              ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
-                              : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
+                            ? 'bg-blue-50/90 text-blue-900 font-bold border-l-4 border-blue-600 pl-3.5 shadow-2xs'
+                            : 'text-slate-700 hover:bg-slate-100/80 hover:text-blue-700 hover:pl-4 font-medium'
                             }`}
                         >
                           <span>{ex.name}</span>
@@ -955,8 +951,8 @@ export default function McqQuestionPage({
                   Home
                 </Link>
                 <span>›</span>
-                <Link href={taxonomy.breadcrumbCatLink || '/mcq-questions'} className="hover:text-blue-600 text-slate-500">
-                  {taxonomy.breadcrumbCategory}
+                <Link href={taxonomy.breadcrumbCatLink || '/subjects'} className="hover:text-blue-600 text-blue-600 underline">
+                  {taxonomy.breadcrumbCategory || 'Subjects'}
                 </Link>
                 <span>›</span>
                 <span className="text-slate-800 font-bold truncate">{taxonomy.name}</span>
@@ -1130,7 +1126,7 @@ export default function McqQuestionPage({
                 <div className="sticky top-14 sm:top-16 z-20 bg-white/95 backdrop-blur-xs rounded-xl border border-slate-200 shadow-2xs p-2 sm:p-3 mb-4 transition-all duration-150 select-none w-full box-border transform-none">
                   {/* Top Bar with Title, Stopwatch & Action Controls */}
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-1.5 sm:gap-2 pb-1.5 sm:pb-2 border-b border-slate-100">
-                    
+
                     {/* Left: Title & Attempted Count Badge + Mobile Action Buttons */}
                     <div className="flex items-center justify-between md:justify-start gap-1.5 sm:gap-2.5 w-full md:w-auto">
                       <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
@@ -1190,18 +1186,17 @@ export default function McqQuestionPage({
 
                     {/* Right: Stopwatch & AI Analysis, Fullscreen & Desktop Reset */}
                     <div className="grid grid-cols-2 md:flex md:items-center gap-1.5 sm:gap-2 w-full md:w-auto">
-                      
+
                       {/* 1. ⏱️ Live Stopwatch Pill */}
                       <div
-                        className={`flex items-center justify-between md:justify-start gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border text-[11px] sm:text-xs font-semibold transition-all duration-200 shadow-2xs ${
-                          isStopwatchRunning
-                            ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 ring-1 ring-emerald-400/50'
-                            : isStopwatchPaused
-                              ? 'bg-amber-50/90 border-amber-300 text-amber-900 ring-1 ring-amber-400/50'
-                              : stats.attempted > 0 && stats.attempted === stats.total
-                                ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-bold'
-                                : 'bg-slate-50 border-slate-200 text-slate-700'
-                        }`}
+                        className={`flex items-center justify-between md:justify-start gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-lg border text-[11px] sm:text-xs font-semibold transition-all duration-200 shadow-2xs ${isStopwatchRunning
+                          ? 'bg-emerald-50/90 border-emerald-300 text-emerald-900 ring-1 ring-emerald-400/50'
+                          : isStopwatchPaused
+                            ? 'bg-amber-50/90 border-amber-300 text-amber-900 ring-1 ring-amber-400/50'
+                            : stats.attempted > 0 && stats.attempted === stats.total
+                              ? 'bg-indigo-50 border-indigo-300 text-indigo-900 font-bold'
+                              : 'bg-slate-50 border-slate-200 text-slate-700'
+                          }`}
                       >
                         <div className="flex items-center gap-1 sm:gap-1.5">
                           <AnimatedClock
@@ -1299,7 +1294,7 @@ export default function McqQuestionPage({
 
                   {/* Compact High-Density Metric Cards Grid */}
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-1.5 sm:gap-2.5 pt-1.5">
-                    
+
                     {/* 1. Correct Stat Card (Compact, No redundant subtext) */}
                     <div className="bg-emerald-50/60 border border-emerald-200/80 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 flex flex-col justify-between shadow-2xs hover:bg-emerald-50 transition">
                       <div className="flex items-center justify-between text-emerald-800 text-[10px] sm:text-xs font-semibold">
@@ -1430,15 +1425,14 @@ export default function McqQuestionPage({
                                 <label
                                   key={optIdx}
                                   onClick={() => handleSelectOption(qId, optIdx)}
-                                  className={`flex items-center justify-between gap-2.5 px-3 py-2.5 rounded-xl border text-xs sm:text-sm cursor-pointer transition select-none ${
-                                    showCorrectHighlight
-                                      ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950 font-semibold'
-                                      : showWrongHighlight
-                                        ? 'bg-rose-50/80 border-rose-300 text-rose-950 font-semibold'
-                                        : isChecked
-                                          ? 'bg-blue-50/50 border-blue-500 text-blue-950 font-medium shadow-2xs'
-                                          : 'bg-white border-slate-200 text-slate-800 hover:border-slate-300 hover:bg-slate-50/70 font-normal'
-                                  }`}
+                                  className={`flex items-center justify-between gap-2.5 px-3 py-2 sm:py-2.5 rounded-xl border text-xs sm:text-sm cursor-pointer transition select-none ${showCorrectHighlight
+                                    ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
+                                    : showWrongHighlight
+                                      ? 'bg-rose-50/80 border-rose-300 text-rose-950 font-semibold shadow-2xs'
+                                      : isChecked
+                                        ? 'bg-blue-50/70 border-blue-500 text-blue-950 font-semibold shadow-2xs'
+                                        : 'bg-transparent border-transparent hover:bg-slate-100/70 text-slate-800 font-normal'
+                                    }`}
                                 >
                                   <div className="flex items-center gap-2.5 min-w-0">
                                     <input
@@ -1489,12 +1483,6 @@ export default function McqQuestionPage({
                               </>
                             )}
                           </button>
-
-                          {q.examination_names && q.examination_names.length > 0 && (
-                            <span className="text-[11px] font-semibold bg-slate-100 text-slate-600 px-2.5 py-0.5 rounded-md border border-slate-200">
-                              {q.examination_names[0]}
-                            </span>
-                          )}
                         </div>
 
                         {/* Collapsible Answer & Explanation Box (Only shown when user clicks View Answer) */}
@@ -1520,48 +1508,29 @@ export default function McqQuestionPage({
                       </div>
 
                       {/* ======================================================= */}
-                      {/* IN-FEED AD SPACE (After Question #3, #10, #17, #24...)  */}
+                      {/* IN-FEED MOCK TEST BANNER (After Question #3, #10...)     */}
                       {/* ======================================================= */}
                       {showAdAfter && (
-                        <div className="my-5 p-4 bg-[#f8fafc] rounded-lg border border-slate-200 space-y-3 shadow-2xs">
-                          {/* Top "Discover more" Row */}
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-xs font-bold text-slate-800 bg-white px-2.5 py-1 rounded border border-slate-200 shadow-2xs">
-                              Discover more
-                            </span>
-                            {DISCOVER_TAGS.slice(0, 3).map((tag, tIdx) => (
-                              <span
-                                key={tIdx}
-                                className="inline-flex items-center gap-1.5 text-xs font-semibold text-blue-600 bg-white px-2.5 py-1 rounded border border-blue-200 hover:bg-blue-50 transition cursor-pointer"
-                              >
-                                <span>{tag.icon}</span>
-                                <span>{tag.name}</span>
-                              </span>
-                            ))}
-                          </div>
-
-                          {/* Sponsored Mockup Banner */}
-                          <div className="p-3 bg-white rounded border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-lg bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-xs shrink-0">
-                                EM
-                              </div>
-                              <div>
-                                <p className="font-bold text-slate-900 text-xs sm:text-sm">
-                                  Practice 15,000+ Free Mock Tests & Quizzes
-                                </p>
-                                <p className="text-[11px] text-slate-500">
-                                  Instant score analysis, all-India rank & detailed solutions.
-                                </p>
-                              </div>
+                        <div className="my-5 p-3.5 sm:p-4 bg-white rounded-xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-blue-600 text-white font-black flex items-center justify-center text-sm shadow-xs shrink-0">
+                              EM
                             </div>
-                            <Link
-                              href="/mock-test"
-                              className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded transition shadow-xs shrink-0 self-start sm:self-auto inline-block"
-                            >
-                              Start Free Test
-                            </Link>
+                            <div>
+                              <p className="font-bold text-slate-900 text-xs sm:text-sm">
+                                Practice 15,000+ Free Mock Tests &amp; Quizzes
+                              </p>
+                              <p className="text-[11px] text-slate-500">
+                                Instant score analysis, all-India rank &amp; detailed solutions.
+                              </p>
+                            </div>
                           </div>
+                          <Link
+                            href="/mock-tests"
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white font-bold text-xs rounded-xl transition shadow-xs shrink-0 self-start sm:self-auto inline-block text-center"
+                          >
+                            Start Free Test
+                          </Link>
                         </div>
                       )}
                     </React.Fragment>
@@ -1611,8 +1580,8 @@ export default function McqQuestionPage({
                         type="button"
                         onClick={() => handlePageChange(item)}
                         className={`px-3 py-1.5 transition border-r border-slate-200 last:border-r-0 font-medium ${isCurrent
-                            ? 'bg-blue-600 text-white font-semibold'
-                            : 'text-blue-600 hover:bg-slate-50'
+                          ? 'bg-blue-600 text-white font-semibold'
+                          : 'text-blue-600 hover:bg-slate-50'
                           }`}
                       >
                         {item}
@@ -1645,8 +1614,8 @@ export default function McqQuestionPage({
                   type="button"
                   onClick={() => setRightTab('expiring')}
                   className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap transition ${rightTab === 'expiring'
-                      ? 'bg-[#f0f2f5] text-slate-900 rounded-tl-lg font-medium'
-                      : 'text-blue-600 hover:text-blue-700 font-medium'
+                    ? 'bg-[#f0f2f5] text-slate-900 rounded-tl-lg font-medium'
+                    : 'text-blue-600 hover:text-blue-700 font-medium'
                     }`}
                 >
                   Jobs Expiring Soon
@@ -1655,8 +1624,8 @@ export default function McqQuestionPage({
                   type="button"
                   onClick={() => setRightTab('mcq')}
                   className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap transition ${rightTab === 'mcq'
-                      ? 'bg-[#f0f2f5] text-slate-900 rounded-tr-lg font-medium'
-                      : 'text-blue-600 hover:text-blue-700 font-medium'
+                    ? 'bg-[#f0f2f5] text-slate-900 rounded-tr-lg font-medium'
+                    : 'text-blue-600 hover:text-blue-700 font-medium'
                     }`}
                 >
                   Discover More
@@ -1670,10 +1639,17 @@ export default function McqQuestionPage({
                     {/* Subheader */}
                     <div className="flex items-center justify-between text-[11px] sm:text-xs mb-3 pb-2.5 border-b border-slate-300 gap-1.5">
                       <span className="text-slate-700 font-normal whitespace-nowrap">
-                        {expiringJobs.length > 0 ? `${expiringJobs.length} Jobs are expiring soon` : '28 Jobs are expiring in 30 Days'}
+                        {taxonomy?.type === 'state' && taxonomy?.title
+                          ? `${expiringJobs.length} ${taxonomy.title} Jobs expiring in 30 Days`
+                          : expiringJobs.length > 0
+                          ? `${expiringJobs.length} Jobs are expiring soon`
+                          : '28 Jobs are expiring in 30 Days'}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
-                        <Link href="/jobs-expiring-in-30-days" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">
+                        <Link
+                          href={taxonomy?.type === 'state' && currentSlug ? `/jobs-expiring-in-30-days?state=${encodeURIComponent(currentSlug)}` : '/jobs-expiring-in-30-days'}
+                          className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs"
+                        >
                           View All
                         </Link>
                         <span className="bg-blue-600 text-white text-[10px] sm:text-[11px] font-normal px-1.5 py-0.5 rounded inline-flex items-center gap-1 leading-none whitespace-nowrap shadow-2xs">
@@ -1742,7 +1718,7 @@ export default function McqQuestionPage({
                         { label: 'Government Exam Syllabus', href: '/syllabus' },
                         { label: 'Current Affairs & Articles', href: '/articles' },
                         { label: 'Online Typing Speed Test', href: '/typing-test' },
-                        { label: 'Mock Test Series 2026', href: '/mock-test' },
+                        { label: 'Mock Test Series 2026', href: '/mock-tests' },
                       ].map((item, i) => (
                         <Link
                           key={i}
@@ -1855,11 +1831,10 @@ export default function McqQuestionPage({
                     setMobileFilterTab('subject');
                     setMobileFilterSearch('');
                   }}
-                  className={`py-2 px-1 text-center rounded-lg text-xs transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer ${
-                    mobileFilterTab === 'subject'
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
-                      : 'text-slate-700 hover:text-slate-900 font-semibold hover:bg-white/50'
-                  }`}
+                  className={`py-2 px-1 text-center rounded-lg text-xs transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer ${mobileFilterTab === 'subject'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'text-slate-700 hover:text-slate-900 font-semibold hover:bg-white/50'
+                    }`}
                 >
                   <BookOpen size={13} className="shrink-0" />
                   <span className="truncate">Subjects ({SUBJECTS_LIST.length})</span>
@@ -1871,11 +1846,10 @@ export default function McqQuestionPage({
                     setMobileFilterTab('state');
                     setMobileFilterSearch('');
                   }}
-                  className={`py-2 px-1 text-center rounded-lg text-xs transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer ${
-                    mobileFilterTab === 'state'
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
-                      : 'text-slate-700 hover:text-slate-900 font-semibold hover:bg-white/50'
-                  }`}
+                  className={`py-2 px-1 text-center rounded-lg text-xs transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer ${mobileFilterTab === 'state'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'text-slate-700 hover:text-slate-900 font-semibold hover:bg-white/50'
+                    }`}
                 >
                   <Layers size={13} className="shrink-0" />
                   <span className="truncate">States ({STATES_LIST.length})</span>
@@ -1887,11 +1861,10 @@ export default function McqQuestionPage({
                     setMobileFilterTab('exam');
                     setMobileFilterSearch('');
                   }}
-                  className={`py-2 px-1 text-center rounded-lg text-xs transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer ${
-                    mobileFilterTab === 'exam'
-                      ? 'bg-blue-600 text-white font-bold shadow-xs'
-                      : 'text-slate-700 hover:text-slate-900 font-semibold hover:bg-white/50'
-                  }`}
+                  className={`py-2 px-1 text-center rounded-lg text-xs transition-all duration-200 flex items-center justify-center gap-1 cursor-pointer ${mobileFilterTab === 'exam'
+                    ? 'bg-blue-600 text-white font-bold shadow-xs'
+                    : 'text-slate-700 hover:text-slate-900 font-semibold hover:bg-white/50'
+                    }`}
                 >
                   <Sparkles size={13} className="shrink-0" />
                   <span className="truncate">Exams ({EXAMS_LIST.length})</span>
@@ -1971,19 +1944,17 @@ export default function McqQuestionPage({
                         key={item.slug}
                         type="button"
                         onClick={() => handleSelectTaxonomy(item.slug, mobileFilterTab || item.category)}
-                        className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 active:scale-[0.98] cursor-pointer ${
-                          isSelected
-                            ? 'bg-blue-50/90 border-blue-600 ring-1 ring-blue-600 text-blue-900 shadow-2xs font-bold'
-                            : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800 shadow-2xs'
-                        }`}
+                        className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between gap-3 active:scale-[0.98] cursor-pointer ${isSelected
+                          ? 'bg-blue-50/90 border-blue-600 ring-1 ring-blue-600 text-blue-900 shadow-2xs font-bold'
+                          : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-800 shadow-2xs'
+                          }`}
                       >
                         <div className="flex items-center gap-2.5 min-w-0">
                           <div
-                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold border ${
-                              isSelected
-                                ? 'bg-blue-600 text-white border-blue-600'
-                                : 'bg-slate-100 text-slate-700 border-slate-200'
-                            }`}
+                            className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 text-xs font-bold border ${isSelected
+                              ? 'bg-blue-600 text-white border-blue-600'
+                              : 'bg-slate-100 text-slate-700 border-slate-200'
+                              }`}
                           >
                             {mobileFilterTab === 'state' ? '🏛️' : mobileFilterTab === 'exam' ? '🎯' : '📚'}
                           </div>
@@ -2176,41 +2147,38 @@ export default function McqQuestionPage({
                             <label
                               key={optIdx}
                               onClick={() => handleSelectOption(qId, optIdx)}
-                              className={`flex items-center justify-between gap-2.5 sm:gap-3.5 px-3 sm:px-4 py-2.5 sm:py-3.5 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all duration-150 select-none ${
-                                showCorrectHighlight
-                                  ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
-                                  : showWrongHighlight
-                                    ? 'bg-rose-50/90 border-rose-300 text-rose-950 font-semibold shadow-2xs'
-                                    : isChecked
-                                      ? 'bg-blue-50/60 border-blue-500 text-blue-950 font-semibold shadow-2xs'
-                                      : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/70 text-slate-800 font-normal'
-                              }`}
+                              className={`flex items-center justify-between gap-2.5 sm:gap-3.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all duration-150 select-none ${showCorrectHighlight
+                                ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
+                                : showWrongHighlight
+                                  ? 'bg-rose-50/90 border-rose-300 text-rose-950 font-semibold shadow-2xs'
+                                  : isChecked
+                                    ? 'bg-blue-50/70 border-blue-500 text-blue-950 font-semibold shadow-2xs'
+                                    : 'bg-transparent border-transparent hover:bg-slate-100/70 text-slate-800 font-normal'
+                                }`}
                             >
                               <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
                                 <span
-                                  className={`font-black text-xs sm:text-sm shrink-0 ${
-                                    showCorrectHighlight
-                                      ? 'text-emerald-800'
-                                      : showWrongHighlight
-                                        ? 'text-rose-800'
-                                        : isChecked
-                                          ? 'text-blue-700'
-                                          : 'text-slate-900'
-                                  }`}
+                                  className={`font-black text-xs sm:text-sm shrink-0 ${showCorrectHighlight
+                                    ? 'text-emerald-800'
+                                    : showWrongHighlight
+                                      ? 'text-rose-800'
+                                      : isChecked
+                                        ? 'text-blue-700'
+                                        : 'text-slate-900'
+                                    }`}
                                 >
                                   {letter})
                                 </span>
 
                                 <div
-                                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center shrink-0 border transition-all ${
-                                    showCorrectHighlight
-                                      ? 'border-emerald-600 bg-emerald-600'
-                                      : showWrongHighlight
-                                        ? 'border-rose-500 bg-rose-500'
-                                        : isChecked
-                                          ? 'border-blue-600 bg-blue-600'
-                                          : 'border-slate-300 bg-white'
-                                  }`}
+                                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 rounded-full flex items-center justify-center shrink-0 border transition-all ${showCorrectHighlight
+                                    ? 'border-emerald-600 bg-emerald-600'
+                                    : showWrongHighlight
+                                      ? 'border-rose-500 bg-rose-500'
+                                      : isChecked
+                                        ? 'border-blue-600 bg-blue-600'
+                                        : 'border-slate-300 bg-white'
+                                    }`}
                                 >
                                   {(isChecked || showCorrectHighlight || showWrongHighlight) && (
                                     <div className="w-1.5 h-1.5 rounded-full bg-white" />
@@ -2257,11 +2225,10 @@ export default function McqQuestionPage({
                         <button
                           type="button"
                           onClick={() => toggleSaveQuestion(qId)}
-                          className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold rounded-xl border transition flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 ${
-                            savedQuestions[qId]
-                              ? 'bg-amber-50 border-amber-300 text-amber-800 font-bold'
-                              : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
-                          }`}
+                          className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold rounded-xl border transition flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 ${savedQuestions[qId]
+                            ? 'bg-amber-50 border-amber-300 text-amber-800 font-bold'
+                            : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
+                            }`}
                         >
                           {savedQuestions[qId] ? (
                             <>
@@ -2276,12 +2243,6 @@ export default function McqQuestionPage({
                           )}
                         </button>
                       </div>
-
-                      {q.examination_names && q.examination_names.length > 0 && (
-                        <span className="text-[11px] sm:text-xs font-semibold bg-slate-50 text-slate-600 px-2.5 sm:px-3 py-1 sm:py-1.5 rounded-lg border border-slate-200">
-                          {q.examination_names[0]}
-                        </span>
-                      )}
                     </div>
 
                     {/* Explanation Box */}

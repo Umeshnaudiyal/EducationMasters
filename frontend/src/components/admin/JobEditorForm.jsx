@@ -298,7 +298,17 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
 
             // Map Job Fields
             setPostName(j.post || j.name || j.title || '');
-            setDeptName(j.dept || (typeof j.department === 'string' ? j.department : j.department?.name) || '');
+
+            let resolvedDept = '';
+            if (typeof j.department === 'object' && j.department?.name) {
+              resolvedDept = j.department.name;
+            } else if (j.dept && !/^[0-9a-fA-F]{24}$/.test(String(j.dept).trim())) {
+              resolvedDept = j.dept;
+            } else if (typeof j.department === 'string' && !/^[0-9a-fA-F]{24}$/.test(j.department.trim())) {
+              resolvedDept = j.department;
+            }
+            setDeptName(resolvedDept);
+
             setDesigName(j.desig || '');
             setVacancies(j.posts || j.total_posts || '');
             setMinAge(j.min_age || j.age_limit?.min_age || '');
@@ -330,7 +340,9 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
             }
 
             // Department & State Dropdowns
-            if (j.department) {
+            if (resolvedDept) {
+              setSelectedDepartment(resolvedDept);
+            } else if (j.department) {
               setSelectedDepartment(typeof j.department === 'object' ? j.department.name : j.department);
             } else if (j.dept) {
               setSelectedDepartment(j.dept);
@@ -380,13 +392,16 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
       const targetId = actualId || slugOrId;
       const isEditing = Boolean(targetId || isEdit);
 
+      const rawDept = deptName || (selectedDepartment !== '— Please Choose —' && selectedDepartment !== '-- Please Choose --' && selectedDepartment !== '— Select Department —' ? selectedDepartment : '');
+      const cleanDept = rawDept ? rawDept.trim() : '';
+
       const payload = {
         title: title.trim(),
         slug: slug.trim() || undefined,
         status: finalStatus,
         post: postName || title.trim(),
-        dept: deptName || selectedDepartment,
-        department: deptName || selectedDepartment,
+        dept: cleanDept || null,
+        department: cleanDept || null,
         desig: desigName,
         posts: vacancies ? Number(vacancies) || vacancies : undefined,
         total_posts: vacancies,
@@ -424,7 +439,7 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
           robots: allowIndexing ? 1 : 0,
         },
         country: selectedCountry || 'India',
-        state: selectedState === '-- All India --' ? null : selectedState,
+        state: (!selectedState || selectedState === '-- All India --' || selectedState === '— All India —' || selectedState === '— Please Choose —') ? null : selectedState,
         categories: ['Jobs'],
         ...(isEditing ? {} : { author: session?.user?.id || undefined }),
       };
@@ -648,7 +663,11 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
                   <input
                     type="text"
                     value={deptName}
-                    onChange={(e) => setDeptName(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDeptName(val);
+                      setSelectedDepartment(val.trim() ? val : '— Please Choose —');
+                    }}
                     placeholder="Enter the name of Department"
                     className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#2271b1]"
                   />
@@ -1264,10 +1283,14 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
               title="Department"
               endpoint="/apis/v1/departments"
               selectedValue={selectedDepartment}
-              onSelect={(val) => {
-                setSelectedDepartment(val);
-                if (val !== '— Please Choose —' && !deptName) {
-                  setDeptName(val);
+              onSelect={(val, item) => {
+                if (val === '— Please Choose —' || val === '-- Please Choose --' || !val) {
+                  setSelectedDepartment('— Please Choose —');
+                  setDeptName('');
+                } else {
+                  const resolvedName = (typeof item === 'object' && item?.name) ? item.name : val;
+                  setSelectedDepartment(resolvedName);
+                  setDeptName(resolvedName);
                 }
               }}
               defaultOption={{ label: '— Please Choose —', value: '— Please Choose —' }}

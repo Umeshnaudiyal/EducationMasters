@@ -13,11 +13,14 @@ import {
   Building, Clock, FileText, HelpCircle, CheckCircle2,
   Share, BookmarkCheck, Mail, Phone
 } from 'lucide-react';
-import StateLink from '@/components/StateLink';
+import StateLink, { isPlaceholderString } from '@/components/StateLink';
+import InternalLinkModal, { isInternalLink } from '@/components/InternalLinkModal';
 import { getImageUrl } from '@/utils/image';
 import authorsData from '@/utils/authorsData.json';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1';
+const API_BASE = typeof window !== 'undefined'
+  ? '/apis/v1'
+  : (process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1');
 
 const findAuthorInCatalog = (identifier) => {
   if (!identifier) return null;
@@ -242,6 +245,53 @@ export default function SingleArticlePage() {
   const [loading, setLoading] = useState(true);
   const [showLeftAd, setShowLeftAd] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [internalLinkModal, setInternalLinkModal] = useState({
+    isOpen: false,
+    targetUrl: '',
+    targetWindow: '_self',
+  });
+
+  const handleArticleContentClick = (e) => {
+    const link = e.target.closest('a');
+    if (!link) return;
+
+    const href = link.getAttribute('href');
+    if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+      return;
+    }
+
+    // Never intercept channel join links, share buttons, top breadcrumbs, or byline author
+    if (
+      link.closest('nav') ||
+      link.closest('.share-buttons') ||
+      link.closest('[data-no-interception]') ||
+      link.getAttribute('data-no-interception') ||
+      href.includes('whatsapp.com/channel') ||
+      href.includes('t.me/educationmastersin') ||
+      href.includes('api.whatsapp.com/send') ||
+      href.includes('facebook.com/educationmastersindia')
+    ) {
+      return;
+    }
+
+    // Check if clicked inside text editor raw HTML, highlights table, overview table, or article body
+    const isInsideArticleContent = Boolean(
+      link.closest('.article-raw-html') ||
+      link.closest('.article-content-body') ||
+      link.closest('table') ||
+      link.closest('.overflow-x-auto')
+    );
+
+    if (isInsideArticleContent) {
+      e.preventDefault();
+      e.stopPropagation();
+      setInternalLinkModal({
+        isOpen: true,
+        targetUrl: href,
+        targetWindow: link.getAttribute('target') || '_blank',
+      });
+    }
+  };
 
   const isJobPage = pathname.startsWith('/job') || article?.isJob;
   const isAdmitCardPage = pathname.startsWith('/admit-card') || article?.isAdmitCard || article?.category?.toLowerCase().includes('admit');
@@ -428,16 +478,16 @@ export default function SingleArticlePage() {
 
     // Extract Department / Board / Agency Name
     const extractDepartment = (rawItem) => {
-      if (rawItem.dept && String(rawItem.dept).trim()) {
+      if (rawItem.dept && String(rawItem.dept).trim() && !isPlaceholderString(rawItem.dept)) {
         return cleanHTML(rawItem.dept);
       }
       if (rawItem.department) {
         const deptStr = typeof rawItem.department === 'object' ? rawItem.department.name : String(rawItem.department);
-        if (deptStr && deptStr.trim() && deptStr !== '[object Object]') return cleanHTML(deptStr);
+        if (deptStr && deptStr.trim() && deptStr !== '[object Object]' && !isPlaceholderString(deptStr)) return cleanHTML(deptStr);
       }
       if (rawItem.board) {
         const boardStr = typeof rawItem.board === 'object' ? rawItem.board.name : String(rawItem.board);
-        if (boardStr && boardStr.trim() && boardStr !== '[object Object]') return cleanHTML(boardStr);
+        if (boardStr && boardStr.trim() && boardStr !== '[object Object]' && !isPlaceholderString(boardStr)) return cleanHTML(boardStr);
       }
 
       const titleStr = (rawItem.title || '').trim();
@@ -586,7 +636,8 @@ export default function SingleArticlePage() {
 
     // Dynamic Result / Admit Card Details Object
     const examNameVal = cleanHTML(raw.post || raw.title || 'Government Examination 2026');
-    const deptNameVal = cleanHTML(raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department) || categoryName || 'Official Authority');
+    const rawDeptCandidate = raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department);
+    const deptNameVal = cleanHTML((rawDeptCandidate && !isPlaceholderString(rawDeptCandidate)) ? rawDeptCandidate : (categoryName || 'Official Authority'));
     const postNameVal = cleanHTML(raw.desig || raw.post || raw.title || 'Various Posts');
     const examDateVal = raw.exam_date ? formatDate(raw.exam_date) : (raw.dates?.exam_date ? formatDate(raw.dates.exam_date) : 'As per scheduled');
     const examTimeVal = cleanHTML(raw.exam_time || 'As per scheduled');
@@ -623,10 +674,13 @@ export default function SingleArticlePage() {
     } : null;
 
     // Standard Job Details Object
+    const rawLocationCandidate = raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state);
+    const cleanJobLocation = (rawLocationCandidate && !isPlaceholderString(rawLocationCandidate)) ? cleanHTML(rawLocationCandidate) : 'All India';
+
     const jobDetailsObj = isJob ? {
       postName: cleanHTML(raw.title),
       totalVacancies: cleanHTML(raw.posts || raw.total_posts || raw.vacancies || 'N/A'),
-      jobLocation: cleanHTML(raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state) || 'All India'),
+      jobLocation: cleanJobLocation,
       qualification: cleanHTML(raw.qualification || 'As per notification'),
       releaseDate: formatDate(raw.released || raw.created_at || raw.createdAt),
       startDate: formatDate(raw.app_start || raw.dates?.start_date || raw.created_at),
@@ -774,6 +828,12 @@ export default function SingleArticlePage() {
     <div className="min-h-screen flex flex-col bg-white text-slate-800 font-sans">
       {/* Global CSS overrides for clean HTML rendering */}
       <style jsx global>{`
+        .article-raw-html {
+          width: 100% !important;
+          max-width: 100% !important;
+          word-break: break-word;
+          overflow-wrap: break-word;
+        }
         .article-raw-html table {
           width: 100% !important;
           display: block !important;
@@ -826,9 +886,24 @@ export default function SingleArticlePage() {
           margin-bottom: 0.75rem !important;
         }
         .article-raw-html p {
+          width: 100% !important;
+          max-width: 100% !important;
           margin-bottom: 0.85rem !important;
           line-height: 1.7 !important;
           color: #334155 !important;
+          text-align: justify !important;
+          text-justify: inter-word !important;
+          hyphens: auto;
+          -webkit-hyphens: auto;
+        }
+        @media (min-width: 640px) {
+          .article-raw-html p {
+            text-align: left !important;
+          }
+        }
+        .article-raw-html div,
+        .article-raw-html span {
+          max-width: 100% !important;
         }
       `}</style>
 
@@ -908,19 +983,17 @@ export default function SingleArticlePage() {
                 <div className="h-72 bg-slate-100 rounded w-full"></div>
               </div>
             ) : article ? (
-              <article className="space-y-5">
-
-
+              <article className="space-y-3 sm:space-y-4 md:space-y-5" onClick={handleArticleContentClick}>
 
                 {/* 2. Article Main Title */}
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 leading-snug sm:leading-tight">
                   {article.title}
                 </h1>
 
                 {/* 3. Byline Meta: Author, Category, Posted Date & Status */}
-                <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs sm:text-sm text-slate-700 font-normal">
-                  <span>
-                    By{' '}
+                <div className="flex flex-wrap items-center gap-x-2 sm:gap-x-2.5 gap-y-1 text-xs sm:text-sm text-slate-600 font-normal">
+                  <span className="inline-flex items-center">
+                    By&nbsp;
                     <Link
                       href={`/author/${encodeURIComponent(
                         (typeof article.author === 'object'
@@ -932,9 +1005,9 @@ export default function SingleArticlePage() {
                       {typeof article.author === 'object' ? article.author.name : article.author}
                     </Link>
                   </span>
-                  <span className="text-slate-300">|</span>
-                  <span>
-                    In{' '}
+                  <span className="text-slate-300 select-none">•</span>
+                  <span className="inline-flex items-center">
+                    In&nbsp;
                     {isJobPage ? (
                       <Link href="/jobs" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
                         Jobs
@@ -953,28 +1026,26 @@ export default function SingleArticlePage() {
                       </Link>
                     )}
                   </span>
-                  <span className="text-slate-300">|</span>
-                  <span>
-                    Posted: <span className="font-bold text-slate-900">{article.date}</span>
+                  <span className="text-slate-300 select-none">•</span>
+                  <span className="inline-flex items-center whitespace-nowrap">
+                    Posted:&nbsp;<strong className="font-bold text-slate-900">{article.date}</strong>
                   </span>
                   {article.lastDate && (
-                    <>
-                      <span className="text-slate-300">|</span>
-                      <span>
-                        Status: <span className="font-bold text-slate-900">{article.lastDate}</span>
-                      </span>
-                    </>
+                    <span className="inline-flex items-center whitespace-nowrap">
+                      <span className="text-slate-300 mr-2 select-none">•</span>
+                      Status:&nbsp;<strong className="font-bold text-slate-900">{article.lastDate}</strong>
+                    </span>
                   )}
                 </div>
 
                 {/* 4. Official Disclaimer Box */}
-                <div className="p-3.5 bg-[#fef9ed] border border-[#f5dfb8] rounded text-xs text-[#8a5314] leading-relaxed">
+                <div className="w-full p-2.5 sm:p-3.5 bg-[#fef9ed] border border-[#f5dfb8] rounded-lg text-xs text-[#8a5314] leading-relaxed">
                   <strong className="font-semibold">Disclaimer:</strong> The content shown on this page related to government jobs, admit cards and results is either sourced from various internet portals or directly from official government websites. We do not claim any affiliation or authority over this content. It is solely for information providing purposes.
                 </div>
 
                 {/* 5. Featured Banner Image (if available) */}
                 {article.image && (
-                  <div className="w-full my-2">
+                  <div className="w-full my-1.5 sm:my-2">
                     <img
                       src={article.image}
                       alt={article.title}
@@ -984,7 +1055,7 @@ export default function SingleArticlePage() {
                 )}
 
                 {/* 6. Professional Social Share Bar (Icons expand on hover to show label) */}
-                <div className="flex flex-wrap items-center justify-between gap-3 py-2.5 border-y border-slate-200/80 my-3 bg-slate-50/60 px-3 rounded-lg">
+                <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 py-1.5 sm:py-2.5 border-y border-slate-200/80 my-2 sm:my-3 bg-slate-50/60 px-2.5 sm:px-3 rounded-lg">
                   <div className="flex flex-wrap items-center gap-2">
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-widest mr-1">Share:</span>
 
@@ -1059,8 +1130,8 @@ export default function SingleArticlePage() {
                     )}
                     <span
                       className={`overflow-hidden whitespace-nowrap transition-all duration-300 ease-out ${copiedLink
-                          ? 'max-w-24 opacity-100 ml-1.5 text-emerald-600 font-semibold'
-                          : 'max-w-0 opacity-0 group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5'
+                        ? 'max-w-24 opacity-100 ml-1.5 text-emerald-600 font-semibold'
+                        : 'max-w-0 opacity-0 group-hover:max-w-24 group-hover:opacity-100 group-hover:ml-1.5'
                         }`}
                     >
                       {copiedLink ? 'Copied!' : 'Copy Link'}
@@ -1172,7 +1243,7 @@ export default function SingleArticlePage() {
                     </div>
 
                     {/* SECTION 3: DIRECT VIEW RESULT LINK CALLOUT BANNER */}
-                    <div className="my-6 p-6 sm:p-8 bg-[#1d68e1] text-white rounded-lg text-center shadow-md space-y-3">
+                    <div className="my-6 p-6 sm:p-8 bg-[#1d68e1] text-white rounded-lg text-center shadow-md space-y-3 direct-link-banner" data-editor-content="true">
                       <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
                         {article.isResult ? 'Direct View Result Link' : 'Direct Download Admit Card Link'}
                       </h3>
@@ -1304,10 +1375,10 @@ export default function SingleArticlePage() {
                   /* ========================================================================= */
                   /* 7. GENERAL / JOB ARTICLE VIEW */
                   /* ========================================================================= */
-                  <div className="text-slate-700 text-base leading-relaxed space-y-4 font-normal">
+                  <div className="w-full text-slate-700 text-sm sm:text-base leading-relaxed space-y-4 font-normal">
                     {article.content ? (
                       <div
-                        className="article-raw-html text-slate-700 text-base leading-relaxed space-y-4"
+                        className="article-raw-html w-full text-slate-700 text-sm sm:text-base leading-relaxed space-y-4"
                         dangerouslySetInnerHTML={{ __html: article.content }}
                       />
                     ) : null}
@@ -1643,7 +1714,7 @@ export default function SingleArticlePage() {
                       </p>
 
                       {/* Social Media & Contact Links Row */}
-                      {typeof article.author === 'object' && (article.author.website || article.author.twitter || article.author.facebook || article.author.instagram || article.author.linkedin || article.author.youtube || article.author.email || article.author.phone) && (
+                      {typeof article.author === 'object' && (article.author.website || article.author.twitter || article.author.facebook || article.author.instagram || article.author.linkedin || article.author.youtube) && (
                         <div className="flex items-center justify-center sm:justify-start gap-2 pt-1.5 flex-wrap">
                           {article.author.website && (
                             <a
@@ -1719,24 +1790,6 @@ export default function SingleArticlePage() {
                               <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                                 <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z" />
                               </svg>
-                            </a>
-                          )}
-                          {article.author.email && (
-                            <a
-                              href={`mailto:${article.author.email}`}
-                              className="w-7 h-7 rounded-lg bg-white hover:bg-emerald-50 text-slate-500 hover:text-emerald-600 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
-                              title={`Email: ${article.author.email}`}
-                            >
-                              <Mail className="w-3.5 h-3.5" />
-                            </a>
-                          )}
-                          {article.author.phone && (
-                            <a
-                              href={`tel:${article.author.phone}`}
-                              className="w-7 h-7 rounded-lg bg-white hover:bg-orange-50 text-slate-500 hover:text-orange-600 border border-slate-200 shadow-2xs flex items-center justify-center transition hover:scale-110"
-                              title={`Phone: ${article.author.phone}`}
-                            >
-                              <Phone className="w-3.5 h-3.5" />
                             </a>
                           )}
                         </div>
@@ -1894,6 +1947,14 @@ export default function SingleArticlePage() {
 
         </div>
       </main>
+
+      {/* Popup Modal for Internal Links in Text Editor */}
+      <InternalLinkModal
+        isOpen={internalLinkModal.isOpen}
+        onClose={() => setInternalLinkModal((prev) => ({ ...prev, isOpen: false }))}
+        targetUrl={internalLinkModal.targetUrl}
+        targetWindow={internalLinkModal.targetWindow}
+      />
 
       <Footer />
     </div>

@@ -156,13 +156,22 @@ export default function CategoriesSection({ onSelectCategory }) {
       <div className="w-full max-w-[1440px] mx-auto px-4 sm:px-6 lg:px-8 space-y-10">
 
         {/* Section Header */}
-        <div className="text-center space-y-2">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#213547] tracking-tight">
-            Popular Categories
-          </h2>
-          <p className="text-slate-500 text-xs sm:text-sm font-medium">
-            Start Learning and update yourself for Govt. jobs Exam
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-center sm:text-left">
+          <div className="space-y-1.5">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#213547] tracking-tight">
+              Popular Categories
+            </h2>
+            <p className="text-slate-500 text-xs sm:text-sm font-medium">
+              Start Learning and update yourself for Govt. jobs Exam
+            </p>
+          </div>
+          <Link
+            href="/categories"
+            className="inline-flex items-center justify-center sm:justify-end gap-1.5 text-xs sm:text-sm font-bold text-blue-600 hover:text-blue-700 hover:underline transition shrink-0"
+          >
+            <span>View All Categories</span>
+            <span className="text-base leading-none">&rarr;</span>
+          </Link>
         </div>
 
         {/* 6-Column × 2-Row Category Grid */}

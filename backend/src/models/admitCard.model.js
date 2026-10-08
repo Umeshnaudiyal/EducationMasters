@@ -61,10 +61,28 @@ const admitCardSchema = new mongoose.Schema(
     meta_id: { type: Number, default: 0 },
   },
   {
-    timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' },
+    timestamps: true,
     strict: false,
   }
 );
+
+admitCardSchema.pre('save', function (next) {
+  const now = new Date();
+  const dateStr = now.toISOString().replace('T', ' ').slice(0, 19);
+  if (!this.created_at) {
+    this.created_at = this.createdAt && !isNaN(new Date(this.createdAt).getTime())
+      ? new Date(this.createdAt).toISOString().replace('T', ' ').slice(0, 19)
+      : dateStr;
+  }
+  if (!this.createdAt || isNaN(new Date(this.createdAt).getTime())) {
+    this.createdAt = this.created_at && !isNaN(new Date(this.created_at).getTime())
+      ? new Date(this.created_at)
+      : now;
+  }
+  this.updated_at = dateStr;
+  this.updatedAt = now;
+  next();
+});
 
 const AdmitCard = mongoose.models.AdmitCard || mongoose.model('AdmitCard', admitCardSchema);
 

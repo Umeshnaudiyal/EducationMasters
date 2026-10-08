@@ -162,23 +162,29 @@ export default function StateJobsClient({ stateSlug }) {
     [stateSlug]
   );
 
-  const fetchExpiringJobs = async () => {
+  const fetchExpiringJobs = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6`);
+      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&state=${encodeURIComponent(stateSlug)}`);
       const data = await res.json();
-      if (data.success && data.data) {
+      if (data.success && Array.isArray(data.data)) {
         setExpiringJobs(data.data);
+      } else {
+        setExpiringJobs([]);
       }
     } catch (err) {
       console.error('Error fetching expiring jobs:', err);
+      setExpiringJobs([]);
     }
-  };
+  }, [stateSlug]);
 
   useEffect(() => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
     fetchJobs(page, searchQuery);
-    fetchExpiringJobs();
   }, [page, searchQuery, fetchJobs]);
+
+  useEffect(() => {
+    fetchExpiringJobs();
+  }, [fetchExpiringJobs]);
 
   // Handler for state switch -> Navigate to that state's dedicated page!
   const handleStateChange = (newSlug) => {
@@ -360,102 +366,107 @@ export default function StateJobsClient({ stateSlug }) {
             {/* ========================================================= */}
             {/* PREMIUM COMPACT COUNTRY & STATE FILTER BAR                */}
             {/* ========================================================= */}
-            <div className="bg-gradient-to-r from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-2xs space-y-2.5">
+            <div className="bg-gradient-to-r from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/90 rounded-xl p-2.5 sm:p-3.5 shadow-2xs space-y-2.5">
 
-              {/* Top Controls Row - Single line sequence with All Jobs after Go button */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Top Controls Row: 2-col dropdowns + full width search on mobile, single flex line on desktop */}
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
 
-                {/* Filter Icon Label */}
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 pr-1 select-none shrink-0">
+                {/* Filter Icon Label (Desktop only) */}
+                <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-800 pr-1 select-none shrink-0">
                   <SlidersHorizontal size={13} className="text-blue-600 shrink-0" />
                   <span>Filter:</span>
                 </div>
 
-                {/* 1. Country Dropdown */}
-                <div className="relative inline-flex items-center shrink-0">
-                  <div className="absolute left-2.5 pointer-events-none text-blue-600 flex items-center">
-                    <Globe size={13} />
+                {/* Dropdowns Group: 2-column grid on mobile, flex on desktop */}
+                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2">
+                  {/* 1. Country Dropdown */}
+                  <div className="relative w-full sm:w-auto">
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-blue-600 flex items-center">
+                      <Globe size={13} />
+                    </div>
+                    <select
+                      value="india"
+                      onChange={(e) => handleCountryChange(e.target.value)}
+                      className="w-full sm:w-auto pl-7 pr-6 py-1.5 sm:py-1 text-xs font-medium bg-white text-slate-800 border border-slate-300 rounded-lg hover:border-blue-400 focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition truncate"
+                      aria-label="Filter by Country"
+                    >
+                      {DEFAULT_COUNTRIES.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.flag ? `${c.flag} ` : ''}{c.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">
+                      ▼
+                    </div>
                   </div>
-                  <select
-                    value="india"
-                    onChange={(e) => handleCountryChange(e.target.value)}
-                    className="pl-7 pr-7 py-1 text-xs font-medium bg-white text-slate-800 border border-slate-300 rounded-lg hover:border-blue-400 focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition"
-                    aria-label="Filter by Country"
-                  >
-                    {DEFAULT_COUNTRIES.map((c) => (
-                      <option key={c.slug} value={c.slug}>
-                        {c.flag ? `${c.flag} ` : ''}{c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-2 pointer-events-none text-slate-400 text-[10px]">
-                    ▼
+
+                  {/* 2. State Dropdown */}
+                  <div className="relative w-full sm:w-auto">
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
+                      <MapPin size={13} />
+                    </div>
+                    <select
+                      value={stateSlug}
+                      onChange={(e) => handleStateChange(e.target.value)}
+                      className="w-full sm:w-auto pl-7 pr-6 py-1.5 sm:py-1 text-xs font-semibold bg-blue-50/40 text-blue-900 border border-blue-500 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition truncate"
+                      aria-label="Filter by State"
+                    >
+                      <option value="all">📍 All States &amp; UTs</option>
+                      <option value="all-india">🌟 All India (Central)</option>
+                      <option disabled>──────────────</option>
+                      {statesList.map((st) => (
+                        <option key={st.slug} value={st.slug}>
+                          {st.name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-blue-600 text-[10px]">
+                      ▼
+                    </div>
                   </div>
                 </div>
 
-                {/* 2. State Dropdown */}
-                <div className="relative inline-flex items-center shrink-0">
-                  <div className="absolute left-2.5 pointer-events-none text-rose-500 flex items-center">
-                    <MapPin size={13} />
-                  </div>
-                  <select
-                    value={stateSlug}
-                    onChange={(e) => handleStateChange(e.target.value)}
-                    className="pl-7 pr-7 py-1 text-xs font-semibold bg-blue-50/40 text-blue-900 border border-blue-500 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition"
-                    aria-label="Filter by State"
+                {/* Search Form + Buttons: Full width on mobile, inline flex on desktop */}
+                <div className="flex items-center gap-1.5 w-full sm:w-auto sm:flex-1 sm:max-w-xs">
+                  <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div className="relative flex-1 min-w-0">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder={`Search in ${stateDisplayName}...`}
+                        className="w-full pl-8 pr-6 py-1.5 sm:py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 transition shadow-2xs placeholder:text-slate-400"
+                      />
+                      {searchInput && (
+                        <button
+                          type="button"
+                          onClick={handleResetSearch}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                        >
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-3.5 py-1.5 sm:py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition cursor-pointer shrink-0"
+                    >
+                      Go
+                    </button>
+                  </form>
+
+                  {/* All Jobs Button */}
+                  <Link
+                    href="/jobs"
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:py-1 text-[11px] font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition shadow-2xs cursor-pointer shrink-0"
+                    title="View All Indian Jobs"
                   >
-                    <option value="all">📍 All States &amp; UTs (All India)</option>
-                    <option value="all-india">🌟 All India / Central Govt</option>
-                    <option disabled>──────────────</option>
-                    {statesList.map((st) => (
-                      <option key={st.slug} value={st.slug}>
-                        {st.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-2 pointer-events-none text-blue-600 text-[10px]">
-                    ▼
-                  </div>
+                    <RotateCcw size={11} />
+                    <span className="hidden min-[360px]:inline">All Jobs</span>
+                  </Link>
                 </div>
-
-                {/* 3. Search Input & Go Button */}
-                <form onSubmit={handleSearchSubmit} className="inline-flex items-center gap-1">
-                  <div className="relative">
-                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      placeholder={`Search in ${stateDisplayName}...`}
-                      className="pl-7 pr-6 py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 w-36 sm:w-44 transition shadow-2xs"
-                    />
-                    {searchInput && (
-                      <button
-                        type="button"
-                        onClick={handleResetSearch}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                      >
-                        <X size={11} />
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition cursor-pointer shrink-0"
-                  >
-                    Go
-                  </button>
-                </form>
-
-                {/* 4. All Jobs Button - Placed AFTER Go Button */}
-                <Link
-                  href="/jobs"
-                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition shadow-2xs cursor-pointer shrink-0"
-                  title="View All Indian Jobs"
-                >
-                  <RotateCcw size={11} />
-                  <span>All Jobs</span>
-                </Link>
 
               </div>
 
@@ -473,7 +484,7 @@ export default function StateJobsClient({ stateSlug }) {
                 <button
                   type="button"
                   onClick={() => handleStateChange('all')}
-                  className="px-2 py-0.5 text-[11px] rounded-md font-medium whitespace-nowrap transition shrink-0 cursor-pointer bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                  className="px-2.5 py-0.5 text-[11px] rounded-md font-medium whitespace-nowrap transition shrink-0 cursor-pointer bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
                 >
                   All India
                 </button>
@@ -486,10 +497,11 @@ export default function StateJobsClient({ stateSlug }) {
                       key={item.slug}
                       type="button"
                       onClick={() => handleStateChange(item.slug)}
-                      className={`px-2 py-0.5 text-[11px] rounded-md font-medium whitespace-nowrap transition shrink-0 cursor-pointer ${isActive
-                        ? 'bg-blue-600 text-white shadow-2xs font-semibold'
-                        : 'bg-white hover:bg-blue-50/80 text-slate-700 hover:text-blue-700 border border-slate-200/90 shadow-2xs'
-                        }`}
+                      className={`px-2.5 py-0.5 text-[11px] rounded-md font-medium whitespace-nowrap transition shrink-0 cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-2xs font-semibold'
+                          : 'bg-white hover:bg-blue-50/80 text-slate-700 hover:text-blue-700 border border-slate-200/90 shadow-2xs'
+                      }`}
                     >
                       {item.shortName}
                     </button>
@@ -738,11 +750,13 @@ export default function StateJobsClient({ stateSlug }) {
                   <div>
                     <div className="flex items-center justify-between text-[11px] sm:text-xs mb-3 pb-2.5 border-b border-slate-300 gap-1.5">
                       <span className="text-slate-700 font-normal whitespace-nowrap">
-                        28 Jobs are expiring in 30 Days
+                        {expiringJobs.length > 0
+                          ? `${expiringJobs.length} ${stateDisplayName} Jobs expiring in 30 Days`
+                          : `0 ${stateDisplayName} Jobs expiring in 30 Days`}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Link
-                          href="/jobs-expiring-in-30-days"
+                          href={`/jobs-expiring-in-30-days?state=${encodeURIComponent(stateSlug)}`}
                           className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs"
                         >
                           View All
@@ -754,45 +768,51 @@ export default function StateJobsClient({ stateSlug }) {
                       </div>
                     </div>
 
-                    <div className="divide-y divide-slate-300">
-                      {expiringJobs.map((item) => {
-                        const miniMediaUrl = getImageUrl(item.featured_media);
+                    {expiringJobs.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-slate-500 font-medium">
+                        No active expiring jobs found for {stateDisplayName}.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-300">
+                        {expiringJobs.map((item) => {
+                          const miniMediaUrl = getImageUrl(item.featured_media);
 
-                        return (
-                          <Link
-                            key={item._id}
-                            href={`/job/${item.slug || item._id}`}
-                            className="py-3.5 first:pt-1 last:pb-1 flex items-start gap-3.5 group transition"
-                          >
-                            <div className="w-28 sm:w-32 h-20 bg-white rounded border border-slate-300 overflow-hidden shrink-0 shadow-2xs">
-                              <img
-                                src={miniMediaUrl}
-                                alt={item.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                onError={(e) => {
-                                  if (!e.currentTarget.dataset.fallback) {
-                                    e.currentTarget.dataset.fallback = 'true';
-                                    e.currentTarget.src = '/job-search.png';
-                                  } else {
-                                    e.currentTarget.style.display = 'none';
-                                  }
-                                }}
-                              />
-                            </div>
-
-                            <div className="flex-1 min-w-0 flex flex-col justify-between h-20">
-                              <h4 className="text-xs sm:text-sm font-normal text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
-                                {item.title}
-                              </h4>
-                              <div className="text-xs text-slate-500 font-normal flex items-center justify-between mt-auto">
-                                <span>Last Date: {formatShortDate(item.app_ends)}</span>
-                                <span>Jobs</span>
+                          return (
+                            <Link
+                              key={item._id}
+                              href={`/job/${item.slug || item._id}`}
+                              className="py-3.5 first:pt-1 last:pb-1 flex items-start gap-3.5 group transition"
+                            >
+                              <div className="w-28 sm:w-32 h-20 bg-white rounded border border-slate-300 overflow-hidden shrink-0 shadow-2xs">
+                                <img
+                                  src={miniMediaUrl}
+                                  alt={item.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                                  onError={(e) => {
+                                    if (!e.currentTarget.dataset.fallback) {
+                                      e.currentTarget.dataset.fallback = 'true';
+                                      e.currentTarget.src = '/job-search.png';
+                                    } else {
+                                      e.currentTarget.style.display = 'none';
+                                    }
+                                  }}
+                                />
                               </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
+
+                              <div className="flex-1 min-w-0 flex flex-col justify-between h-20">
+                                <h4 className="text-xs sm:text-sm font-normal text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
+                                  {item.title}
+                                </h4>
+                                <div className="text-xs text-slate-500 font-normal flex items-center justify-between mt-auto">
+                                  <span>Last Date: {formatShortDate(item.app_ends)}</span>
+                                  <span>Jobs</span>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-sm text-slate-600 py-8 text-center">

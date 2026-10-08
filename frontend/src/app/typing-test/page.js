@@ -387,7 +387,6 @@ export default function TypingTestPage() {
       {/* 1. Header Navigation */}
       <Header
         onOpenTypingModal={() => setIsTypingModalOpen(true)}
-        onOpenMockModal={() => setIsMockModalOpen(true)}
       />
 
       {/* 60VH VIEWPORT CONTAINER */}

@@ -7,9 +7,11 @@ import { X } from 'lucide-react';
 import {
   AnimatedGauge,
   AnimatedPin,
+  AnimatedStickyNote,
   AnimatedImage,
   AnimatedLandmark,
   AnimatedCheckSquare,
+  AnimatedMockTest,
   AnimatedUsers,
   AnimatedMail,
   AnimatedHistory,
@@ -110,6 +112,13 @@ export default function AdminSidebar({
       ],
     },
     {
+      id: 'sticky-notes',
+      label: 'Sticky Notes',
+      icon: AnimatedStickyNote,
+      href: '/edu-admin/sticky-notes',
+      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+    },
+    {
       id: 'media',
       label: 'Media',
       icon: AnimatedImage,
@@ -131,6 +140,18 @@ export default function AdminSidebar({
         { label: 'Add New', href: '/edu-admin/institutes/create' },
         { label: 'Courses', href: '/edu-admin/institutes/courses' },
         { label: 'Facilities', href: '/edu-admin/institutes/facilities' },
+      ],
+    },
+    {
+      id: 'mock-tests',
+      label: 'Mock Tests',
+      icon: AnimatedMockTest,
+      hasSubmenu: true,
+      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+      subItems: [
+        { label: 'All Mock Test Series', href: '/edu-admin/mock-tests' },
+        { label: 'Create Series', href: '/edu-admin/mock-tests/create' },
+        { label: 'Pricing & Passes', href: '/edu-admin/mock-tests/plans' },
       ],
     },
     {
@@ -211,7 +232,9 @@ export default function AdminSidebar({
 
       const IconComponent = item.icon;
       const isMenuOpen = openMenus[item.id];
-      const isDirectActive = item.href === pathname;
+      const isDirectActive =
+        item.href === pathname ||
+        (item.href && item.href !== '/edu-admin' && pathname.startsWith(item.href));
       const isSubmenuActive =
         item.subItems &&
         item.subItems.some((s) => {
@@ -230,21 +253,21 @@ export default function AdminSidebar({
               type="button"
               onClick={() => toggleSubmenu(item.id)}
               title={!isMobileView && isCollapsed ? item.label : undefined}
-              className={`relative w-full flex items-center justify-between px-3 py-2 text-xs font-normal transition-all duration-200 cursor-pointer ${
+              className={`relative w-full flex items-center justify-between px-3.5 py-2.5 text-[13px] font-medium transition-all duration-200 cursor-pointer ${
                 isActive
-                  ? 'bg-[#2271b1] text-white font-medium shadow-xs'
+                  ? 'bg-[#2271b1] text-white shadow-xs'
                   : 'text-[#c3c4c7] hover:bg-[#2c3338] hover:text-[#72aee6]'
               }`}
             >
-              <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex items-center gap-3 min-w-0">
                 <IconComponent
-                  size={16}
+                  size={17}
                   className={`shrink-0 transition-colors ${
                     isActive ? 'text-white' : 'text-[#a7aaad] group-hover:text-[#72aee6]'
                   }`}
                 />
                 {(isMobileView || !isCollapsed) && (
-                  <span className="truncate text-left">{item.label}</span>
+                  <span className="truncate text-left leading-tight">{item.label}</span>
                 )}
               </div>
 
@@ -256,7 +279,7 @@ export default function AdminSidebar({
 
             {/* Submenu Links */}
             {(isMobileView || !isCollapsed) && isMenuOpen && item.subItems && (
-              <div className="bg-[#2c3338] py-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
+              <div className="bg-[#262c30] py-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
                 {item.subItems.map((sub, subIdx) => {
                   const isSubActive =
                     pathname === sub.href ||
@@ -269,9 +292,9 @@ export default function AdminSidebar({
                       onClick={() => {
                         if (isMobileView) setIsMobileSidebarOpen(false);
                       }}
-                      className={`block py-1.5 px-4 text-[11px] transition-colors truncate ${
+                      className={`block py-2 px-5 text-[12px] font-medium transition-colors truncate ${
                         isSubActive
-                          ? 'text-white font-bold bg-[#135e96]/40'
+                          ? 'text-white font-bold bg-[#2271b1]/35 border-l-2 border-[#2271b1]'
                           : 'text-[#c3c4c7] hover:text-[#72aee6] hover:bg-[#1d2327]/60'
                       }`}
                     >
@@ -293,19 +316,19 @@ export default function AdminSidebar({
             if (isMobileView) setIsMobileSidebarOpen(false);
           }}
           title={!isMobileView && isCollapsed ? item.label : undefined}
-          className={`group flex items-center gap-2.5 px-3 py-2 text-xs font-normal transition-all duration-200 ${
+          className={`group flex items-center gap-3 px-3.5 py-2.5 text-[13px] font-medium transition-all duration-200 ${
             isActive
-              ? 'bg-[#2271b1] text-white font-medium shadow-xs'
+              ? 'bg-[#2271b1] text-white shadow-xs'
               : 'text-[#c3c4c7] hover:bg-[#2c3338] hover:text-[#72aee6]'
           }`}
         >
           <IconComponent
-            size={16}
+            size={17}
             className={`shrink-0 transition-colors ${
               isActive ? 'text-white' : 'text-[#a7aaad] group-hover:text-[#72aee6]'
             }`}
           />
-          {(isMobileView || !isCollapsed) && <span className="truncate">{item.label}</span>}
+          {(isMobileView || !isCollapsed) && <span className="truncate leading-tight">{item.label}</span>}
         </Link>
       );
     });
@@ -324,22 +347,22 @@ export default function AdminSidebar({
           />
 
           {/* Drawer Panel */}
-          <aside className="fixed inset-y-0 left-0 w-64 max-w-[82vw] bg-[#1d2327] text-[#c3c4c7] select-none flex flex-col shadow-2xl z-[100] animate-in slide-in-from-left duration-200">
+          <aside className="fixed inset-y-0 left-0 w-68 max-w-[85vw] bg-[#1d2327] text-[#c3c4c7] select-none flex flex-col shadow-2xl z-[100] animate-in slide-in-from-left duration-200">
             {/* Mobile Drawer Top Header */}
-            <div className="h-11 px-3.5 bg-[#1d2327] border-b border-[#2c3338] flex items-center justify-between shrink-0">
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full overflow-hidden bg-amber-400/20 border border-amber-400 flex items-center justify-center p-0.5 shrink-0">
+            <div className="h-12 px-4 bg-[#1d2327] border-b border-[#2c3338] flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-6 h-6 rounded-full overflow-hidden bg-amber-400/20 border border-amber-400 flex items-center justify-center p-0.5 shrink-0">
                   <img src="/logo.webp" alt="Logo" className="w-full h-full object-contain" />
                 </div>
-                <span className="font-bold text-xs text-white tracking-tight">Admin Menu</span>
+                <span className="font-bold text-xs sm:text-sm text-white tracking-tight">Admin Menu</span>
               </div>
               <button
                 type="button"
                 onClick={() => setIsMobileSidebarOpen(false)}
-                className="p-1.5 text-[#a7aaad] hover:text-white hover:bg-[#2c3338] rounded-md transition-colors cursor-pointer"
+                className="p-1.5 text-[#a7aaad] hover:text-white hover:bg-[#2c3338] rounded-lg transition-colors cursor-pointer"
                 aria-label="Close menu"
               >
-                <X size={16} />
+                <X size={18} />
               </button>
             </div>
 
@@ -349,30 +372,47 @@ export default function AdminSidebar({
             </div>
 
             {/* Mobile Footer */}
-            <div className="border-t border-[#2c3338] p-3 bg-[#1d2327] shrink-0 text-center">
-              <span className="text-[10px] text-slate-400">Education Masters Portal</span>
+            <div className="border-t border-[#2c3338] p-3.5 bg-[#1d2327] shrink-0 text-center">
+              <span className="text-[11px] text-slate-400 font-medium">Education Masters Portal</span>
             </div>
           </aside>
         </div>
       )}
 
-      {/* 2. Standard Fixed Desktop Sidebar (>= 768px) - 100% Intact */}
+      {/* 2. Standard Fixed Desktop Sidebar (>= 768px) with Center-side Animated Collapse Button */}
       <aside
-        className={`hidden md:flex relative flex-col bg-[#1d2327] text-[#c3c4c7] select-none transition-all duration-200 ease-in-out shrink-0 z-30 ${
-          isCollapsed ? 'w-12' : 'w-[165px]'
+        className={`hidden md:flex relative flex-col bg-[#1d2327] text-[#c3c4c7] select-none transition-all duration-300 ease-in-out shrink-0 z-30 ${
+          isCollapsed ? 'w-14' : 'w-[188px]'
         }`}
         style={{ minHeight: '100vh' }}
       >
-        {/* Navigation Items */}
-        <div className="flex-1 overflow-y-auto py-1 space-y-0.5 custom-scrollbar">
+        {/* CENTER-SIDE FLOATING COLLAPSE BUTTON WITH ANIMATION & HOVER EFFECT */}
+        <button
+          type="button"
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          title={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          aria-label={isCollapsed ? 'Expand Sidebar' : 'Collapse Sidebar'}
+          className="group/sidebtn absolute top-1/2 -translate-y-1/2 -right-3.5 z-40 w-7 h-7 rounded-full bg-[#1d2327] hover:bg-[#2271b1] text-[#a7aaad] hover:text-white border-2 border-[#2c3338] hover:border-[#2271b1] shadow-lg flex items-center justify-center cursor-pointer transition-all duration-300 ease-out hover:scale-115 active:scale-95"
+        >
+          <div className="transition-transform duration-300 flex items-center justify-center">
+            {isCollapsed ? (
+              <AnimatedChevronRight size={13} className="text-[#a7aaad] group-hover/sidebtn:text-white" />
+            ) : (
+              <AnimatedChevronLeft size={13} className="text-[#a7aaad] group-hover/sidebtn:text-white" />
+            )}
+          </div>
+        </button>
+
+        {/* Navigation Items Container */}
+        <div className="flex-1 overflow-y-auto py-1.5 space-y-0.5 custom-scrollbar">
           {renderNavItems(false)}
         </div>
 
-        {/* Collapse Menu Toggle Button at Bottom */}
+        {/* Bottom Collapse Menu Toggle Button */}
         <div className="border-t border-[#2c3338] bg-[#1d2327] shrink-0">
           <button
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="group w-full flex items-center gap-2 px-3 py-2.5 text-xs text-[#a7aaad] hover:text-[#72aee6] hover:bg-[#2c3338] transition-colors cursor-pointer"
+            className="group w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs text-[#a7aaad] hover:text-[#72aee6] hover:bg-[#2c3338] transition-colors cursor-pointer"
           >
             <div className="w-5 h-5 rounded-full border border-[#a7aaad] flex items-center justify-center shrink-0 transition-colors group-hover:border-[#72aee6]">
               {isCollapsed ? (
@@ -381,7 +421,7 @@ export default function AdminSidebar({
                 <AnimatedChevronLeft size={12} className="text-[#a7aaad] group-hover:text-[#72aee6]" />
               )}
             </div>
-            {!isCollapsed && <span className="text-[11px]">Collapse Menu</span>}
+            {!isCollapsed && <span className="text-[12px] font-medium">Collapse Menu</span>}
           </button>
         </div>
       </aside>

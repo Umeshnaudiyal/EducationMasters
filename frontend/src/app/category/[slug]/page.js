@@ -180,9 +180,9 @@ export default function CategoryPage() {
             <div className="text-xs text-slate-500 mb-1 flex items-center gap-1.5 font-medium overflow-x-auto whitespace-nowrap">
               <Link href="/" className="hover:text-blue-600 text-blue-600 underline">Home</Link>
               <span>›</span>
-              <span className="text-slate-500">Categories</span>
+              <Link href="/categories" className="hover:text-blue-600 text-blue-600 underline">Categories</Link>
               <span>›</span>
-              <span className="text-slate-800 font-bold">Category: {categoryInfo.name}</span>
+              <span className="text-slate-800 font-bold"> {categoryInfo.name}</span>
             </div>
 
             {/* Title Header */}
@@ -321,8 +321,8 @@ export default function CategoryPage() {
                         key={item}
                         onClick={() => setPage(item)}
                         className={`px-3 py-1.5 transition border-r border-slate-200 last:border-r-0 ${isCurrent
-                            ? 'bg-blue-600 text-white font-semibold'
-                            : 'text-blue-600 hover:bg-slate-50 font-medium'
+                          ? 'bg-blue-600 text-white font-semibold'
+                          : 'text-blue-600 hover:bg-slate-50 font-medium'
                           }`}
                       >
                         {item}
@@ -352,8 +352,8 @@ export default function CategoryPage() {
                 <button
                   onClick={() => setRightTab('expiring')}
                   className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-normal transition ${rightTab === 'expiring'
-                      ? 'bg-[#f0f2f5] text-slate-900 rounded-tl-lg font-medium'
-                      : 'text-blue-600 hover:text-blue-700 font-medium'
+                    ? 'bg-[#f0f2f5] text-slate-900 rounded-tl-lg font-medium'
+                    : 'text-blue-600 hover:text-blue-700 font-medium'
                     }`}
                 >
                   Jobs Expiring Soon
@@ -361,8 +361,8 @@ export default function CategoryPage() {
                 <button
                   onClick={() => setRightTab('mcq')}
                   className={`flex-1 py-3.5 px-3 text-center text-xs sm:text-sm whitespace-nowrap font-normal transition ${rightTab === 'mcq'
-                      ? 'bg-[#f0f2f5] text-slate-900 rounded-tr-lg font-medium'
-                      : 'text-blue-600 hover:text-blue-700 font-medium'
+                    ? 'bg-[#f0f2f5] text-slate-900 rounded-tr-lg font-medium'
+                    : 'text-blue-600 hover:text-blue-700 font-medium'
                     }`}
                 >
                   MCQ Questions

@@ -4,6 +4,29 @@ import { INDIAN_STATES_DATA } from '@/utils/indianStatesData';
 
 export { INDIAN_STATES_DATA };
 
+export function isPlaceholderString(val) {
+  if (!val || typeof val !== 'string') return true;
+  const lower = val.trim().toLowerCase();
+  return (
+    !lower ||
+    lower === '— please choose —' ||
+    lower === '-- please choose --' ||
+    lower === 'please choose' ||
+    lower === '— please choose department —' ||
+    lower === '-- please choose department --' ||
+    lower === '— select —' ||
+    lower === '-- select --' ||
+    lower === 'select' ||
+    lower === '— select state —' ||
+    lower === '-- select state --' ||
+    lower === '— select department —' ||
+    lower === '-- select department --' ||
+    lower === 'none' ||
+    lower === 'null' ||
+    lower === 'undefined'
+  );
+}
+
 /**
  * Match a raw state string, object, or department text to a known State & slug
  */
@@ -13,7 +36,7 @@ export function parseStateInfo(state, dept) {
     const stateName = state.name || '';
     const stateSlug = state.slug || (stateName ? stateName.toLowerCase().replace(/[^a-z0-9]+/g, '-') : '');
     
-    if (stateName) {
+    if (stateName && !isPlaceholderString(stateName)) {
       // Check if canonical entry matches
       const canonical = INDIAN_STATES_DATA.find(
         (s) => s.slug === stateSlug || s.name.toLowerCase() === stateName.toLowerCase()
@@ -28,7 +51,7 @@ export function parseStateInfo(state, dept) {
   }
 
   // Case 2: State is a string
-  if (typeof state === 'string' && state.trim()) {
+  if (typeof state === 'string' && state.trim() && !isPlaceholderString(state)) {
     const trimmed = state.trim();
     const lower = trimmed.toLowerCase();
 
@@ -58,7 +81,7 @@ export function parseStateInfo(state, dept) {
   }
 
   // Case 3: Dept string might contain state info or comma-separated location
-  if (typeof dept === 'string' && dept.trim()) {
+  if (typeof dept === 'string' && dept.trim() && !isPlaceholderString(dept)) {
     const trimmedDept = dept.trim();
     const lowerDept = trimmedDept.toLowerCase();
 

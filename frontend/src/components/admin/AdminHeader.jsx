@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { signOut } from 'next-auth/react';
 import {
@@ -33,6 +33,61 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSessionDetail, setShowSessionDetail] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const profileRef = useRef(null);
+  const profileTimerRef = useRef(null);
+  const newMenuRef = useRef(null);
+  const newMenuTimerRef = useRef(null);
+
+  // Smooth hover enter/leave handlers for User Profile Dropdown
+  const handleProfileEnter = () => {
+    if (profileTimerRef.current) {
+      clearTimeout(profileTimerRef.current);
+      profileTimerRef.current = null;
+    }
+    setShowProfileMenu(true);
+  };
+
+  const handleProfileLeave = () => {
+    if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
+    profileTimerRef.current = setTimeout(() => {
+      setShowProfileMenu(false);
+    }, 220);
+  };
+
+  // Smooth hover enter/leave handlers for + New Menu Dropdown
+  const handleNewMenuEnter = () => {
+    if (newMenuTimerRef.current) {
+      clearTimeout(newMenuTimerRef.current);
+      newMenuTimerRef.current = null;
+    }
+    setShowNewMenu(true);
+  };
+
+  const handleNewMenuLeave = () => {
+    if (newMenuTimerRef.current) clearTimeout(newMenuTimerRef.current);
+    newMenuTimerRef.current = setTimeout(() => {
+      setShowNewMenu(false);
+    }, 220);
+  };
+
+  // Close menus on click outside
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
+        setShowProfileMenu(false);
+      }
+      if (newMenuRef.current && !newMenuRef.current.contains(e.target)) {
+        setShowNewMenu(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+      if (profileTimerRef.current) clearTimeout(profileTimerRef.current);
+      if (newMenuTimerRef.current) clearTimeout(newMenuTimerRef.current);
+    };
+  }, []);
 
   // Live session times state
   const [sessionData, setSessionData] = useState({
@@ -261,7 +316,12 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
         </Link>
 
         {/* + New Dropdown */}
-        <div className="relative">
+        <div
+          ref={newMenuRef}
+          onMouseEnter={handleNewMenuEnter}
+          onMouseLeave={handleNewMenuLeave}
+          className="relative"
+        >
           <button
             onClick={() => {
               setShowNewMenu(!showNewMenu);
@@ -276,7 +336,11 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
           </button>
 
           {showNewMenu && (
-            <div className="absolute left-0 mt-1.5 w-44 bg-[#2c3338] border border-[#3c434a] rounded-lg shadow-2xl py-1 z-50 text-xs text-[#c3c4c7] animate-in fade-in zoom-in-95 duration-100">
+            <div
+              onMouseEnter={handleNewMenuEnter}
+              onMouseLeave={handleNewMenuLeave}
+              className="absolute left-0 mt-1.5 w-44 bg-[#2c3338] border border-[#3c434a] rounded-lg shadow-2xl py-1 z-50 text-xs text-[#c3c4c7] animate-in fade-in zoom-in-95 duration-100"
+            >
               <Link
                 href="/edu-admin/blog/create"
                 onClick={() => setShowNewMenu(false)}
@@ -438,10 +502,15 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
         </div>
 
         {/* User Profile Menu */}
-        <div className="relative">
+        <div
+          ref={profileRef}
+          onMouseEnter={handleProfileEnter}
+          onMouseLeave={handleProfileLeave}
+          className="relative"
+        >
           <button
             onClick={() => {
-              setShowProfileMenu(!showProfileMenu);
+              setShowProfileMenu((prev) => !prev);
               setShowNewMenu(false);
               setShowSessionDetail(false);
             }}
@@ -457,7 +526,11 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
 
           {/* Profile Dropdown */}
           {showProfileMenu && (
-            <div className="absolute right-0 mt-1.5 w-64 bg-[#23282d] border border-[#3c434a] rounded-md shadow-2xl py-2 z-50 text-xs text-[#c3c4c7] animate-in fade-in duration-100">
+            <div
+              onMouseEnter={handleProfileEnter}
+              onMouseLeave={handleProfileLeave}
+              className="absolute right-0 mt-1.5 w-64 bg-[#23282d] border border-[#3c434a] rounded-md shadow-2xl py-2 z-50 text-xs text-[#c3c4c7] animate-in fade-in duration-100"
+            >
               {/* User Header Info Card */}
               <div className="px-4 py-2 border-b border-[#3c434a] mb-1.5">
                 <p className="font-bold text-white text-sm truncate">

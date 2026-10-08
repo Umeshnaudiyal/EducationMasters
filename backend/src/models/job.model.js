@@ -41,6 +41,8 @@ const jobSchema = new mongoose.Schema(
     country_id: Number,
     state: { type: mongoose.Schema.Types.ObjectId, ref: 'State' },
     state_id: Number,
+    department: { type: mongoose.Schema.Types.ObjectId, ref: 'Department' },
+    department_id: Number,
     
     categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
     category_ids: [Number],
@@ -93,6 +95,24 @@ const jobSchema = new mongoose.Schema(
   },
   { timestamps: true, strict: false }
 );
+
+jobSchema.pre('save', function (next) {
+  const now = new Date();
+  const dateStr = now.toISOString().replace('T', ' ').slice(0, 19);
+  if (!this.created_at) {
+    this.created_at = this.createdAt && !isNaN(new Date(this.createdAt).getTime())
+      ? new Date(this.createdAt).toISOString().replace('T', ' ').slice(0, 19)
+      : dateStr;
+  }
+  if (!this.createdAt || isNaN(new Date(this.createdAt).getTime())) {
+    this.createdAt = this.created_at && !isNaN(new Date(this.created_at).getTime())
+      ? new Date(this.created_at)
+      : now;
+  }
+  this.updated_at = dateStr;
+  this.updatedAt = now;
+  next();
+});
 
 const Job = mongoose.model('Job', jobSchema);
 export default Job;

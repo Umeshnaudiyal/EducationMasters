@@ -342,6 +342,8 @@ export default function EduAiAnalysisModal({
     }, 40);
   };
 
+  if (!isOpen) return null;
+
   return (
     <div className="fixed inset-0 z-[120] flex items-end sm:items-center justify-center p-0 sm:p-4 md:p-6 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-300">
       

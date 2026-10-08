@@ -163,27 +163,61 @@ function JobsExpiringContent() {
   );
 
   // Fetch Sidebar Expiring Jobs
-  const fetchExpiringSidebar = useCallback(async () => {
+  const fetchExpiringSidebar = useCallback(async (stateFilter) => {
     try {
-      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&days=30`);
+      const stateParam = stateFilter && stateFilter !== 'all' ? `&state=${encodeURIComponent(stateFilter)}` : '';
+      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&days=30${stateParam}`);
       if (!res.ok) return;
       const json = await res.json();
       if (json.success && Array.isArray(json.data)) {
         setExpiringJobs(json.data);
+      } else {
+        setExpiringJobs([]);
       }
     } catch (err) {
       console.error('Error fetching expiring jobs for sidebar:', err);
+      setExpiringJobs([]);
     }
   }, []);
 
   useEffect(() => {
-    fetchExpiringSidebar();
-  }, [fetchExpiringSidebar]);
+    fetchExpiringSidebar(selectedState);
+  }, [selectedState, fetchExpiringSidebar]);
 
   // Main data fetch effect
   useEffect(() => {
     fetchJobs(page, selectedCountry, selectedState, searchQuery);
+
+    // Sync browser URL query string with selected filters
+    const params = new URLSearchParams();
+    if (page > 1) params.set('page', page.toString());
+    if (selectedCountry && selectedCountry !== 'india' && selectedCountry !== 'all') {
+      params.set('country', selectedCountry);
+    }
+    if (selectedState && selectedState !== 'all') {
+      params.set('state', selectedState);
+    }
+    if (searchQuery && searchQuery.trim()) {
+      params.set('search', searchQuery.trim());
+    }
+
+    const newUrl = params.toString() ? `/jobs-expiring-in-30-days?${params.toString()}` : '/jobs-expiring-in-30-days';
+    window.history.replaceState(null, '', newUrl);
   }, [page, selectedCountry, selectedState, searchQuery, fetchJobs]);
+
+  // Sync state if URL searchParams change externally
+  useEffect(() => {
+    const urlCountry = searchParams.get('country') || 'india';
+    const urlState = searchParams.get('state') || 'all';
+    const urlSearch = searchParams.get('search') || '';
+
+    if (urlCountry !== selectedCountry) setSelectedCountry(urlCountry);
+    if (urlState !== selectedState) setSelectedState(urlState);
+    if (urlSearch !== searchQuery) {
+      setSearchQuery(urlSearch);
+      setSearchInput(urlSearch);
+    }
+  }, [searchParams]);
 
   // Handlers
   const handleCountrySelect = (countrySlug) => {
@@ -338,114 +372,127 @@ function JobsExpiringContent() {
             {/* ========================================================= */}
             {/* PREMIUM COMPACT COUNTRY & STATE FILTER BAR                */}
             {/* ========================================================= */}
-            <div className="bg-gradient-to-r from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/90 rounded-xl p-3 sm:p-3.5 shadow-2xs space-y-2.5">
+            {/* ========================================================= */}
+            {/* PREMIUM COMPACT COUNTRY & STATE FILTER BAR                */}
+            {/* ========================================================= */}
+            <div className="bg-gradient-to-r from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/90 rounded-xl p-2.5 sm:p-3.5 shadow-2xs space-y-2.5">
 
-              {/* Top Controls Row - Single line sequence with Reset after Go button */}
-              <div className="flex flex-wrap items-center gap-2">
+              {/* Top Controls Row: 2-col dropdowns + full width search on mobile, single flex line on desktop */}
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
 
-                {/* Filter Icon Label */}
-                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-800 pr-1 select-none shrink-0">
+                {/* Filter Icon Label (Desktop only) */}
+                <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-800 pr-1 select-none shrink-0">
                   <SlidersHorizontal size={13} className="text-blue-600 shrink-0" />
                   <span>Filter:</span>
                 </div>
 
-                {/* 1. Country Dropdown */}
-                <div className="relative inline-flex items-center shrink-0">
-                  <div className="absolute left-2.5 pointer-events-none text-blue-600 flex items-center">
-                    <Globe size={13} />
-                  </div>
-                  <select
-                    value={selectedCountry}
-                    onChange={(e) => handleCountrySelect(e.target.value)}
-                    className="pl-7 pr-7 py-1 text-xs font-medium bg-white text-slate-800 border border-slate-300 rounded-lg hover:border-blue-400 focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition"
-                    aria-label="Filter by Country"
-                  >
-                    {countriesList.map((c) => (
-                      <option key={c.slug} value={c.slug}>
-                        {c.flag ? `${c.flag} ` : ''}{c.name}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="absolute right-2 pointer-events-none text-slate-400 text-[10px]">
-                    ▼
-                  </div>
-                </div>
-
-                {/* 2. State Dropdown (Active when Country is India or All) */}
-                {(selectedCountry === 'india' || selectedCountry === 'all') && (
-                  <div className="relative inline-flex items-center shrink-0">
-                    <div className="absolute left-2.5 pointer-events-none text-rose-500 flex items-center">
-                      <MapPin size={13} />
+                {/* Dropdowns Group: 2-column grid on mobile, flex on desktop */}
+                <div className={`grid gap-1.5 sm:flex sm:items-center sm:gap-2 ${
+                  selectedCountry === 'india' || selectedCountry === 'all'
+                    ? 'grid-cols-2'
+                    : 'grid-cols-1'
+                }`}>
+                  {/* 1. Country Dropdown */}
+                  <div className="relative w-full sm:w-auto">
+                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-blue-600 flex items-center">
+                      <Globe size={13} />
                     </div>
                     <select
-                      value={selectedState}
-                      onChange={(e) => handleStateSelect(e.target.value)}
-                      className={`pl-7 pr-7 py-1 text-xs font-medium bg-white border rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition ${selectedState !== 'all'
-                          ? 'border-blue-500 text-blue-800 font-semibold bg-blue-50/30'
-                          : 'border-slate-300 text-slate-800 hover:border-blue-400'
-                        }`}
-                      aria-label="Filter by State"
+                      value={selectedCountry}
+                      onChange={(e) => handleCountrySelect(e.target.value)}
+                      className="w-full sm:w-auto pl-7 pr-6 py-1.5 sm:py-1 text-xs font-medium bg-white text-slate-800 border border-slate-300 rounded-lg hover:border-blue-400 focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition truncate"
+                      aria-label="Filter by Country"
                     >
-                      <option value="all">📍 All States &amp; UTs</option>
-                      <option value="all-india">🌟 All India / Central Govt</option>
-                      <option disabled>──────────────</option>
-                      {statesList.map((st) => (
-                        <option key={st.slug} value={st.slug}>
-                          {st.name}
+                      {countriesList.map((c) => (
+                        <option key={c.slug} value={c.slug}>
+                          {c.flag ? `${c.flag} ` : ''}{c.name}
                         </option>
                       ))}
                     </select>
-                    <div className="absolute right-2 pointer-events-none text-slate-400 text-[10px]">
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">
                       ▼
                     </div>
                   </div>
-                )}
 
-                {/* 3. Compact Keyword Search & Go Button */}
-                <form onSubmit={handleSearchSubmit} className="inline-flex items-center gap-1">
-                  <div className="relative">
-                    <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input
-                      type="text"
-                      value={searchInput}
-                      onChange={(e) => setSearchInput(e.target.value)}
-                      placeholder="Search title, post, dept..."
-                      className="pl-7 pr-6 py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 w-36 sm:w-44 transition shadow-2xs"
-                    />
-                    {searchInput && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setSearchInput('');
-                          setSearchQuery('');
-                          setPage(1);
-                        }}
-                        className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                  {/* 2. State Dropdown (Active when Country is India or All) */}
+                  {(selectedCountry === 'india' || selectedCountry === 'all') && (
+                    <div className="relative w-full sm:w-auto">
+                      <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
+                        <MapPin size={13} />
+                      </div>
+                      <select
+                        value={selectedState}
+                        onChange={(e) => handleStateSelect(e.target.value)}
+                        className={`w-full sm:w-auto pl-7 pr-6 py-1.5 sm:py-1 text-xs font-medium bg-white border rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition truncate ${
+                          selectedState !== 'all'
+                            ? 'border-blue-500 text-blue-800 font-semibold bg-blue-50/30'
+                            : 'border-slate-300 text-slate-800 hover:border-blue-400'
+                        }`}
+                        aria-label="Filter by State"
                       >
-                        <X size={11} />
-                      </button>
-                    )}
-                  </div>
-                  <button
-                    type="submit"
-                    className="px-2.5 py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition cursor-pointer shrink-0"
-                  >
-                    Go
-                  </button>
-                </form>
+                        <option value="all">📍 All States &amp; UTs</option>
+                        <option value="all-india">🌟 All India (Central)</option>
+                        <option disabled>──────────────</option>
+                        {statesList.map((st) => (
+                          <option key={st.slug} value={st.slug}>
+                            {st.name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">
+                        ▼
+                      </div>
+                    </div>
+                  )}
+                </div>
 
-                {/* 4. Clear / Reset Filter Button - Placed AFTER Go Button */}
-                {hasActiveFilters && (
-                  <button
-                    type="button"
-                    onClick={handleResetFilters}
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition shadow-2xs cursor-pointer shrink-0"
-                    title="Reset all filters"
-                  >
-                    <RotateCcw size={11} />
-                    <span>Reset</span>
-                  </button>
-                )}
+                {/* Search Form + Buttons: Full width on mobile, inline flex on desktop */}
+                <div className="flex items-center gap-1.5 w-full sm:w-auto sm:flex-1 sm:max-w-xs">
+                  <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 flex-1 min-w-0">
+                    <div className="relative flex-1 min-w-0">
+                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input
+                        type="text"
+                        value={searchInput}
+                        onChange={(e) => setSearchInput(e.target.value)}
+                        placeholder="Search title, post, dept..."
+                        className="w-full pl-8 pr-6 py-1.5 sm:py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 transition shadow-2xs placeholder:text-slate-400"
+                      />
+                      {searchInput && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchInput('');
+                            setSearchQuery('');
+                            setPage(1);
+                          }}
+                          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                        >
+                          <X size={11} />
+                        </button>
+                      )}
+                    </div>
+                    <button
+                      type="submit"
+                      className="px-3.5 py-1.5 sm:py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition cursor-pointer shrink-0"
+                    >
+                      Go
+                    </button>
+                  </form>
+
+                  {/* Clear / Reset Filter Button */}
+                  {hasActiveFilters && (
+                    <button
+                      type="button"
+                      onClick={handleResetFilters}
+                      className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:py-1 text-[11px] font-medium text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-lg transition shadow-2xs cursor-pointer shrink-0"
+                      title="Reset all filters"
+                    >
+                      <RotateCcw size={11} />
+                      <span className="hidden min-[360px]:inline">Reset</span>
+                    </button>
+                  )}
+                </div>
 
               </div>
 
@@ -460,17 +507,31 @@ function JobsExpiringContent() {
                     Quick:
                   </span>
 
-                  {POPULAR_STATES.map((st) => {
+                  {/* All Expiring Button */}
+                  <button
+                    type="button"
+                    onClick={() => handleStateSelect('all')}
+                    className={`px-2.5 py-0.5 text-[11px] font-medium rounded-md whitespace-nowrap transition cursor-pointer shrink-0 ${
+                      selectedState === 'all'
+                        ? 'bg-blue-600 text-white shadow-2xs font-semibold'
+                        : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 hover:border-blue-300'
+                    }`}
+                  >
+                    All Expiring
+                  </button>
+
+                  {POPULAR_STATES.filter(st => st.slug !== 'all-india' && st.slug !== 'all').map((st) => {
                     const isActive = selectedState === st.slug;
                     return (
                       <button
                         key={st.slug}
                         type="button"
                         onClick={() => handleStateSelect(st.slug)}
-                        className={`px-2.5 py-0.5 text-[11px] font-medium rounded-md whitespace-nowrap transition cursor-pointer shrink-0 ${isActive
+                        className={`px-2.5 py-0.5 text-[11px] font-medium rounded-md whitespace-nowrap transition cursor-pointer shrink-0 ${
+                          isActive
                             ? 'bg-blue-600 text-white shadow-2xs font-semibold'
                             : 'bg-white text-slate-700 hover:bg-slate-100 border border-slate-200 hover:border-blue-300'
-                          }`}
+                        }`}
                       >
                         {st.shortName}
                       </button>
@@ -480,30 +541,55 @@ function JobsExpiringContent() {
               )}
 
               {/* Active Filter Summary Bar */}
-              {(selectedState !== 'all' || (selectedCountry !== 'india' && selectedCountry !== 'all') || searchQuery) && (
+              {hasActiveFilters && (
                 <div className="pt-2 border-t border-slate-200/70 flex flex-wrap items-center justify-between text-xs text-slate-600 gap-2">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="text-slate-500 font-medium">Active Filter:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-slate-500 font-medium text-[11px]">Active:</span>
                     {selectedCountry !== 'india' && selectedCountry !== 'all' && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100/70 text-blue-800 rounded font-medium text-[11px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100/70 text-blue-800 rounded font-medium text-[11px] border border-blue-200">
                         <Globe size={10} />
-                        {activeCountryName}
+                        <span>{activeCountryName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleCountrySelect('india')}
+                          className="hover:text-blue-900 ml-0.5"
+                        >
+                          ×
+                        </button>
                       </span>
                     )}
                     {selectedState !== 'all' && (
-                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100/70 text-blue-800 rounded font-medium text-[11px]">
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-blue-100/70 text-blue-800 rounded font-medium text-[11px] border border-blue-200">
                         <MapPin size={10} />
-                        {activeStateName}
+                        <span>{activeStateName}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleStateSelect('all')}
+                          className="hover:text-blue-900 ml-0.5"
+                        >
+                          ×
+                        </button>
                       </span>
                     )}
                     {searchQuery && (
                       <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-200 text-slate-800 rounded font-medium text-[11px]">
-                        &ldquo;{searchQuery}&rdquo;
+                        <span>&ldquo;{searchQuery}&rdquo;</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSearchQuery('');
+                            setSearchInput('');
+                            setPage(1);
+                          }}
+                          className="hover:text-slate-900 ml-0.5"
+                        >
+                          ×
+                        </button>
                       </span>
                     )}
                   </div>
-                  <span className="text-slate-500 font-medium">
-                    {totalJobs} Jobs found expiring soon
+                  <span className="text-slate-500 font-medium text-[11px]">
+                    {totalJobs} Jobs expiring soon
                   </span>
                 </div>
               )}
@@ -730,11 +816,13 @@ function JobsExpiringContent() {
                     {/* Badge & Info Line */}
                     <div className="flex items-center justify-between text-[11px] sm:text-xs mb-3 pb-2.5 border-b border-slate-300 gap-1.5">
                       <span className="text-slate-700 font-normal whitespace-nowrap">
-                        {totalJobs > 0 ? `${totalJobs} Jobs are expiring in 30 Days` : '28 Jobs are expiring in 30 Days'}
+                        {selectedState && selectedState !== 'all' && activeStateName
+                          ? `${expiringJobs.length > 0 ? expiringJobs.length : totalJobs} ${activeStateName} Jobs expiring in 30 Days`
+                          : `${totalJobs > 0 ? totalJobs : 28} Jobs are expiring in 30 Days`}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Link
-                          href="/jobs-expiring-in-30-days"
+                          href={selectedState && selectedState !== 'all' ? `/jobs-expiring-in-30-days?state=${encodeURIComponent(selectedState)}` : '/jobs-expiring-in-30-days'}
                           className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs"
                         >
                           View All
@@ -747,47 +835,53 @@ function JobsExpiringContent() {
                     </div>
 
                     {/* Mini Jobs Cards List */}
-                    <div className="divide-y divide-slate-300">
-                      {expiringJobs.map((item) => {
-                        const miniMediaUrl = getImageUrl(item.featured_media);
+                    {expiringJobs.length === 0 ? (
+                      <div className="py-6 text-center text-xs text-slate-500 font-medium">
+                        No active expiring jobs found{activeStateName ? ` for ${activeStateName}` : ''}.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-slate-300">
+                        {expiringJobs.map((item) => {
+                          const miniMediaUrl = getImageUrl(item.featured_media);
 
-                        return (
-                          <Link
-                            key={item._id}
-                            href={`/job/${item.slug || item._id}`}
-                            className="py-3.5 first:pt-1 last:pb-1 flex items-start gap-3.5 group transition"
-                          >
-                            {/* Thumbnail Image */}
-                            <div className="w-28 sm:w-32 h-20 bg-white rounded border border-slate-300 overflow-hidden shrink-0 shadow-2xs">
-                              <img
-                                src={miniMediaUrl}
-                                alt={item.title}
-                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                                onError={(e) => {
-                                  if (!e.currentTarget.dataset.fallback) {
-                                    e.currentTarget.dataset.fallback = 'true';
-                                    e.currentTarget.src = '/job-search.png';
-                                  } else {
-                                    e.currentTarget.style.display = 'none';
-                                  }
-                                }}
-                              />
-                            </div>
-
-                            {/* Info */}
-                            <div className="flex-1 min-w-0">
-                              <h4 className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
-                                {item.title}
-                              </h4>
-                              <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500">
-                                <span>{formatDate(item.app_ends || item.dates?.last_date)}</span>
-                                <span className="text-blue-600 font-medium">Jobs</span>
+                          return (
+                            <Link
+                              key={item._id}
+                              href={`/job/${item.slug || item._id}`}
+                              className="py-3.5 first:pt-1 last:pb-1 flex items-start gap-3.5 group transition"
+                            >
+                              {/* Thumbnail Image */}
+                              <div className="w-28 sm:w-32 h-20 bg-white rounded border border-slate-300 overflow-hidden shrink-0 shadow-2xs">
+                                <img
+                                  src={miniMediaUrl}
+                                  alt={item.title}
+                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                  onError={(e) => {
+                                    if (!e.currentTarget.dataset.fallback) {
+                                      e.currentTarget.dataset.fallback = 'true';
+                                      e.currentTarget.src = '/job-search.png';
+                                    } else {
+                                      e.currentTarget.style.display = 'none';
+                                    }
+                                  }}
+                                />
                               </div>
-                            </div>
-                          </Link>
-                        );
-                      })}
-                    </div>
+
+                              {/* Info */}
+                              <div className="flex-1 min-w-0">
+                                <h4 className="text-xs sm:text-sm font-semibold text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
+                                  {item.title}
+                                </h4>
+                                <div className="flex items-center justify-between mt-1 text-[11px] text-slate-500">
+                                  <span>{formatDate(item.app_ends || item.dates?.last_date)}</span>
+                                  <span className="text-blue-600 font-medium">Jobs</span>
+                                </div>
+                              </div>
+                            </Link>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className="text-center py-6 text-xs text-slate-500">

@@ -230,7 +230,9 @@ export default function SubscriptionBanner({
     setStatus({ loading: true, error: '', success: false, message: '' });
 
     try {
-      const baseUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+      const baseUrl = typeof window !== 'undefined'
+        ? ''
+        : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
       const cleanMobile = formData.whatsapp.replace(/\D/g, '').slice(0, 10);
 
       const res = await fetch(`${baseUrl}/api/v1/subscribers/subscribe`, {

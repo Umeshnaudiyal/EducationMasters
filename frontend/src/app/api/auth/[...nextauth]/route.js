@@ -15,6 +15,7 @@ const getTodayDateString = (dateObj = new Date()) => {
 };
 
 export const authOptions = {
+  trustHost: true,
   providers: [
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [

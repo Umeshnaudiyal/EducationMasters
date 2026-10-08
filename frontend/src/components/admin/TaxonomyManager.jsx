@@ -19,11 +19,14 @@ import {
   RefreshCw,
   Eye,
   Info,
+  ArrowLeft,
 } from 'lucide-react';
 import MediaLibraryModal from './MediaLibraryModal';
 import DeleteConfirmModal from './DeleteConfirmModal';
+import JoditEditorWrapper from './JoditEditorWrapper';
 import { getImageUrl } from '@/utils/image';
 import { getAuthToken } from '@/utils/auth';
+import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
 
 function TaxonomyThumbnail({ src, alt, size = 14, className = 'w-9 h-9' }) {
   const [hasError, setHasError] = useState(false);
@@ -103,7 +106,7 @@ export default function TaxonomyManager({
   const [formErrors, setFormErrors] = useState({});
   const [serverMessage, setServerMessage] = useState(null); // { type: 'error' | 'success', text: '' }
   const [saving, setSaving] = useState(false);
-  const [isSeoOpen, setIsSeoOpen] = useState(false);
+  const [isSeoOpen, setIsSeoOpen] = useState(true);
   const [mediaModalOpen, setMediaModalOpen] = useState(false);
 
   // Delete modal state
@@ -213,27 +216,33 @@ export default function TaxonomyManager({
   // Edit item
   const handleEdit = (item) => {
     setEditingId(item._id);
+    const rawMetaDesc = item.seo?.meta_description || item.meta_description || '';
+    const rawMetaTitle = item.seo?.meta_title || item.meta_title || '';
+    const rawMetaKeywords = item.seo?.meta_keywords || item.meta_keywords || '';
+    const cleanDesc = cleanHtmlContent(item.description || '');
+
     setFormData({
+      ...item,
       name: item.name || '',
       slug: item.slug || '',
-      image: item.image || '',
-      description: item.description || '',
+      image: item.image || item.featured_media || '',
+      description: cleanDesc,
       seo: {
-        allow_indexing: item.seo?.allow_indexing ?? true,
-        meta_title: item.seo?.meta_title || '',
-        meta_keywords: item.seo?.meta_keywords || '',
-        meta_description: item.seo?.meta_description || '',
+        allow_indexing: item.seo?.allow_indexing ?? item.allow_indexing ?? true,
+        meta_title: stripHtmlToPlainText(rawMetaTitle),
+        meta_keywords: stripHtmlToPlainText(rawMetaKeywords),
+        meta_description: stripHtmlToPlainText(rawMetaDesc),
       },
-      ...item,
     });
     setFormErrors({});
     setServerMessage(null);
+    setIsSeoOpen(true);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // Submit form
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e && e.preventDefault) e.preventDefault();
     setServerMessage(null);
 
     // Client-side validation
@@ -261,6 +270,24 @@ export default function TaxonomyManager({
       return;
     }
 
+    // Sanitize payload to strip any HTML from SEO fields and clean description
+    const payload = {
+      ...formData,
+      description: cleanHtmlContent(formData.description || ''),
+      seo: {
+        allow_indexing: formData.seo?.allow_indexing ?? true,
+        meta_title: stripHtmlToPlainText(formData.seo?.meta_title || ''),
+        meta_keywords: stripHtmlToPlainText(formData.seo?.meta_keywords || ''),
+        meta_description: stripHtmlToPlainText(formData.seo?.meta_description || ''),
+      },
+    };
+    if (formData.meta_description) {
+      payload.meta_description = stripHtmlToPlainText(formData.meta_description);
+    }
+    if (formData.meta_title) {
+      payload.meta_title = stripHtmlToPlainText(formData.meta_title);
+    }
+
     try {
       setSaving(true);
       const url = editingId
@@ -276,7 +303,7 @@ export default function TaxonomyManager({
           'Content-Type': 'application/json',
           ...(token ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       const data = await res.json();
@@ -414,6 +441,354 @@ export default function TaxonomyManager({
     setActiveSearch(searchTerm.trim());
     setPage(1);
   };
+
+  if (editingId) {
+    return (
+      <div className="space-y-5 w-full font-sans text-slate-800 pb-16 animate-in fade-in-50 duration-200">
+        {/* Toast Alert Notification */}
+        {serverMessage && (
+          <div
+            className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2.5 border animate-in slide-in-from-top-2 ${
+              serverMessage.type === 'error'
+                ? 'bg-rose-50 border-rose-200 text-rose-800'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-800'
+            }`}
+          >
+            {serverMessage.type === 'error' ? (
+              <AlertCircle size={15} className="text-rose-600 shrink-0" />
+            ) : (
+              <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
+            )}
+            <span>{serverMessage.text}</span>
+            <button
+              type="button"
+              onClick={() => setServerMessage(null)}
+              className="text-slate-400 hover:text-slate-700 font-bold ml-2 cursor-pointer"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Top Header with Back Button & Quick Actions */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white p-4 sm:px-6 rounded-2xl border border-slate-200 shadow-2xs">
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="inline-flex items-center gap-2 px-3.5 py-2 bg-slate-50 hover:bg-slate-100 active:bg-slate-200 text-slate-700 hover:text-[#2271b1] border border-slate-200 hover:border-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs group"
+              title={`Back to ${title} list`}
+            >
+              <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform duration-200 text-slate-500 group-hover:text-[#2271b1]" />
+              <span>Back to {title}</span>
+            </button>
+
+            <div className="h-5 w-[1px] bg-slate-200 hidden sm:block" />
+
+            <div className="flex items-center gap-2.5">
+              <h1 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight flex items-center gap-2">
+                <span>Edit {singularTitle}</span>
+              </h1>
+              {formData.slug && (
+                <span className="hidden md:inline-flex items-center px-2.5 py-0.5 rounded-lg text-xs font-mono font-medium bg-slate-100 text-slate-600 border border-slate-200">
+                  /{formData.slug}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2.5 self-end sm:self-auto">
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-4 py-2 bg-white hover:bg-slate-50 active:bg-slate-100 text-slate-600 hover:text-slate-900 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs cursor-pointer"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={saving}
+              className="px-5 py-2 bg-[#2271b1] hover:bg-[#135e96] active:bg-[#0a4b78] disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs hover:shadow-xs cursor-pointer flex items-center gap-2"
+            >
+              {saving && <Loader2 size={15} className="animate-spin" />}
+              <span>Update {singularTitle}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Edit Form */}
+        <form onSubmit={handleSubmit} className="bg-white border border-slate-200/90 rounded-2xl p-5 sm:p-7 shadow-xs space-y-6">
+          {/* Row 1: Featured Image */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 pt-1">
+            <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-1 shrink-0">
+              Featured Image
+            </label>
+            <div className="flex-1 min-w-0 max-w-4xl space-y-3">
+              {formData.image ? (
+                <div className="space-y-3">
+                  <div className="flex items-center gap-2.5">
+                    <button
+                      type="button"
+                      onClick={() => handleChange('image', '')}
+                      className="px-3 py-1.5 bg-white hover:bg-rose-50 text-[#0073aa] hover:text-rose-600 border border-[#2271b1]/40 hover:border-rose-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                    >
+                      Remove Image
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setMediaModalOpen(true)}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#2271b1] border border-slate-300 hover:border-[#2271b1] rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ImageIcon size={13} />
+                      <span>Replace Image</span>
+                    </button>
+                  </div>
+
+                  <div
+                    className="w-full max-w-xl rounded-xl border border-slate-200 overflow-hidden shadow-xs bg-slate-50/70 cursor-pointer group relative"
+                    onClick={() => setMediaModalOpen(true)}
+                    title="Click to change image"
+                  >
+                    <img
+                      src={getImageUrl(formData.image, null)}
+                      alt={formData.name || 'Featured image'}
+                      className="w-full h-auto max-h-[380px] object-contain mx-auto group-hover:scale-[1.01] transition-transform duration-200"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/15 transition-colors flex items-center justify-center pointer-events-none">
+                      <span className="opacity-0 group-hover:opacity-100 transition-opacity bg-black/80 text-white text-xs font-semibold px-3 py-1.5 rounded-lg shadow-md flex items-center gap-1.5">
+                        <ImageIcon size={13} />
+                        <span>Click to change image</span>
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => setMediaModalOpen(true)}
+                    className="px-4 py-2 bg-white hover:bg-blue-50 text-[#2271b1] border border-blue-200 hover:border-[#2271b1] rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+                  >
+                    <ImageIcon size={15} />
+                    <span>Choose Featured Image</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Row 2: Name */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+            <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
+              Name <span className="text-rose-500">*</span>
+            </label>
+            <div className="flex-1 min-w-0 max-w-4xl space-y-1">
+              <input
+                type="text"
+                value={formData.name || ''}
+                onChange={(e) => handleChange('name', e.target.value)}
+                placeholder={`Enter ${singularTitle.toLowerCase()} name`}
+                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-lg text-slate-800 focus:outline-none transition-all ${
+                  formErrors.name
+                    ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
+                    : 'border-slate-300 focus:border-[#2271b1] focus:ring-2 focus:ring-[#2271b1]/15'
+                }`}
+              />
+              {formErrors.name ? (
+                <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  <span>{formErrors.name}</span>
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-400">
+                  The name is how it appears on your site.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Row 3: Slug */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+            <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
+              Slug <span className="text-rose-500">*</span>
+            </label>
+            <div className="flex-1 min-w-0 max-w-4xl space-y-1">
+              <input
+                type="text"
+                value={formData.slug || ''}
+                onChange={(e) => handleChange('slug', slugify(e.target.value))}
+                placeholder={`e.g. ${formData.name ? slugify(formData.name) : 'slug-name'}`}
+                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-lg text-slate-800 font-mono focus:outline-none transition-all ${
+                  formErrors.slug
+                    ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
+                    : 'border-slate-300 focus:border-[#2271b1] focus:ring-2 focus:ring-[#2271b1]/15'
+                }`}
+              />
+              {formErrors.slug ? (
+                <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
+                  <AlertCircle size={12} />
+                  <span>{formErrors.slug}</span>
+                </p>
+              ) : (
+                <p className="text-[11px] text-slate-400">
+                  The &quot;slug&quot; is the URL-friendly version of the name. It is usually all lower case and contains only letters, numbers, and hyphens.
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Optional Custom Fields (for Topics/Topic Groups) */}
+          {customFields && (
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+              <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
+                Category / Subject
+              </label>
+              <div className="flex-1 min-w-0 max-w-4xl">
+                {customFields({ formData, setFormData, formErrors, setFormErrors, handleChange })}
+              </div>
+            </div>
+          )}
+
+          {/* Row 4: Description (Rich Text Editor) */}
+          <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+            <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
+              Description
+            </label>
+            <div className="flex-1 min-w-0 max-w-4xl space-y-1.5">
+              <JoditEditorWrapper
+                value={formData.description || ''}
+                onChange={(content) => handleChange('description', content)}
+                height={300}
+                placeholder={`Enter ${singularTitle.toLowerCase()} description...`}
+              />
+              <p className="text-[11px] text-slate-400">
+                The description is not prominent by default; however, sometimes we may show it.
+              </p>
+            </div>
+          </div>
+
+          {/* Row 5: SEO Data */}
+          {showSeo && (
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+              <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
+                SEO Data
+              </label>
+              <div className="flex-1 min-w-0 max-w-4xl border border-slate-300/90 rounded-xl overflow-hidden bg-white shadow-2xs">
+                <div
+                  onClick={() => setIsSeoOpen(!isSeoOpen)}
+                  className="px-4 py-2.5 bg-[#f8fafc] hover:bg-slate-100/80 border-b border-slate-200 flex items-center justify-between cursor-pointer select-none transition-colors"
+                >
+                  <span className="text-xs font-bold text-slate-800">SEO Tags Section</span>
+                  <span className="text-slate-500 hover:text-slate-800 text-base font-bold px-1">
+                    {isSeoOpen ? '−' : '+'}
+                  </span>
+                </div>
+
+                {isSeoOpen && (
+                  <div className="p-4 sm:p-5 space-y-4 bg-white">
+                    {/* Allow Indexing */}
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        id="edit_allow_indexing"
+                        checked={formData.seo?.allow_indexing ?? true}
+                        onChange={(e) => handleSeoChange('allow_indexing', e.target.checked)}
+                        className="rounded border-slate-300 text-[#2271b1] focus:ring-[#2271b1] w-4 h-4 cursor-pointer"
+                      />
+                      <label htmlFor="edit_allow_indexing" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                        Allow Indexing:
+                      </label>
+                    </div>
+
+                    {/* Meta Title */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold text-slate-700">
+                        Meta Title
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.seo?.meta_title || ''}
+                        onChange={(e) => handleSeoChange('meta_title', e.target.value)}
+                        placeholder="Meta title for search engines"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1]"
+                      />
+                    </div>
+
+                    {/* Meta Keywords */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold text-slate-700">
+                        Meta Keywords
+                      </label>
+                      <input
+                        type="text"
+                        value={formData.seo?.meta_keywords || ''}
+                        onChange={(e) => handleSeoChange('meta_keywords', e.target.value)}
+                        placeholder="keyword1, keyword2, tag3"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1]"
+                      />
+                    </div>
+
+                    {/* Meta Description */}
+                    <div className="space-y-1">
+                      <label className="block text-[11px] font-semibold text-slate-700">
+                        Meta Description
+                      </label>
+                      <textarea
+                        rows={3}
+                        value={formData.seo?.meta_description || ''}
+                        onChange={(e) => handleSeoChange('meta_description', e.target.value)}
+                        placeholder="Meta description snippet for search engines"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-lg text-xs text-slate-800 focus:outline-none focus:border-[#2271b1] focus:ring-1 focus:ring-[#2271b1] resize-y"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Row 6: Actions */}
+          <div className="flex items-center gap-3 pt-4 sm:pl-44 border-t border-slate-100">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-5 py-2.5 bg-[#2271b1] hover:bg-[#135e96] active:bg-[#0a4b78] disabled:opacity-50 text-white rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs hover:shadow-xs cursor-pointer flex items-center gap-2"
+            >
+              {saving && <Loader2 size={14} className="animate-spin" />}
+              <span>Update {singularTitle}</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={resetForm}
+              className="px-5 py-2.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-slate-900 border border-slate-300 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-2xs cursor-pointer"
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+
+        {/* Media Library Modal */}
+        <MediaLibraryModal
+          isOpen={mediaModalOpen}
+          onClose={() => setMediaModalOpen(false)}
+          onSelect={(media) => {
+            const selectedUrl =
+              media.url ||
+              (media.path && media.name ? `${media.path}/${media.name}` : '') ||
+              media.file ||
+              getImageUrl(media, '');
+            handleChange('image', selectedUrl);
+            setMediaModalOpen(false);
+          }}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3 w-full select-none font-sans text-slate-800">
@@ -778,9 +1153,9 @@ export default function TaxonomyManager({
                           <div className="text-[11px] text-slate-500 font-mono mt-0.5 truncate">
                             Slug: {item.slug}
                           </div>
-                          {item.description && (
+                          {!columns.some((col) => (col.header || '').toLowerCase() === 'description') && item.description && (
                             <p className="text-[11px] text-slate-600 line-clamp-2 mt-1">
-                              {item.description}
+                              {stripHtmlToPlainText(item.description)}
                             </p>
                           )}
                           {columns.length > 0 && (
@@ -906,9 +1281,9 @@ export default function TaxonomyManager({
                             <div className="font-semibold text-slate-900 hover:text-[#2271b1] cursor-pointer" onClick={() => handleEdit(item)}>
                               {item.name}
                             </div>
-                            {item.description && (
+                            {!columns.some((col) => (col.header || '').toLowerCase() === 'description') && item.description && (
                               <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5 max-w-xs">
-                                {item.description}
+                                {stripHtmlToPlainText(item.description)}
                               </p>
                             )}
                           </td>
