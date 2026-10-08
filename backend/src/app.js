@@ -6,8 +6,19 @@ import apiRoutes from './routes/index.js';
 import errorHandler from './middlewares/error.middleware.js';
 import { requestLogger } from './middlewares/logger.middleware.js';
 import ApiError from './utils/apiError.js';
+import connectDB from './config/db.config.js';
 
 const app = express();
+
+// Ensure Database Connection for Serverless / Standalone
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    next(new ApiError(500, `Database connection failed: ${err.message}`));
+  }
+});
 
 // Middlewares
 // app.use(
