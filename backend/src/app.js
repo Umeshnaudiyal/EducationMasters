@@ -33,9 +33,34 @@ app.use('/uploads', (req, res) => {
 app.use(morgan('dev'));
 app.use(requestLogger);
 
+// Root Backend Route
+app.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'online',
+    message: 'Welcome to Education Masters Backend API Server',
+    environment: process.env.NODE_ENV || 'development',
+    version: '1.0.0',
+    timestamp: new Date().toISOString(),
+    endpoints: {
+      health: '/health',
+      apis: '/apis',
+      api: '/api',
+      apiV1: '/api/v1',
+      apisV1: '/apis/v1',
+    },
+  });
+});
+
 // Health Check Route
 app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'OK', message: 'Education Masters Backend service is up and running' });
+  res.status(200).json({
+    success: true,
+    status: 'healthy',
+    message: 'Education Masters Backend service is operational',
+    timestamp: new Date().toISOString(),
+    uptime: `${Math.floor(process.uptime())}s`,
+  });
 });
 
 // API Routes (support both /api/v1 and /apis/v1)

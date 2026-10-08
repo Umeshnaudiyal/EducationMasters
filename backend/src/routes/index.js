@@ -32,6 +32,49 @@ import { getPublicAuthorsList } from '../controllers/user.controller.js';
 
 const router = express.Router();
 
+// Base API Route
+router.get('/', (req, res) => {
+  res.status(200).json({
+    success: true,
+    message: 'Education Masters REST API Service',
+    status: 'active',
+    version: 'v1',
+    timestamp: new Date().toISOString(),
+    availableRoutes: {
+      auth: '/auth',
+      users: '/users',
+      blogs: '/blogs',
+      jobs: '/jobs',
+      admitCards: '/admit-cards',
+      results: '/results',
+      mcqs: '/mcqs',
+      questions: '/questions',
+      mockTests: '/mock-tests',
+      mockTestSeries: '/mock-test-series',
+      mockTestPlans: '/mock-test-plans',
+      stickyNotes: '/sticky-notes',
+      institutes: '/institutes',
+      courses: '/courses',
+      facilities: '/facilities',
+      categories: '/categories',
+      departments: '/departments',
+      exams: '/exams',
+      subjects: '/subjects',
+      topics: '/topics',
+      topicGroups: '/topic-groups',
+      states: '/states',
+      countries: '/countries',
+      tags: '/tags',
+      media: '/media',
+      stats: '/stats',
+      search: '/search',
+      subscribers: '/subscribers',
+      authors: '/authors',
+      payments: '/payments',
+    },
+  });
+});
+
 router.use('/sticky-notes', stickyNoteRoutes);
 router.use('/sticky-note', stickyNoteRoutes);
 router.use('/payments', paymentRoutes);
