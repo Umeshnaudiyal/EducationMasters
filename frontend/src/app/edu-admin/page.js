@@ -58,8 +58,7 @@ import {
   AnimatedCpu,
   AnimatedLandmark,
 } from '@/components/AnimatedIcons';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 // Default multi-timeframe activity data (7D, 30D, 1Y)
 const DEFAULT_CHART_ACTIVITY = {

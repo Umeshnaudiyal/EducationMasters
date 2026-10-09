@@ -12,8 +12,7 @@ import {
   ChevronRight,
   Briefcase
 } from 'lucide-react';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function PostsManagementPage() {
   const [posts, setPosts] = useState([]);

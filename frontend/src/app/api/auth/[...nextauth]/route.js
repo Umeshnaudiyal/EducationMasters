@@ -3,7 +3,13 @@ import CredentialsProvider from 'next-auth/providers/credentials';
 import GoogleProvider from 'next-auth/providers/google';
 import { decode as defaultDecode } from 'next-auth/jwt';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+const BACKEND_URL =
+  process.env.INTERNAL_BACKEND_URL ||
+  process.env.BACKEND_URL ||
+  process.env.NEXT_PUBLIC_BACKEND_URL ||
+  (process.env.NODE_ENV === 'production'
+    ? 'https://education-masters-cv8z.vercel.app'
+    : 'http://localhost:5001');
 const NEXTAUTH_SECRET = process.env.NEXTAUTH_SECRET || 'educationmasters_nextauth_secret_2026_super_secure_key';
 
 const getTodayDateString = (dateObj = new Date()) => {

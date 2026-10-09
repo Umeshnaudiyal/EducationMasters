@@ -24,10 +24,7 @@ import {
   AnimatedCornerDownLeft
 } from './AnimatedIcons';
 import { useAuthModal } from '@/context/AuthModalContext';
-
-const API_BASE = typeof window !== 'undefined'
-  ? '/apis/v1'
-  : (process.env.NEXT_PUBLIC_BACKEND_URL ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` : 'http://localhost:5001/apis/v1');
+import { API_BASE } from '@/utils/api';
 
 const ROTATING_PLACEHOLDERS = [
   'Search "Union Bank 2026 Result"...',

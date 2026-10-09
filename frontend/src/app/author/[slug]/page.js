@@ -39,10 +39,7 @@ import {
   AnimatedGraduationCap,
   AnimatedHelpCircle,
 } from '@/components/AnimatedIcons';
-
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
-  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
-  : 'http://localhost:5001/apis/v1';
+import { API_BASE } from '@/utils/api';
 
 // Theme configuration for content categories
 const CATEGORY_THEMES = {

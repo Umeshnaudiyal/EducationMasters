@@ -27,6 +27,7 @@ import {
 import { getAuthToken } from '@/utils/auth';
 import { slugify } from '@/utils/slug';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { toast } from '@/context/ToastContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -302,10 +303,12 @@ export default function MockTestPlansManagePage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const msg = editingPlan ? 'Plan updated successfully.' : 'Plan created successfully.';
         setServerMessage({
           type: 'success',
-          text: editingPlan ? 'Plan updated successfully.' : 'Plan created successfully.',
+          text: msg,
         });
+        toast.success(msg);
         setIsFormOpen(false);
         fetchPlans();
       } else {
@@ -319,14 +322,18 @@ export default function MockTestPlansManagePage() {
             nameRef.current.focus();
           }
         }
+        const errMsg = data.message || 'Failed to save plan. Please check the form.';
         setServerMessage({
           type: 'error',
-          text: data.message || 'Failed to save plan. Please check the form.',
+          text: errMsg,
         });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Save plan error:', err);
-      setServerMessage({ type: 'error', text: 'Network error occurred while saving plan.' });
+      const errMsg = 'Network error occurred while saving plan.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -350,13 +357,16 @@ export default function MockTestPlansManagePage() {
         setPlans((prev) =>
           prev.map((p) => (p._id === plan._id ? { ...p, status: newStatus } : p))
         );
+        const msg = `Plan status set to ${newStatus}.`;
         setServerMessage({
           type: 'success',
-          text: `Plan status set to ${newStatus}.`,
+          text: msg,
         });
+        toast.success(msg);
       }
     } catch (err) {
       console.error('Status toggle error:', err);
+      toast.error('Failed to toggle status');
     }
   };
 
@@ -373,12 +383,16 @@ export default function MockTestPlansManagePage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setServerMessage({ type: 'success', text: 'Plan deleted successfully.' });
+        toast.success('Plan deleted successfully.');
         fetchPlans();
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Failed to delete plan.' });
+        const errMsg = data.message || 'Failed to delete plan.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Delete error:', err);
+      toast.error('Error deleting plan.');
     } finally {
       setDeleteModal({ isOpen: false, item: null, isLoading: false });
     }

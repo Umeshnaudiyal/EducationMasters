@@ -20,9 +20,11 @@ import {
   User,
   ArrowRight,
 } from 'lucide-react';
-const API_BASE = typeof window !== 'undefined'
-  ? ''
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
+import { toast } from '@/context/ToastContext';
+import { getBackendUrl } from '@/utils/api';
+import { loadRazorpayScript } from '@/utils/razorpay';
+
+const API_BASE = getBackendUrl();
 
 const DEFAULT_PLANS = [
   {
@@ -230,15 +232,23 @@ export default function UnlockPassModal({
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
               setPaymentSuccess(true);
+              toast.success({
+                title: '🎉 Pass Unlocked Successfully!',
+                message: `Your ${selectedPlan.name} is now active! All tests unlocked.`,
+              });
               if (onSuccess) {
                 onSuccess(verifyData.data);
               }
             } else {
-              setErrorMsg(verifyData.message || 'Payment verification failed. Please contact support.');
+              const errMsg = verifyData.message || 'Payment verification failed. Please contact support.';
+              setErrorMsg(errMsg);
+              toast.error(errMsg);
             }
           } catch (vErr) {
             console.error('Payment verification error:', vErr);
-            setErrorMsg('Payment verification failed. Please contact support.');
+            const errMsg = 'Payment verification failed. Please contact support.';
+            setErrorMsg(errMsg);
+            toast.error(errMsg);
           } finally {
             setLoading(false);
           }
@@ -273,8 +283,6 @@ export default function UnlockPassModal({
       setLoading(false);
     }
   };
-
-  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">

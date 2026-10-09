@@ -19,8 +19,7 @@ import {
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import { getImageUrl } from '@/utils/image';
 import AdminLoader from '@/components/admin/AdminLoader';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function CurrentUserProfilePage() {
   const router = useRouter();

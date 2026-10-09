@@ -25,6 +25,7 @@ import {
 import ExcelQuestionImportModal from '@/components/admin/ExcelQuestionImportModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
+import { toast } from '@/context/ToastContext';
 
 export default function QuestionsListPage() {
   const router = useRouter();
@@ -186,12 +187,12 @@ export default function QuestionsListPage() {
       bulkAction === 'publish'
         ? 'publish'
         : bulkAction === 'draft'
-        ? 'move to draft'
-        : bulkAction === 'trash'
-        ? 'move to trash'
-        : bulkAction === 'restore'
-        ? 'restore'
-        : 'permanently delete';
+          ? 'move to draft'
+          : bulkAction === 'trash'
+            ? 'move to trash'
+            : bulkAction === 'restore'
+              ? 'restore'
+              : 'permanently delete';
 
     if (!window.confirm(`Are you sure you want to ${actionText} ${selectedIds.length} selected questions?`)) {
       return;
@@ -215,16 +216,22 @@ export default function QuestionsListPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setServerMessage({ type: 'success', text: data.message || 'Bulk action applied successfully.' });
+        const msg = data.message || 'Bulk action applied successfully.';
+        setServerMessage({ type: 'success', text: msg });
+        toast.success(msg);
         setSelectedIds([]);
         setBulkAction('');
         fetchQuestions();
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Failed to apply bulk action.' });
+        const errMsg = data.message || 'Failed to apply bulk action.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Bulk action error:', err);
-      setServerMessage({ type: 'error', text: 'Server error occurred during bulk action.' });
+      const errMsg = 'Server error occurred during bulk action.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setBulkLoading(false);
     }
@@ -244,8 +251,7 @@ export default function QuestionsListPage() {
       const isPermanently = activeTab === 'trash';
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${itemToDelete._id}${
-          isPermanently ? '?force=true' : ''
+        `${process.env.NEXT_PUBLIC_API_URL || ''}/apis/v1/questions/${itemToDelete._id}${isPermanently ? '?force=true' : ''
         }`,
         {
           method: 'DELETE',
@@ -255,17 +261,23 @@ export default function QuestionsListPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
+        const msg = isPermanently ? 'Question permanently deleted.' : 'Question moved to trash.';
         setServerMessage({
           type: 'success',
-          text: isPermanently ? 'Question permanently deleted.' : 'Question moved to trash.',
+          text: msg,
         });
+        toast.success(msg);
         fetchQuestions();
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Failed to delete question.' });
+        const errMsg = data.message || 'Failed to delete question.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Delete error:', err);
-      setServerMessage({ type: 'error', text: 'Server error while deleting.' });
+      const errMsg = 'Server error while deleting.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setIsDeleting(false);
       setDeleteModalOpen(false);
@@ -286,14 +298,20 @@ export default function QuestionsListPage() {
       );
       const data = await res.json();
       if (res.ok && data.success) {
-        setServerMessage({ type: 'success', text: 'Question restored to published.' });
+        const msg = 'Question restored to published.';
+        setServerMessage({ type: 'success', text: msg });
+        toast.success(msg);
         fetchQuestions();
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Failed to restore question.' });
+        const errMsg = data.message || 'Failed to restore question.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Restore error:', err);
-      setServerMessage({ type: 'error', text: 'Server error while restoring.' });
+      const errMsg = 'Server error while restoring.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     }
   };
 
@@ -325,20 +343,26 @@ export default function QuestionsListPage() {
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const msg = `Status changed to "${newStatus}" successfully.`;
         setServerMessage({
           type: 'success',
-          text: `Status changed to "${newStatus}" successfully.`,
+          text: msg,
         });
+        toast.success(msg);
         setTimeout(() => setServerMessage(null), 3000);
         fetchQuestions();
       } else {
         setQuestions(prevQuestions);
-        setServerMessage({ type: 'error', text: data.message || 'Failed to update status.' });
+        const errMsg = data.message || 'Failed to update status.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Status update error:', err);
       setQuestions(prevQuestions);
-      setServerMessage({ type: 'error', text: 'Error connecting to server to update status.' });
+      const errMsg = 'Error connecting to server to update status.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setUpdatingStatusId(null);
     }
@@ -398,11 +422,10 @@ export default function QuestionsListPage() {
       {/* Global Alert Notification Banner */}
       {serverMessage && (
         <div
-          className={`p-2.5 rounded border text-xs flex items-start gap-2 animate-in fade-in duration-200 ${
-            serverMessage.type === 'error'
-              ? 'bg-rose-50 border-rose-300 text-rose-800'
-              : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-          }`}
+          className={`p-2.5 rounded border text-xs flex items-start gap-2 animate-in fade-in duration-200 ${serverMessage.type === 'error'
+            ? 'bg-rose-50 border-rose-300 text-rose-800'
+            : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+            }`}
         >
           {serverMessage.type === 'error' ? (
             <AlertCircle size={15} className="shrink-0 text-rose-600 mt-0.5" />
@@ -429,11 +452,10 @@ export default function QuestionsListPage() {
               <button
                 type="button"
                 onClick={() => handleTabChange(tab.key)}
-                className={`transition-colors cursor-pointer py-0.5 font-normal ${
-                  isActive
-                    ? 'text-slate-900 font-bold border-b-2 border-[#2271b1]'
-                    : 'text-[#2271b1] hover:text-[#135e96]'
-                }`}
+                className={`transition-colors cursor-pointer py-0.5 font-normal ${isActive
+                  ? 'text-slate-900 font-bold border-b-2 border-[#2271b1]'
+                  : 'text-[#2271b1] hover:text-[#135e96]'
+                  }`}
               >
                 {tab.label}{' '}
                 <span className="text-slate-500 font-normal">
@@ -620,22 +642,21 @@ export default function QuestionsListPage() {
                           statusStr.includes('pub')
                             ? 'Published'
                             : statusStr.includes('pending')
-                            ? 'Pending'
-                            : statusStr.includes('trash')
-                            ? 'Trash'
-                            : 'Draft'
+                              ? 'Pending'
+                              : statusStr.includes('trash')
+                                ? 'Trash'
+                                : 'Draft'
                         }
                         disabled={updatingStatusId === q._id}
                         onChange={(e) => handleStatusChange(q._id, e.target.value)}
-                        className={`text-[11px] font-semibold rounded px-2 py-1 border cursor-pointer appearance-none pr-5 focus:outline-none shadow-2xs ${
-                          statusStr.includes('pub')
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
-                            : statusStr.includes('pending')
+                        className={`text-[11px] font-semibold rounded px-2 py-1 border cursor-pointer appearance-none pr-5 focus:outline-none shadow-2xs ${statusStr.includes('pub')
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-300'
+                          : statusStr.includes('pending')
                             ? 'bg-amber-50 text-amber-700 border-amber-300'
                             : statusStr.includes('trash')
-                            ? 'bg-rose-50 text-rose-700 border-rose-300'
-                            : 'bg-slate-100 text-slate-700 border-slate-300'
-                        } ${updatingStatusId === q._id ? 'opacity-50 pointer-events-none' : ''}`}
+                              ? 'bg-rose-50 text-rose-700 border-rose-300'
+                              : 'bg-slate-100 text-slate-700 border-slate-300'
+                          } ${updatingStatusId === q._id ? 'opacity-50 pointer-events-none' : ''}`}
                       >
                         <option value="Published">Published</option>
                         <option value="Pending">Pending</option>
@@ -759,9 +780,8 @@ export default function QuestionsListPage() {
                   return (
                     <tr
                       key={q._id}
-                      className={`hover:bg-[#f6f7f7] transition-colors ${
-                        isSelected ? 'bg-amber-50/50' : ''
-                      }`}
+                      className={`hover:bg-[#f6f7f7] transition-colors ${isSelected ? 'bg-amber-50/50' : ''
+                        }`}
                     >
                       {/* Checkbox */}
                       <td className="py-2 px-3 text-center align-middle">
@@ -828,22 +848,21 @@ export default function QuestionsListPage() {
                               statusStr.includes('pub')
                                 ? 'Published'
                                 : statusStr.includes('pending')
-                                ? 'Pending'
-                                : statusStr.includes('trash')
-                                ? 'Trash'
-                                : 'Draft'
+                                  ? 'Pending'
+                                  : statusStr.includes('trash')
+                                    ? 'Trash'
+                                    : 'Draft'
                             }
                             disabled={updatingStatusId === q._id}
                             onChange={(e) => handleStatusChange(q._id, e.target.value)}
-                            className={`text-[11px] font-semibold rounded px-2 py-0.5 border cursor-pointer appearance-none pr-5 focus:outline-none transition-all shadow-2xs ${
-                              statusStr.includes('pub')
-                                ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100/80 focus:ring-1 focus:ring-emerald-400'
-                                : statusStr.includes('pending')
+                            className={`text-[11px] font-semibold rounded px-2 py-0.5 border cursor-pointer appearance-none pr-5 focus:outline-none transition-all shadow-2xs ${statusStr.includes('pub')
+                              ? 'bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100/80 focus:ring-1 focus:ring-emerald-400'
+                              : statusStr.includes('pending')
                                 ? 'bg-amber-50 text-amber-700 border-amber-300 hover:bg-amber-100/80 focus:ring-1 focus:ring-amber-400'
                                 : statusStr.includes('trash')
-                                ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100/80 focus:ring-1 focus:ring-rose-400'
-                                : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200/80 focus:ring-1 focus:ring-slate-400'
-                            } ${updatingStatusId === q._id ? 'opacity-50 pointer-events-none' : ''}`}
+                                  ? 'bg-rose-50 text-rose-700 border-rose-300 hover:bg-rose-100/80 focus:ring-1 focus:ring-rose-400'
+                                  : 'bg-slate-100 text-slate-700 border-slate-300 hover:bg-slate-200/80 focus:ring-1 focus:ring-slate-400'
+                              } ${updatingStatusId === q._id ? 'opacity-50 pointer-events-none' : ''}`}
                           >
                             <option value="Published">Published</option>
                             <option value="Pending">Pending</option>
@@ -855,15 +874,14 @@ export default function QuestionsListPage() {
                           ) : (
                             <ChevronDown
                               size={11}
-                              className={`absolute right-1 pointer-events-none ${
-                                statusStr.includes('pub')
-                                  ? 'text-emerald-600'
-                                  : statusStr.includes('pending')
+                              className={`absolute right-1 pointer-events-none ${statusStr.includes('pub')
+                                ? 'text-emerald-600'
+                                : statusStr.includes('pending')
                                   ? 'text-amber-600'
                                   : statusStr.includes('trash')
-                                  ? 'text-rose-600'
-                                  : 'text-slate-600'
-                              }`}
+                                    ? 'text-rose-600'
+                                    : 'text-slate-600'
+                                }`}
                             />
                           )}
                         </div>

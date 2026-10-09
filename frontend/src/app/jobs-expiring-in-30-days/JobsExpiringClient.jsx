@@ -23,10 +23,8 @@ import {
 import StateLink from '@/components/StateLink';
 import { INDIAN_STATES_DATA } from '@/utils/indianStatesData';
 import { getImageUrl } from '@/utils/image';
+import { API_BASE } from '@/utils/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
-  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
-  : 'http://localhost:5001/apis/v1';
 const LIMIT = 12;
 
 // Built-in Country Presets

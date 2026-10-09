@@ -23,10 +23,10 @@ import {
 import JoditEditorWrapper from '@/components/admin/JoditEditorWrapper';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import { getImageUrl } from '@/utils/image';
+import { toast } from '@/context/ToastContext';
 import { getAuthToken } from '@/utils/auth';
 import { cleanHtmlContent } from '@/utils/cleanHtml';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function StateEditorForm({ stateId = null, isEdit = false }) {
   const router = useRouter();
@@ -260,23 +260,29 @@ export default function StateEditorForm({ stateId = null, isEdit = false }) {
       const data = await res.json();
 
       if (data.success) {
+        const msg = isEdit ? 'State updated successfully!' : 'State created successfully!';
         setServerMessage({
           type: 'success',
-          text: isEdit ? 'State updated successfully!' : 'State created successfully!',
+          text: msg,
         });
+        toast.success(msg);
         setTimeout(() => {
           router.push('/edu-admin/states');
         }, 1000);
       } else {
+        const errMsg = data.message || (isEdit ? 'Failed to update state' : 'Failed to create state');
         setServerMessage({
           type: 'error',
-          text: data.message || (isEdit ? 'Failed to update state' : 'Failed to create state'),
+          text: errMsg,
         });
+        toast.error(errMsg);
         window.scrollTo({ top: 0, behavior: 'smooth' });
       }
     } catch (err) {
       console.error('Error saving state:', err);
-      setServerMessage({ type: 'error', text: 'Network error occurred. Please try again.' });
+      const errMsg = 'Network error occurred. Please try again.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } finally {
       setSaving(false);

@@ -24,8 +24,8 @@ import {
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
 const INTEREST_PRESETS = [
   'All Updates (GK, Jobs, Exams, Study Material)',
@@ -80,13 +80,18 @@ export default function SubscribersManagementPage() {
     isLoading: false,
   });
 
-  // Toast notification
-  const [toast, setToast] = useState(null);
   const [copiedField, setCopiedField] = useState(null);
 
   const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    if (type === 'error') {
+      toast.error(message);
+    } else if (type === 'warning') {
+      toast.warning(message);
+    } else if (type === 'info') {
+      toast.info(message);
+    } else {
+      toast.success(message);
+    }
   };
 
   const copyToClipboard = (text, fieldId) => {
@@ -431,25 +436,6 @@ export default function SubscribersManagementPage() {
 
   return (
     <div className="w-full min-h-full space-y-3 select-none font-sans text-slate-800">
-      
-      {/* Toast Alert */}
-      {toast && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded shadow-xl text-xs font-semibold flex items-center gap-2 border animate-in slide-in-from-top-2 ${
-            toast.type === 'error'
-              ? 'bg-rose-50 border-rose-200 text-rose-800'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-          }`}
-        >
-          {toast.type === 'error' ? (
-            <AlertCircle size={14} className="text-rose-600 shrink-0" />
-          ) : (
-            <Check size={14} className="text-emerald-600 shrink-0" />
-          )}
-          <span>{toast.message}</span>
-        </div>
-      )}
-
       {/* TOP HEADER: Title + Add New + Export CSV (Matching WP/Admin Reference) */}
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">

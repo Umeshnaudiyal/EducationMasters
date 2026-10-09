@@ -31,8 +31,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import LeaderboardView from '@/components/mock-test/LeaderboardView';
 import UnlockPassModal from '@/components/mock-test/UnlockPassModal';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+import { API_BASE } from '@/utils/api';
 
 // Helper to determine best matching emblem for the series
 function getSeriesEmblem(series) {

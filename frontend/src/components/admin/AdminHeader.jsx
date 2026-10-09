@@ -27,6 +27,7 @@ import {
   AnimatedCheckSquare,
   AnimatedMenu,
 } from '@/components/AnimatedIcons';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function AdminHeader({ session, onToggleMobileSidebar }) {
   const [showNewMenu, setShowNewMenu] = useState(false);
@@ -113,7 +114,7 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
     if (!user?.id) return;
     try {
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'}/apis/v1/auth/session-info?userId=${user.id}`
+        `${BACKEND_URL}/apis/v1/auth/session-info?userId=${user.id}`
       );
       const data = await res.json();
       if (data.success && data.data) {
@@ -262,7 +263,7 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
         (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
 
       await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'}/apis/v1/auth/logout`,
+        `${BACKEND_URL}/apis/v1/auth/logout`,
         {
           method: 'POST',
           headers: {

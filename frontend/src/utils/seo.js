@@ -1,8 +1,7 @@
 import { getImageUrl } from './image';
+import { getApiBaseUrl } from './api';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL 
-  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1` 
-  : 'http://localhost:5001/apis/v1';
+const API_BASE = getApiBaseUrl();
 
 const SITE_URL = 'https://educationmasters.in';
 const SITE_NAME = 'Education Masters';

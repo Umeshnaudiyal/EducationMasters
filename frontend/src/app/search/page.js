@@ -12,10 +12,7 @@ import {
   Flame, Keyboard, Award, CheckCircle2, Zap, ArrowUpRight, HelpCircle
 } from 'lucide-react';
 import { getImageUrl } from '@/utils/image';
-
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
-  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
-  : 'http://localhost:5001/apis/v1';
+import { API_BASE } from '@/utils/api';
 
 const TRENDING_EXAMS = [
   { title: 'UPSC Civil Services 2026', type: 'Job', badgeColor: '#2563eb', query: 'UPSC' },

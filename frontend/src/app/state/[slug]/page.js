@@ -34,10 +34,7 @@ import {
   Layers,
   Sparkles,
 } from 'lucide-react';
-
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL
-  ? `${process.env.NEXT_PUBLIC_BACKEND_URL}/apis/v1`
-  : 'http://localhost:5001/apis/v1';
+import { API_BASE } from '@/utils/api';
 
 // Subject list configuration with authentic PNG icons stored in /public
 const STATE_SUBJECTS = [

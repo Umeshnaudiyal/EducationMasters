@@ -24,10 +24,10 @@ import {
   Target,
   ArrowRight,
 } from 'lucide-react';
+import { getBackendUrl } from '@/utils/api';
+import { getImageUrl } from '@/utils/image';
 
-const API_BASE = typeof window !== 'undefined'
-  ? ''
-  : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
+const API_BASE = getBackendUrl();
 
 function CandidateAvatar({ src, name, rank, isUser }) {
   const [imgError, setImgError] = useState(false);
@@ -39,14 +39,7 @@ function CandidateAvatar({ src, name, rank, isUser }) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  let resolvedSrc = src;
-  if (resolvedSrc && typeof resolvedSrc === 'string' && resolvedSrc.trim() !== '') {
-    if (resolvedSrc.startsWith('/uploads/')) {
-      resolvedSrc = `${API_BASE}${resolvedSrc}`;
-    }
-  } else {
-    resolvedSrc = null;
-  }
+  let resolvedSrc = src ? getImageUrl(src) : null;
 
   let ringStyle = 'border border-slate-200';
   let badgeStyle = 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white';

@@ -29,10 +29,7 @@ import {
 } from '@/components/AnimatedIcons';
 import { useAuthModal } from '@/context/AuthModalContext';
 import { useToast } from '@/context/ToastContext';
-
-const BACKEND_URL = typeof window !== 'undefined'
-  ? ''
-  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
+import { BACKEND_URL } from '@/utils/api';
 
 export default function AuthModal() {
   const { isAuthModalOpen, closeAuthModal, authModalMode, setAuthModalMode, modalOptions } = useAuthModal();
@@ -831,9 +828,9 @@ export default function AuthModal() {
               </div>
 
               {/* Divider */}
-              <div className="relative flex items-center justify-center my-0.5">
-                <div className="w-full border-t border-slate-200/80" />
-                <span className="absolute bg-white px-2.5 text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+              <div className="relative flex items-center justify-center my-3.5 sm:my-4 py-0.5">
+                <div className="w-full border-t border-slate-200" />
+                <span className="absolute bg-white px-3 text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
                   or with email
                 </span>
               </div>

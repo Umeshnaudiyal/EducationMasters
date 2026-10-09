@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import DeleteConfirmModal from './DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
+import { toast } from '@/context/ToastContext';
 
 // Helper to parse the correct option index (0-indexed) from various data formats
 const parseCorrectOptionIndex = (data) => {
@@ -434,26 +435,32 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const msg = isEdit ? 'Question updated successfully!' : 'Question published successfully!';
         setServerMessage({
           type: 'success',
-          text: isEdit ? 'Question updated successfully!' : 'Question published successfully!',
+          text: msg,
         });
+        toast.success(msg);
         setTimeout(() => {
           router.push('/edu-admin/questions');
         }, 800);
       } else {
         if (data.errors) setErrors(data.errors);
+        const errMsg = data.message || 'Failed to save question. Please check form errors.';
         setServerMessage({
           type: 'error',
-          text: data.message || 'Failed to save question. Please check form errors.',
+          text: errMsg,
         });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Question save error:', err);
+      const errMsg = 'Network error communicating with server.';
       setServerMessage({
         type: 'error',
-        text: 'Network error communicating with server.',
+        text: errMsg,
       });
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -474,12 +481,16 @@ export default function QuestionEditorForm({ initialData = null, isEdit = false 
       );
       const data = await res.json();
       if (res.ok && data.success) {
+        toast.success('Question deleted successfully');
         router.push('/edu-admin/questions');
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Failed to delete question' });
+        const errMsg = data.message || 'Failed to delete question';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Delete error:', err);
+      toast.error('Failed to delete question');
     } finally {
       setIsDeleting(false);
       setDeleteModalOpen(false);

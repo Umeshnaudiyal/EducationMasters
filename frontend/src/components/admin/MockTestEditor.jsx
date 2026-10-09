@@ -32,6 +32,7 @@ import JoditEditorWrapper from './JoditEditorWrapper';
 import { getAuthToken } from '@/utils/auth';
 import { slugify } from '@/utils/slug';
 import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
+import { toast } from '@/context/ToastContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -428,10 +429,12 @@ export default function MockTestEditor({ seriesId, initialTest = null, isEdit = 
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const msg = isEdit ? 'Test updated and questions synced successfully.' : 'Test created and questions allocated successfully.';
         setServerMessage({
           type: 'success',
-          text: isEdit ? 'Test updated and questions synced successfully.' : 'Test created and questions allocated successfully.',
+          text: msg,
         });
+        toast.success(msg);
         setTimeout(() => {
           router.push(`/edu-admin/mock-tests/${seriesId}/tests`);
         }, 800);
@@ -449,11 +452,15 @@ export default function MockTestEditor({ seriesId, initialTest = null, isEdit = 
             }
           }, 50);
         }
-        setServerMessage({ type: 'error', text: data.message || 'Failed to save mock test.' });
+        const errMsg = data.message || 'Failed to save mock test.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Save test error:', err);
-      setServerMessage({ type: 'error', text: 'Network error occurred while saving test.' });
+      const errMsg = 'Network error occurred while saving test.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }

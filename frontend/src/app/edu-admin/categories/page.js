@@ -36,8 +36,7 @@ import AdminLoader from '@/components/admin/AdminLoader';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 // Helper to auto-generate clean URL slug
 const slugify = (text) => {

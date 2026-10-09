@@ -7,6 +7,18 @@ const nextConfig = {
         hostname: 'educationmasters.in',
       },
       {
+        protocol: 'https',
+        hostname: 'education-masters-cv8z.vercel.app',
+      },
+      {
+        protocol: 'https',
+        hostname: '*.vercel.app',
+      },
+      {
+        protocol: 'https',
+        hostname: 'lh3.googleusercontent.com',
+      },
+      {
         protocol: 'http',
         hostname: 'localhost',
       },
@@ -67,7 +79,13 @@ const nextConfig = {
     ];
   },
   async rewrites() {
-    const rawBackend = "https://education-masters-cv8z.vercel.app";
+    const rawBackend =
+      process.env.INTERNAL_BACKEND_URL ||
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? "https://education-masters-cv8z.vercel.app"
+        : "http://localhost:5001");
     const backendUrl = rawBackend.replace(/\/apis?\/?$/, ''); // strips trailing /api or /apis if present
 
     return [

@@ -23,6 +23,7 @@ import {
 } from 'lucide-react';
 import { getAuthToken } from '@/utils/auth';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { toast } from '@/context/ToastContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -119,11 +120,14 @@ export default function SeriesTestsManagePage() {
         )
       );
       setServerMessage({ type: 'success', text: `Updated ${selectedIds.length} tests successfully.` });
+      toast.success(`Updated ${selectedIds.length} tests successfully.`);
       setSelectedIds([]);
       fetchData();
     } catch (err) {
       console.error('Bulk update error:', err);
-      setServerMessage({ type: 'error', text: 'Error applying bulk action.' });
+      const errMsg = 'Error applying bulk action.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setBulkLoading(false);
     }
@@ -144,7 +148,9 @@ export default function SeriesTestsManagePage() {
             })
           )
         );
-        setServerMessage({ type: 'success', text: `${selectedIds.length} tests deleted successfully.` });
+        const msg = `${selectedIds.length} tests deleted successfully.`;
+        setServerMessage({ type: 'success', text: msg });
+        toast.success(msg);
         setSelectedIds([]);
       } else if (deleteModal.item) {
         const res = await fetch(`${API_BASE}/apis/v1/mock-tests/${deleteModal.item._id}`, {
@@ -153,15 +159,21 @@ export default function SeriesTestsManagePage() {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          setServerMessage({ type: 'success', text: `Test "${deleteModal.item.title}" deleted successfully.` });
+          const msg = `Test "${deleteModal.item.title}" deleted successfully.`;
+          setServerMessage({ type: 'success', text: msg });
+          toast.success(msg);
         } else {
-          setServerMessage({ type: 'error', text: data.message || 'Failed to delete test.' });
+          const errMsg = data.message || 'Failed to delete test.';
+          setServerMessage({ type: 'error', text: errMsg });
+          toast.error(errMsg);
         }
       }
       fetchData();
     } catch (err) {
       console.error('Delete error:', err);
-      setServerMessage({ type: 'error', text: 'Error connecting to server during test deletion.' });
+      const errMsg = 'Error connecting to server during test deletion.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setDeleteModal({ isOpen: false, item: null, isLoading: false, isBulk: false });
     }

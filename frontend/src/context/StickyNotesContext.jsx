@@ -1,12 +1,9 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import { BACKEND_URL } from '@/utils/api';
 
 const StickyNotesContext = createContext(null);
-
-const BACKEND_URL = typeof window !== 'undefined'
-  ? ''
-  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
 
 export function StickyNotesProvider({ children }) {
   const [notes, setNotes] = useState([]);

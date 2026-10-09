@@ -19,8 +19,8 @@ import { formatTimeAgo, formatDate } from '@/utils/date';
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function JobsAdminPage() {
   const { data: session } = useSession();
@@ -38,7 +38,6 @@ export default function JobsAdminPage() {
   const [bulkAction, setBulkAction] = useState('');
   const [selectedIds, setSelectedIds] = useState([]);
   const [updatingId, setUpdatingId] = useState(null);
-  const [toast, setToast] = useState({ message: '', type: '' });
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     id: null,
@@ -55,8 +54,15 @@ export default function JobsAdminPage() {
   });
 
   const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast({ message: '', type: '' }), 3500);
+    if (type === 'error') {
+      toast.error(message);
+    } else if (type === 'warning') {
+      toast.warning(message);
+    } else if (type === 'info') {
+      toast.info(message);
+    } else {
+      toast.success(message);
+    }
   };
 
   const fetchJobs = async () => {
@@ -289,24 +295,6 @@ export default function JobsAdminPage() {
 
   return (
     <div className="space-y-3 w-full select-none font-sans text-slate-800">
-      {/* Toast Alert */}
-      {toast.message && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded shadow-xl text-xs font-semibold flex items-center gap-2 border animate-in slide-in-from-top-2 ${
-            toast.type === 'error'
-              ? 'bg-rose-50 border-rose-200 text-rose-800'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-          }`}
-        >
-          {toast.type === 'error' ? (
-            <AlertCircle size={14} className="text-rose-600 shrink-0" />
-          ) : (
-            <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-          )}
-          <span>{toast.message}</span>
-        </div>
-      )}
-
       {/* Top Header: Jobs + Add New (Matching WP Reference Screenshot) */}
       <div className="flex items-center gap-2">
         <h1 className="text-xl font-normal text-slate-900 tracking-tight">Jobs</h1>

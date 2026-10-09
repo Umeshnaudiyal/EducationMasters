@@ -28,8 +28,10 @@ import {
 import { getImageUrl } from '@/utils/image';
 import { getAuthToken } from '@/utils/auth';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
+import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = BACKEND_URL;
 
 export default function MockTestSeriesListPage() {
   const { data: session } = useSession();
@@ -169,16 +171,22 @@ export default function MockTestSeriesListPage() {
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setServerMessage({ type: 'success', text: data.message || 'Bulk action applied successfully.' });
+        const msg = data.message || 'Bulk action applied successfully.';
+        setServerMessage({ type: 'success', text: msg });
+        toast.success(msg);
         setSelectedIds([]);
         setBulkAction('');
         fetchSeries();
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Bulk action failed.' });
+        const errMsg = data.message || 'Bulk action failed.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Bulk action error:', err);
-      setServerMessage({ type: 'error', text: 'Error applying bulk action.' });
+      const errMsg = 'Error applying bulk action.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setBulkLoading(false);
     }
@@ -200,11 +208,15 @@ export default function MockTestSeriesListPage() {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          setServerMessage({ type: 'success', text: `${selectedIds.length} series deleted successfully.` });
+          const msg = `${selectedIds.length} series deleted successfully.`;
+          setServerMessage({ type: 'success', text: msg });
+          toast.success(msg);
           setSelectedIds([]);
           fetchSeries();
         } else {
-          setServerMessage({ type: 'error', text: data.message || 'Failed to delete series.' });
+          const errMsg = data.message || 'Failed to delete series.';
+          setServerMessage({ type: 'error', text: errMsg });
+          toast.error(errMsg);
         }
       } else if (deleteModal.item) {
         const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/${deleteModal.item._id}`, {
@@ -213,15 +225,21 @@ export default function MockTestSeriesListPage() {
         });
         const data = await res.json();
         if (res.ok && data.success) {
-          setServerMessage({ type: 'success', text: `Mock Test Series "${deleteModal.item.title}" deleted successfully.` });
+          const msg = `Mock Test Series "${deleteModal.item.title}" deleted successfully.`;
+          setServerMessage({ type: 'success', text: msg });
+          toast.success(msg);
           fetchSeries();
         } else {
-          setServerMessage({ type: 'error', text: data.message || 'Failed to delete series.' });
+          const errMsg = data.message || 'Failed to delete series.';
+          setServerMessage({ type: 'error', text: errMsg });
+          toast.error(errMsg);
         }
       }
     } catch (err) {
       console.error('Delete error:', err);
-      setServerMessage({ type: 'error', text: 'Error connecting to server during deletion.' });
+      const errMsg = 'Error connecting to server during deletion.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setDeleteModal({ isOpen: false, item: null, isLoading: false, isBulk: false });
     }

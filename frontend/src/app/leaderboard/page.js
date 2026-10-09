@@ -30,8 +30,8 @@ import {
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+import { API_BASE } from '@/utils/api';
+import { getImageUrl } from '@/utils/image';
 
 function CandidateAvatar({ src, name, rank, isUser }) {
   const [imgError, setImgError] = useState(false);
@@ -43,14 +43,7 @@ function CandidateAvatar({ src, name, rank, isUser }) {
     return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
-  let resolvedSrc = src;
-  if (resolvedSrc && typeof resolvedSrc === 'string' && resolvedSrc.trim() !== '') {
-    if (resolvedSrc.startsWith('/uploads/')) {
-      resolvedSrc = `${API_BASE}${resolvedSrc}`;
-    }
-  } else {
-    resolvedSrc = null;
-  }
+  let resolvedSrc = src ? getImageUrl(src) : null;
 
   let ringStyle = 'border border-slate-200';
   let badgeStyle = 'bg-gradient-to-tr from-slate-700 to-slate-900 text-white';

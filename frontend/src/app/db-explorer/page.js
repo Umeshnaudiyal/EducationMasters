@@ -1,8 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-
-const API_BASE = 'http://localhost:5001/apis/v1';
+import { API_BASE } from '@/utils/api';
 
 export default function DbExplorerPage() {
   const [stats, setStats] = useState(null);

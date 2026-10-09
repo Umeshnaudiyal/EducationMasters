@@ -23,8 +23,8 @@ import {
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
 function InstituteThumbnail({ inst }) {
   const [imgError, setImgError] = useState(false);
@@ -108,7 +108,6 @@ export default function InstitutesListPage() {
   const [selectedIds, setSelectedIds] = useState([]);
   const [bulkAction, setBulkAction] = useState('');
   const [updatingId, setUpdatingId] = useState(null);
-  const [toast, setToast] = useState(null);
   const [deleteModal, setDeleteModal] = useState({
     isOpen: false,
     id: null,
@@ -119,8 +118,15 @@ export default function InstitutesListPage() {
   });
 
   const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast(null), 3500);
+    if (type === 'error') {
+      toast.error(message);
+    } else if (type === 'warning') {
+      toast.warning(message);
+    } else if (type === 'info') {
+      toast.info(message);
+    } else {
+      toast.success(message);
+    }
   };
 
   const fetchInstitutes = useCallback(async () => {
@@ -413,20 +419,6 @@ export default function InstitutesListPage() {
 
   return (
     <div className="w-full space-y-3 font-sans select-none text-slate-800 pb-10">
-      {/* Toast Alert */}
-      {toast && (
-        <div
-          className={`fixed top-12 right-6 z-50 flex items-center gap-2 px-4 py-2.5 rounded shadow-lg text-xs font-semibold transition-all ${
-            toast.type === 'error'
-              ? 'bg-red-600 text-white shadow-red-500/20'
-              : 'bg-slate-800 text-white shadow-slate-900/20'
-          }`}
-        >
-          {toast.type === 'error' ? <AlertCircle size={16} /> : <Check size={16} className="text-emerald-400" />}
-          <span>{toast.message}</span>
-        </div>
-      )}
-
       {/* Top Header */}
       <div className="flex items-center gap-3">
         <h1 className="text-2xl font-bold text-slate-900 tracking-tight">Institutes</h1>

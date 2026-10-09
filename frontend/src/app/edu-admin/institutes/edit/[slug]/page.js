@@ -6,8 +6,7 @@ import InstituteForm from '@/components/admin/InstituteForm';
 import AdminLoader from '@/components/admin/AdminLoader';
 import { AlertCircle, RefreshCw, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function EditInstitutePage() {
   const params = useParams();

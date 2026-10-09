@@ -11,6 +11,7 @@ import {
 } from './AnimatedIcons';
 import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
+import { getBackendUrl } from '@/utils/api';
 
 export default function SubscriptionBanner({
   title = 'Get Latest Update (like G.K, Latest Job, Exam Alert, Study Material, Previous year papers etc)',
@@ -230,9 +231,7 @@ export default function SubscriptionBanner({
     setStatus({ loading: true, error: '', success: false, message: '' });
 
     try {
-      const baseUrl = typeof window !== 'undefined'
-        ? ''
-        : (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001');
+      const baseUrl = getBackendUrl();
       const cleanMobile = formData.whatsapp.replace(/\D/g, '').slice(0, 10);
 
       const res = await fetch(`${baseUrl}/apis/v1/subscribers/subscribe`, {

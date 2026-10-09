@@ -64,10 +64,7 @@ import {
   AnimatedBrain,
   AnimatedRotateCcw,
 } from '@/components/AnimatedIcons';
-
-const BACKEND_URL = typeof window !== 'undefined'
-  ? ''
-  : (process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001');
+import { BACKEND_URL } from '@/utils/api';
 
 
 

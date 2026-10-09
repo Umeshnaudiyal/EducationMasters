@@ -1,7 +1,8 @@
 import React from 'react';
 import MockTestsClient from './MockTestsClient';
+import { getApiBaseUrl } from '@/utils/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = getApiBaseUrl();
 
 export const metadata = {
   title: 'Online Mock Tests & Test Series 2026 | Education Masters',

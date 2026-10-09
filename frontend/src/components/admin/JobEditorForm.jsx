@@ -23,8 +23,8 @@ import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import AdminLoader from '@/components/admin/AdminLoader';
 import SearchableSelectPanel from '@/components/admin/SearchableSelectPanel';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
   const router = useRouter();
@@ -239,11 +239,17 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
   // Status & Notifications
   const [fetchingJob, setFetchingJob] = useState(Boolean(slugOrId));
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [toast, setToast] = useState({ message: '', type: '' });
 
   const showToast = (message, type = 'success') => {
-    setToast({ message, type });
-    setTimeout(() => setToast({ message: '', type: '' }), 4000);
+    if (type === 'error') {
+      toast.error(message);
+    } else if (type === 'warning') {
+      toast.warning(message);
+    } else if (type === 'info') {
+      toast.info(message);
+    } else {
+      toast.success(message);
+    }
   };
 
   // Fetch Dynamic Stored Departments, Countries, and States
@@ -485,19 +491,6 @@ export default function JobEditorForm({ slugOrId = null, isEdit = false }) {
 
   return (
     <div className="space-y-3.5 w-full select-none font-sans text-slate-800">
-      {/* Toast Alert */}
-      {toast.message && (
-        <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded shadow-xl text-xs font-semibold flex items-center gap-2 border animate-in slide-in-from-top-2 ${
-            toast.type === 'error'
-              ? 'bg-rose-50 border-rose-200 text-rose-800'
-              : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-          }`}
-        >
-          <span>{toast.message}</span>
-        </div>
-      )}
-
       {/* Top Header: Back Button + Add a New Job / Edit Job */}
       <div className="flex items-center justify-between pb-1">
         <div className="flex items-center gap-2.5">

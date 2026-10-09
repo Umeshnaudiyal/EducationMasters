@@ -29,6 +29,7 @@ import {
   Eye,
   ExternalLink,
 } from 'lucide-react';
+import { BACKEND_URL } from '@/utils/api';
 
 const PAGE_SIZE = 10;
 
@@ -102,7 +103,7 @@ export default function UserSessionLogsPage() {
         (typeof window !== 'undefined' ? localStorage.getItem('token') : null);
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'}/apis/v1/auth/daily-dashboard-logs?${query}`,
+        `${BACKEND_URL}/apis/v1/auth/daily-dashboard-logs?${query}`,
         {
           headers: {
             'Content-Type': 'application/json',
@@ -172,7 +173,7 @@ export default function UserSessionLogsPage() {
       });
 
       const res = await fetch(
-        `${process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001'}/apis/v1/auth/calendar-history?${query}`,
+        `${BACKEND_URL}/apis/v1/auth/calendar-history?${query}`,
         {
           headers: {
             'Content-Type': 'application/json',

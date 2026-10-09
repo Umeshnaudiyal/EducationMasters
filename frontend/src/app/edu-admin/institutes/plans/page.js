@@ -20,8 +20,8 @@ import {
 } from 'lucide-react';
 import AdminLoader from '@/components/admin/AdminLoader';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
+import { getImageUrl } from '@/utils/image';
 
 export default function InstituteCrmPlansPage() {
   const { data: session } = useSession();
@@ -275,7 +275,7 @@ export default function InstituteCrmPlansPage() {
                           <div className="w-9 h-9 rounded bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
                             {inst.logo ? (
                               <img
-                                src={inst.logo.startsWith('http') ? inst.logo : `http://localhost:5001${inst.logo}`}
+                                src={getImageUrl(inst.logo)}
                                 alt={name}
                                 className="w-full h-full object-cover"
                               />

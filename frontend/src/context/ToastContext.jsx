@@ -13,48 +13,69 @@ const ToastContext = createContext({
   warning: () => {},
 });
 
+function parseToastParams(type, arg1, arg2) {
+  const defaultTitles = {
+    success: 'Success!',
+    error: 'Error',
+    warning: 'Warning',
+    info: 'Information',
+  };
+
+  let config = {
+    type,
+    title: defaultTitles[type] || 'Notification',
+    message: '',
+  };
+
+  if (typeof arg1 === 'object' && arg1 !== null) {
+    config = { ...config, ...arg1, type: arg1.type || type };
+  } else if (typeof arg1 === 'string' && typeof arg2 === 'string') {
+    // Determine which is title and which is message
+    if (arg1.length <= 40 && arg2.length > arg1.length) {
+      config.title = arg1;
+      config.message = arg2;
+    } else {
+      config.title = arg2;
+      config.message = arg1;
+    }
+  } else if (typeof arg1 === 'string') {
+    config.message = arg1;
+    if (typeof arg2 === 'object' && arg2 !== null) {
+      config = { ...config, ...arg2 };
+      if (arg2.title) config.title = arg2.title;
+    }
+  }
+
+  return config;
+}
+
 // Singleton emitter for direct toast.success() imports anywhere
 let globalToastEmitter = null;
 
 export const toast = {
-  success: (message, options = {}) => {
+  success: (arg1, arg2) => {
     if (globalToastEmitter) {
-      return globalToastEmitter({
-        type: 'success',
-        message,
-        title: typeof options === 'string' ? options : options.title || 'Success!',
-        ...((typeof options === 'object') ? options : {}),
-      });
+      return globalToastEmitter(parseToastParams('success', arg1, arg2));
     }
   },
-  error: (message, options = {}) => {
+  error: (arg1, arg2) => {
     if (globalToastEmitter) {
-      return globalToastEmitter({
-        type: 'error',
-        message,
-        title: typeof options === 'string' ? options : options.title || 'Error',
-        ...((typeof options === 'object') ? options : {}),
-      });
+      return globalToastEmitter(parseToastParams('error', arg1, arg2));
     }
   },
-  info: (message, options = {}) => {
+  info: (arg1, arg2) => {
     if (globalToastEmitter) {
-      return globalToastEmitter({
-        type: 'info',
-        message,
-        title: typeof options === 'string' ? options : options.title || 'Information',
-        ...((typeof options === 'object') ? options : {}),
-      });
+      return globalToastEmitter(parseToastParams('info', arg1, arg2));
     }
   },
-  warning: (message, options = {}) => {
+  warning: (arg1, arg2) => {
     if (globalToastEmitter) {
-      return globalToastEmitter({
-        type: 'warning',
-        message,
-        title: typeof options === 'string' ? options : options.title || 'Warning',
-        ...((typeof options === 'object') ? options : {}),
-      });
+      return globalToastEmitter(parseToastParams('warning', arg1, arg2));
+    }
+  },
+  show: (toastData) => {
+    if (globalToastEmitter) {
+      return globalToastEmitter(toastData);
     }
   },
 };
@@ -69,58 +90,45 @@ export function ToastProvider({ children }) {
 
   const showToast = useCallback((toastData) => {
     const id = `toast_${Date.now()}_${++counterRef.current}`;
+    const parsed = typeof toastData === 'string' 
+      ? { type: 'success', title: 'Success!', message: toastData }
+      : toastData;
+
     const newToast = {
       id,
-      type: toastData.type || 'success',
-      title: toastData.title || (toastData.type === 'error' ? 'Something went wrong' : 'Success!'),
-      message: typeof toastData === 'string' ? toastData : toastData.message || '',
-      duration: toastData.duration ?? 5000,
-      icon: toastData.icon,
+      type: parsed.type || 'success',
+      title: parsed.title || (parsed.type === 'error' ? 'Something went wrong' : 'Success!'),
+      message: parsed.message || '',
+      duration: parsed.duration ?? 5000,
+      icon: parsed.icon,
+      emoji: parsed.emoji,
+      badge: parsed.badge,
+      action: parsed.action,
       timestamp: Date.now(),
-      ...toastData,
+      ...parsed,
     };
 
-    setToasts([newToast]); // Show only 1 toast at a time
+    setToasts((prev) => [...prev.slice(-2), newToast]);
     return id;
   }, []);
 
   // Set global emitter reference
   globalToastEmitter = showToast;
 
-  const success = useCallback((message, options = {}) => {
-    return showToast({
-      type: 'success',
-      message,
-      title: typeof options === 'string' ? options : options.title || 'Success!',
-      ...(typeof options === 'object' ? options : {}),
-    });
+  const success = useCallback((arg1, arg2) => {
+    return showToast(parseToastParams('success', arg1, arg2));
   }, [showToast]);
 
-  const error = useCallback((message, options = {}) => {
-    return showToast({
-      type: 'error',
-      message,
-      title: typeof options === 'string' ? options : options.title || 'Error',
-      ...(typeof options === 'object' ? options : {}),
-    });
+  const error = useCallback((arg1, arg2) => {
+    return showToast(parseToastParams('error', arg1, arg2));
   }, [showToast]);
 
-  const info = useCallback((message, options = {}) => {
-    return showToast({
-      type: 'info',
-      message,
-      title: typeof options === 'string' ? options : options.title || 'Information',
-      ...(typeof options === 'object' ? options : {}),
-    });
+  const info = useCallback((arg1, arg2) => {
+    return showToast(parseToastParams('info', arg1, arg2));
   }, [showToast]);
 
-  const warning = useCallback((message, options = {}) => {
-    return showToast({
-      type: 'warning',
-      message,
-      title: typeof options === 'string' ? options : options.title || 'Warning',
-      ...(typeof options === 'object' ? options : {}),
-    });
+  const warning = useCallback((arg1, arg2) => {
+    return showToast(parseToastParams('warning', arg1, arg2));
   }, [showToast]);
 
   return (

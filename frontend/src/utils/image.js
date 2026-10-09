@@ -59,8 +59,17 @@ export const getImageUrl = (mediaObj, fallback = '/logo.webp') => {
     normalizedPath.startsWith('/uploads/') ||
     normalizedPath.startsWith('/temp/')
   ) {
-    const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
-    return encodeURI(`${backendUrl}${normalizedPath}`);
+    if (typeof window !== 'undefined') {
+      return encodeURI(normalizedPath);
+    }
+    const backendUrl =
+      process.env.INTERNAL_BACKEND_URL ||
+      process.env.BACKEND_URL ||
+      process.env.NEXT_PUBLIC_BACKEND_URL ||
+      (process.env.NODE_ENV === 'production'
+        ? 'https://education-masters-cv8z.vercel.app'
+        : 'http://localhost:5001');
+    return encodeURI(`${backendUrl.replace(/\/apis?\/?$/, '')}${normalizedPath}`);
   }
 
   // Production migrated image repository (https://educationmasters.in/assets/... or similar)

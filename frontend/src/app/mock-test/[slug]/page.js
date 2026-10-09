@@ -1,8 +1,9 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import SingleSeriesClient from './SingleSeriesClient';
+import { getApiBaseUrl } from '@/utils/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_BACKEND_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+const API_BASE = getApiBaseUrl();
 
 async function getSeriesData(slug) {
   try {

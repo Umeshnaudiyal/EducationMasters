@@ -32,6 +32,7 @@ import { getImageUrl } from '@/utils/image';
 import { getAuthToken } from '@/utils/auth';
 import { slugify } from '@/utils/slug';
 import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
+import { toast } from '@/context/ToastContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
@@ -384,10 +385,12 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const msg = isEdit ? 'Mock test series updated successfully.' : 'Mock test series created successfully.';
         setServerMessage({
           type: 'success',
-          text: isEdit ? 'Mock test series updated successfully.' : 'Mock test series created successfully.',
+          text: msg,
         });
+        toast.success(msg);
         setTimeout(() => {
           router.push('/edu-admin/mock-tests');
         }, 800);
@@ -409,14 +412,18 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
             }
           }
         }
+        const errMsg = data.message || 'Server error occurred while saving the series.';
         setServerMessage({
           type: 'error',
-          text: data.message || 'Server error occurred while saving the series.',
+          text: errMsg,
         });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Save series error:', err);
-      setServerMessage({ type: 'error', text: 'Network connection error while saving mock test series.' });
+      const errMsg = 'Network connection error while saving mock test series.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }

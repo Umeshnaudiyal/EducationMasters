@@ -26,8 +26,7 @@ import {
 } from 'lucide-react';
 import { useToast } from '@/context/ToastContext';
 import { NOTE_COLOR_STYLES } from '@/components/sticky-notes/StickyNotesDrawer';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 const COLOR_OPTIONS = [
   { id: 'yellow', label: 'Warm Yellow', hex: '#fde047', dot: 'bg-amber-400' },

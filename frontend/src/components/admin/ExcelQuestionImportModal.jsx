@@ -26,6 +26,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import { getAuthToken } from '@/utils/auth';
+import { toast } from '@/context/ToastContext';
 
 export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess }) {
   const { data: session } = useSession();
@@ -608,23 +609,29 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
 
       if (res.ok && data.success) {
         setImportSummary(data);
+        const successMsg = data.message || `Successfully imported ${data.imported} questions!`;
         setStatusMessage({
           type: 'success',
-          text: data.message || `Successfully imported ${data.imported} questions!`,
+          text: successMsg,
         });
+        toast.success(successMsg, { title: 'Import Successful' });
         if (onSuccess) onSuccess();
       } else {
+        const errMsg = data.message || 'Error occurred during questions bulk import.';
         setStatusMessage({
           type: 'error',
-          text: data.message || 'Error occurred during questions bulk import.',
+          text: errMsg,
         });
+        toast.error(errMsg, { title: 'Import Failed' });
       }
     } catch (err) {
       console.error('Import request error:', err);
+      const errMsg = 'Network error communicating with server.';
       setStatusMessage({
         type: 'error',
-        text: 'Network error communicating with server.',
+        text: errMsg,
       });
+      toast.error(errMsg, { title: 'Import Error' });
     } finally {
       setIsUploading(false);
     }

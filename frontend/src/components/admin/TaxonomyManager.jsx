@@ -27,6 +27,7 @@ import JoditEditorWrapper from './JoditEditorWrapper';
 import { getImageUrl } from '@/utils/image';
 import { getAuthToken } from '@/utils/auth';
 import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
+import { toast } from '@/context/ToastContext';
 
 function TaxonomyThumbnail({ src, alt, size = 14, className = 'w-9 h-9' }) {
   const [hasError, setHasError] = useState(false);
@@ -309,29 +310,35 @@ export default function TaxonomyManager({
       const data = await res.json();
 
       if (res.ok && data.success) {
+        const successMsg = editingId
+          ? `${singularTitle} updated successfully.`
+          : `${singularTitle} created successfully.`;
         setServerMessage({
           type: 'success',
-          text: editingId
-            ? `${singularTitle} updated successfully.`
-            : `${singularTitle} created successfully.`,
+          text: successMsg,
         });
+        toast.success(successMsg);
         resetForm();
         fetchItems();
       } else {
         if (data.errors) {
           setFormErrors(data.errors);
         }
+        const errMsg = data.message || `Failed to save ${singularTitle.toLowerCase()}. Please check the fields.`;
         setServerMessage({
           type: 'error',
-          text: data.message || `Failed to save ${singularTitle.toLowerCase()}. Please check the fields.`,
+          text: errMsg,
         });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Save error:', err);
+      const errMsg = 'Network error occurred while saving. Please try again.';
       setServerMessage({
         type: 'error',
-        text: 'Network error occurred while saving. Please try again.',
+        text: errMsg,
       });
+      toast.error(errMsg);
     } finally {
       setSaving(false);
     }
@@ -360,15 +367,21 @@ export default function TaxonomyManager({
       );
       const data = await res.json();
       if (res.ok && data.success) {
-        setServerMessage({ type: 'success', text: `${singularTitle} deleted successfully.` });
+        const msg = `${singularTitle} deleted successfully.`;
+        setServerMessage({ type: 'success', text: msg });
+        toast.success(msg);
         if (editingId === itemToDelete._id) resetForm();
         fetchItems();
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Failed to delete item.' });
+        const errMsg = data.message || 'Failed to delete item.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Delete error:', err);
-      setServerMessage({ type: 'error', text: 'Error connecting to server while deleting.' });
+      const errMsg = 'Error connecting to server while deleting.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setDeleting(false);
       setDeleteModalOpen(false);
@@ -420,16 +433,22 @@ export default function TaxonomyManager({
         );
         const data = await res.json();
         if (res.ok && data.success) {
-          setServerMessage({ type: 'success', text: `Successfully deleted ${selectedIds.length} items.` });
+          const msg = `Successfully deleted ${selectedIds.length} items.`;
+          setServerMessage({ type: 'success', text: msg });
+          toast.success(msg);
           setSelectedIds([]);
           setBulkAction('');
           fetchItems();
         } else {
-          setServerMessage({ type: 'error', text: data.message || 'Bulk delete failed.' });
+          const errMsg = data.message || 'Bulk delete failed.';
+          setServerMessage({ type: 'error', text: errMsg });
+          toast.error(errMsg);
         }
       } catch (err) {
         console.error('Bulk delete error:', err);
-        setServerMessage({ type: 'error', text: 'Server error during bulk action.' });
+        const errMsg = 'Server error during bulk action.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       } finally {
         setBulkLoading(false);
       }

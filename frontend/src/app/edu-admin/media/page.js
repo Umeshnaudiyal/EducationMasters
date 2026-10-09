@@ -32,8 +32,7 @@ import {
   IMAGE_ACCEPT_ATTRIBUTE,
   formatFileSize,
 } from '@/utils/imageValidation';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 // Consistent unique key helper
 const getMediaKey = (item, idx) => {

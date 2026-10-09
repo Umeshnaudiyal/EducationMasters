@@ -23,8 +23,8 @@ import {
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getImageUrl } from '@/utils/image';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function StatesListPage() {
   const router = useRouter();
@@ -157,16 +157,22 @@ export default function StatesListPage() {
         const data = await res.json();
 
         if (data.success) {
-          setServerMessage({ type: 'success', text: `Successfully deleted ${selectedIds.length} states` });
+          const msg = `Successfully deleted ${selectedIds.length} states`;
+          setServerMessage({ type: 'success', text: msg });
+          toast.success(msg);
           setSelectedIds([]);
           setBulkAction('');
           fetchStates();
         } else {
-          setServerMessage({ type: 'error', text: data.message || 'Failed to perform bulk action' });
+          const errMsg = data.message || 'Failed to perform bulk action';
+          setServerMessage({ type: 'error', text: errMsg });
+          toast.error(errMsg);
         }
       } catch (err) {
         console.error('Bulk delete error:', err);
-        setServerMessage({ type: 'error', text: 'Network error during bulk delete' });
+        const errMsg = 'Network error during bulk delete';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       } finally {
         setBulkLoading(false);
       }
@@ -195,17 +201,23 @@ export default function StatesListPage() {
       const data = await res.json();
 
       if (data.success) {
-        setServerMessage({ type: 'success', text: `State "${itemToDelete.name}" deleted successfully.` });
+        const msg = `State "${itemToDelete.name}" deleted successfully.`;
+        setServerMessage({ type: 'success', text: msg });
+        toast.success(msg);
         setDeleteModalOpen(false);
         setItemToDelete(null);
         setSelectedIds((prev) => prev.filter((id) => id !== itemToDelete._id));
         fetchStates();
       } else {
-        setServerMessage({ type: 'error', text: data.message || 'Failed to delete state.' });
+        const errMsg = data.message || 'Failed to delete state.';
+        setServerMessage({ type: 'error', text: errMsg });
+        toast.error(errMsg);
       }
     } catch (err) {
       console.error('Delete error:', err);
-      setServerMessage({ type: 'error', text: 'Error connecting to server to delete state.' });
+      const errMsg = 'Error connecting to server to delete state.';
+      setServerMessage({ type: 'error', text: errMsg });
+      toast.error(errMsg);
     } finally {
       setDeleting(false);
     }

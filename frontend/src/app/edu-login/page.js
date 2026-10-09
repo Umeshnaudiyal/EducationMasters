@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, AlertCircle, ShieldAlert, CheckCircle2, Clock } from 'lucide-react';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function EduLoginPage() {
   const router = useRouter();
@@ -114,6 +114,11 @@ export default function EduLoginPage() {
                   const data = await res.json();
 
                   if (res.ok && data.success) {
+                    const welcomeName = profile.name || profile.email.split('@')[0];
+                    toast.success({
+                      title: '🎉 Google Login Successful!',
+                      message: `Welcome back, ${welcomeName}! All MCQs and AI Performance features unlocked.`,
+                    });
                     if (data.data?.token) {
                       const loginResult = await signIn('credentials', {
                         authType: 'session-token',
@@ -132,13 +137,17 @@ export default function EduLoginPage() {
                     router.push('/edu-admin');
                     router.refresh();
                   } else {
-                    setErrorMsg(data.message || 'Google authentication failed on server.');
+                    const errMsg = data.message || 'Google authentication failed on server.';
+                    setErrorMsg(errMsg);
+                    toast.error(errMsg);
                   }
                 } else {
                   setErrorMsg('Failed to obtain Google email profile.');
+                  toast.error('Failed to obtain Google email profile.');
                 }
               } catch (err) {
                 setErrorMsg('Error retrieving Google profile.');
+                toast.error('Error retrieving Google profile.');
               } finally {
                 setIsGoogleLoading(false);
               }
@@ -206,15 +215,19 @@ export default function EduLoginPage() {
         const data = await res.json();
 
         if (res.ok && data.success) {
-          setSuccessMsg(
-            data.message ||
-            'Account registered successfully! Your account is currently inactive pending administrator approval.'
-          );
+          const successText = data.message || 'Account registered successfully! Your account is currently inactive pending administrator approval.';
+          setSuccessMsg(successText);
+          toast.success({
+            title: '🎉 Registration Successful!',
+            message: successText,
+          });
           setName('');
           setPassword('');
           setIsRegisterMode(false);
         } else {
-          setErrorMsg(data.message || 'Registration failed. Please check your details.');
+          const errMsg = data.message || 'Registration failed. Please check your details.';
+          setErrorMsg(errMsg);
+          toast.error(errMsg);
           if (data.message?.toLowerCase().includes('email')) {
             setFieldErrors((prev) => ({ ...prev, email: data.message }));
             emailRef.current?.focus();
@@ -230,6 +243,10 @@ export default function EduLoginPage() {
 
         if (result?.ok) {
           setSuccessMsg('Login successful! Redirecting to panel...');
+          toast.success({
+            title: '🎉 Login Successful!',
+            message: 'Welcome back! Opening admin dashboard.',
+          });
           router.push('/edu-admin');
           router.refresh();
         } else {
@@ -242,6 +259,7 @@ export default function EduLoginPage() {
 
           setIsInactiveError(isInactive);
           setErrorMsg(err);
+          toast.error(err);
 
           if (isInactive) {
             setFieldErrors({

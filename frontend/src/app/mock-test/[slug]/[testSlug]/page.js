@@ -40,8 +40,8 @@ import Footer from '@/components/Footer';
 import LeaderboardView from '@/components/mock-test/LeaderboardView';
 import UnlockPassModal from '@/components/mock-test/UnlockPassModal';
 import { stripHtmlToPlainText } from '@/utils/cleanHtml';
-
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5001';
+import { toast } from '@/context/ToastContext';
+import { API_BASE } from '@/utils/api';
 
 export default function MockTestTakingEnginePage({ params }) {
   const router = useRouter();
@@ -289,10 +289,17 @@ export default function MockTestTakingEnginePage({ params }) {
       if (data.success && data.data) {
         setEvaluationResult(data.data);
         setIsTestSubmitted(true);
+        toast.success({
+          title: '🎉 Test Submitted Successfully!',
+          message: `Your score: ${data.data.score || 0}/${data.data.total_marks || 0} (${data.data.percentage || 0}%). Solutions & analytics ready!`,
+        });
         window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else {
+        toast.error(data.message || 'Failed to submit test. Please try again.');
       }
     } catch (err) {
       console.error('Submit test error:', err);
+      toast.error('Network error during test submission.');
     } finally {
       setSubmitting(false);
     }

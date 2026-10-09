@@ -18,8 +18,7 @@ import {
 import AdminLoader from '@/components/admin/AdminLoader';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getAuthToken } from '@/utils/auth';
-
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5001';
+import { BACKEND_URL } from '@/utils/api';
 
 const slugify = (text) => {
   return String(text || '')
