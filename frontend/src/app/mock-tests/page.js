@@ -1,8 +1,6 @@
 import React from 'react';
 import MockTestsClient from './MockTestsClient';
-import { getApiBaseUrl } from '@/utils/api';
-
-const API_BASE = getApiBaseUrl();
+import { BACKEND_URL } from '@/utils/api';
 
 export const metadata = {
   title: 'Online Mock Tests & Test Series 2026 | Education Masters',
@@ -12,8 +10,8 @@ export const metadata = {
 
 async function getMockSeriesData() {
   try {
-    const res = await fetch(`${API_BASE}/apis/v1/mock-test-series?status=published&limit=50`, {
-      next: { revalidate: 30 },
+    const res = await fetch(`${BACKEND_URL}/apis/v1/mock-test-series?status=published&limit=50`, {
+      cache: 'no-store',
     });
     const data = await res.json();
     return data.success ? data.data || [] : [];

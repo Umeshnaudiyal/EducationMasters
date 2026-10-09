@@ -24,8 +24,9 @@ import {
 import { getAuthToken } from '@/utils/auth';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE = BACKEND_URL;
 
 export default function SeriesTestsManagePage() {
   const params = useParams();

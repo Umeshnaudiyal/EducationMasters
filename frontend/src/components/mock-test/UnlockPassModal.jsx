@@ -21,10 +21,8 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { toast } from '@/context/ToastContext';
-import { getBackendUrl } from '@/utils/api';
+import { BACKEND_URL } from '@/utils/api';
 import { loadRazorpayScript } from '@/utils/razorpay';
-
-const API_BASE = getBackendUrl();
 
 const DEFAULT_PLANS = [
   {
@@ -159,7 +157,7 @@ export default function UnlockPassModal({
       }
 
       // 1. Create order on backend
-      const res = await fetch(`${API_BASE}/apis/v1/payments/create-order`, {
+      const res = await fetch(`${BACKEND_URL}/apis/v1/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -211,7 +209,7 @@ export default function UnlockPassModal({
         handler: async function (response) {
           try {
             setLoading(true);
-            const verifyRes = await fetch(`${API_BASE}/apis/v1/payments/verify-payment`, {
+            const verifyRes = await fetch(`${BACKEND_URL}/apis/v1/payments/verify-payment`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',

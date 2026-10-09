@@ -33,8 +33,9 @@ import { getAuthToken } from '@/utils/auth';
 import { slugify } from '@/utils/slug';
 import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
 import { toast } from '@/context/ToastContext';
+import { BACKEND_URL } from '@/utils/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE = BACKEND_URL;
 
 export default function MockTestEditor({ seriesId, initialTest = null, isEdit = false }) {
   const router = useRouter();

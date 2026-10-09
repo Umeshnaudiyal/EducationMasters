@@ -1,14 +1,12 @@
 import React from 'react';
 import { notFound } from 'next/navigation';
 import SingleSeriesClient from './SingleSeriesClient';
-import { getApiBaseUrl } from '@/utils/api';
-
-const API_BASE = getApiBaseUrl();
+import { BACKEND_URL } from '@/utils/api';
 
 async function getSeriesData(slug) {
   try {
-    const res = await fetch(`${API_BASE}/apis/v1/mock-test-series/${slug}`, {
-      next: { revalidate: 30 },
+    const res = await fetch(`${BACKEND_URL}/apis/v1/mock-test-series/${slug}`, {
+      cache: 'no-store',
     });
     const data = await res.json();
     return data.success ? data.data : null;
@@ -20,8 +18,8 @@ async function getSeriesData(slug) {
 
 async function getAllPublishedSeries() {
   try {
-    const res = await fetch(`${API_BASE}/apis/v1/mock-test-series?status=published&limit=20`, {
-      next: { revalidate: 30 },
+    const res = await fetch(`${BACKEND_URL}/apis/v1/mock-test-series?status=published&limit=20`, {
+      cache: 'no-store',
     });
     const data = await res.json();
     return data.success ? data.data || [] : [];

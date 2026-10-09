@@ -24,10 +24,8 @@ import {
   Target,
   ArrowRight,
 } from 'lucide-react';
-import { getBackendUrl } from '@/utils/api';
+import { BACKEND_URL } from '@/utils/api';
 import { getImageUrl } from '@/utils/image';
-
-const API_BASE = getBackendUrl();
 
 function CandidateAvatar({ src, name, rank, isUser }) {
   const [imgError, setImgError] = useState(false);
@@ -106,11 +104,11 @@ export default function LeaderboardView({
       if (selectedMedium) params.append('language', selectedMedium);
 
       if (testId) {
-        url = `${API_BASE}/apis/v1/mock-tests/${testId}/leaderboard?${params.toString()}`;
+        url = `${BACKEND_URL}/apis/v1/mock-tests/${testId}/leaderboard?${params.toString()}`;
       } else if (seriesId) {
-        url = `${API_BASE}/apis/v1/mock-tests/series/${seriesId}/leaderboard?${params.toString()}`;
+        url = `${BACKEND_URL}/apis/v1/mock-tests/series/${seriesId}/leaderboard?${params.toString()}`;
       } else {
-        url = `${API_BASE}/apis/v1/mock-tests/leaderboard/global?${params.toString()}`;
+        url = `${BACKEND_URL}/apis/v1/mock-tests/leaderboard/global?${params.toString()}`;
       }
 
       const res = await fetch(url);

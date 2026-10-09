@@ -31,7 +31,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import LeaderboardView from '@/components/mock-test/LeaderboardView';
 import UnlockPassModal from '@/components/mock-test/UnlockPassModal';
-import { API_BASE } from '@/utils/api';
+import { BACKEND_URL } from '@/utils/api';
 
 // Helper to determine best matching emblem for the series
 function getSeriesEmblem(series) {
@@ -96,7 +96,7 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
 
       try {
         const res = await fetch(
-          `${API_BASE}/apis/v1/payments/user-status?email=${encodeURIComponent(userEmail || '')}&userId=${userId || ''}`
+          `${BACKEND_URL}/apis/v1/payments/user-status?email=${encodeURIComponent(userEmail || '')}&userId=${userId || ''}`
         );
         const data = await res.json();
         if (data.success && data.data?.hasPass) {
@@ -128,7 +128,7 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
         if (userId) params.append('userId', userId);
         if (series._id) params.append('series', series._id);
 
-        const res = await fetch(`${API_BASE}/apis/v1/mock-tests/user/attempts?${params.toString()}`);
+        const res = await fetch(`${BACKEND_URL}/apis/v1/mock-tests/user/attempts?${params.toString()}`);
         const data = await res.json();
         if (data.success && data.data?.attemptMap) {
           setUserAttemptsMap(data.data.attemptMap);

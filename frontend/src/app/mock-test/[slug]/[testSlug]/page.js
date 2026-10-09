@@ -41,7 +41,7 @@ import LeaderboardView from '@/components/mock-test/LeaderboardView';
 import UnlockPassModal from '@/components/mock-test/UnlockPassModal';
 import { stripHtmlToPlainText } from '@/utils/cleanHtml';
 import { toast } from '@/context/ToastContext';
-import { API_BASE } from '@/utils/api';
+import { BACKEND_URL } from '@/utils/api';
 
 export default function MockTestTakingEnginePage({ params }) {
   const router = useRouter();
@@ -86,7 +86,7 @@ export default function MockTestTakingEnginePage({ params }) {
     const fetchTest = async () => {
       try {
         setLoading(true);
-        const res = await fetch(`${API_BASE}/apis/v1/mock-tests/${testSlug}`);
+        const res = await fetch(`${BACKEND_URL}/apis/v1/mock-tests/${testSlug}`);
         const data = await res.json();
         if (data.success && data.data) {
           const testData = data.data;
@@ -133,7 +133,7 @@ export default function MockTestTakingEnginePage({ params }) {
 
       try {
         const res = await fetch(
-          `${API_BASE}/apis/v1/payments/user-status?email=${encodeURIComponent(userEmail || '')}&userId=${userId || ''}`
+          `${BACKEND_URL}/apis/v1/payments/user-status?email=${encodeURIComponent(userEmail || '')}&userId=${userId || ''}`
         );
         const data = await res.json();
         if (data.success && data.data?.hasPass) {
@@ -273,7 +273,7 @@ export default function MockTestTakingEnginePage({ params }) {
         is_marked_for_review: markedForReview.has(q._id),
       }));
 
-      const res = await fetch(`${API_BASE}/apis/v1/mock-tests/${test._id}/submit`, {
+      const res = await fetch(`${BACKEND_URL}/apis/v1/mock-tests/${test._id}/submit`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -30,7 +30,7 @@ import {
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { API_BASE } from '@/utils/api';
+import { BACKEND_URL } from '@/utils/api';
 import { getImageUrl } from '@/utils/image';
 
 function CandidateAvatar({ src, name, rank, isUser }) {
@@ -116,11 +116,11 @@ function LeaderboardInner() {
 
       let url = '';
       if (activeTestId) {
-        url = `${API_BASE}/apis/v1/mock-tests/${activeTestId}/leaderboard?${params.toString()}`;
+        url = `${BACKEND_URL}/apis/v1/mock-tests/${activeTestId}/leaderboard?${params.toString()}`;
       } else {
         if (selectedSeries !== 'all') params.append('seriesId', selectedSeries);
         if (selectedPeriod !== 'all') params.append('period', selectedPeriod);
-        url = `${API_BASE}/apis/v1/mock-tests/leaderboard/global?${params.toString()}`;
+        url = `${BACKEND_URL}/apis/v1/mock-tests/leaderboard/global?${params.toString()}`;
       }
 
       const res = await fetch(url);

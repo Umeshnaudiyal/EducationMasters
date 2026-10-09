@@ -4,8 +4,9 @@ import React, { useState, useEffect } from 'react';
 import { useParams } from 'next/navigation';
 import { Loader2 } from 'lucide-react';
 import MockTestSeriesForm from '@/components/admin/MockTestSeriesForm';
+import { BACKEND_URL } from '@/utils/api';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const API_BASE = BACKEND_URL;
 
 export default function EditMockTestSeriesPage() {
   const params = useParams();
