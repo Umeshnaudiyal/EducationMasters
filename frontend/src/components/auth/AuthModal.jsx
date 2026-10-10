@@ -882,7 +882,7 @@ export default function AuthModal() {
                             maxLength={10}
                             value={phone}
                             onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                            placeholder="98765 43210"
+                            placeholder="Enter mobile number"
                             className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-18 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
                           />
                         </div>
@@ -1059,7 +1059,7 @@ export default function AuthModal() {
                         autoFocus
                         value={phone}
                         onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                        placeholder="98765 43210"
+                        placeholder="Enter mobile number"
                         className="w-full bg-slate-50/90 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-sm pl-19 pr-3.5 py-3 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-4 focus:ring-blue-100 transition-all font-medium"
                       />
                     </div>

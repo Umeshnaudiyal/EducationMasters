@@ -208,11 +208,10 @@ export default function SeriesTestsManagePage() {
       {/* Toast */}
       {serverMessage && (
         <div
-          className={`p-2.5 rounded border text-xs flex items-start gap-2 animate-in fade-in duration-200 ${
-            serverMessage.type === 'error'
-              ? 'bg-rose-50 border-rose-300 text-rose-800'
-              : 'bg-emerald-50 border-emerald-300 text-emerald-800'
-          }`}
+          className={`p-2.5 rounded border text-xs flex items-start gap-2 animate-in fade-in duration-200 ${serverMessage.type === 'error'
+            ? 'bg-rose-50 border-rose-300 text-rose-800'
+            : 'bg-emerald-50 border-emerald-300 text-emerald-800'
+            }`}
         >
           {serverMessage.type === 'error' ? (
             <AlertCircle size={15} className="text-rose-600 shrink-0 mt-0.5" />
@@ -276,9 +275,8 @@ export default function SeriesTestsManagePage() {
               <button
                 type="button"
                 onClick={() => setStatusTab(tab.key)}
-                className={`hover:text-[#2271b1] transition-colors flex items-center gap-1 cursor-pointer ${
-                  isActive ? 'text-[#2271b1] font-bold' : 'text-slate-600'
-                }`}
+                className={`hover:text-[#2271b1] transition-colors flex items-center gap-1 cursor-pointer ${isActive ? 'text-[#2271b1] font-bold' : 'text-slate-600'
+                  }`}
               >
                 <span>{tab.label}</span>
                 <span className="text-slate-400 font-normal">({tab.count})</span>
@@ -401,9 +399,8 @@ export default function SeriesTestsManagePage() {
                   return (
                     <tr
                       key={test._id}
-                      className={`hover:bg-slate-50/80 transition-colors group ${
-                        isSelected ? 'bg-blue-50/50' : ''
-                      }`}
+                      className={`hover:bg-slate-50/80 transition-colors group ${isSelected ? 'bg-blue-50/50' : ''
+                        }`}
                     >
                       <td className="p-3 text-center">
                         <input
@@ -476,9 +473,8 @@ export default function SeriesTestsManagePage() {
 
                       <td className="p-3 text-center">
                         <span
-                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                            isPaid ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
-                          }`}
+                          className={`px-2 py-0.5 rounded text-[10px] font-bold ${isPaid ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'
+                            }`}
                         >
                           {isPaid ? 'PAID' : 'FREE'}
                         </span>
@@ -490,11 +486,10 @@ export default function SeriesTestsManagePage() {
 
                       <td className="p-3 text-center">
                         <span
-                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${
-                            (test.status || '').toLowerCase().includes('pub')
-                              ? 'bg-emerald-100 text-emerald-800'
-                              : 'bg-amber-100 text-amber-800'
-                          }`}
+                          className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold ${(test.status || '').toLowerCase().includes('pub')
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : 'bg-amber-100 text-amber-800'
+                            }`}
                         >
                           {test.status || 'Published'}
                         </span>

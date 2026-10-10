@@ -1015,7 +1015,7 @@ export default function SubscribersManagementPage() {
                   type="text"
                   value={formData.phone}
                   onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="E.g. +91 9876543210"
+                  placeholder="Enter mobile number"
                   className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-slate-800"
                 />
               </div>

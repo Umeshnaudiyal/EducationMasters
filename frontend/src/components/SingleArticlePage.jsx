@@ -230,16 +230,372 @@ const DEFAULT_EXPIRING_JOBS = [
   }
 ];
 
-export default function SingleArticlePage() {
+const formatArticleData = (rawInput, type = '', currentPathname = '') => {
+  if (!rawInput) return null;
+  // Unwrap if payload is wrapped in { data: {...}, type: '...' }
+  const raw = (rawInput && typeof rawInput === 'object' && rawInput.data && typeof rawInput.data === 'object' && !rawInput.title && !rawInput.post)
+    ? rawInput.data
+    : rawInput;
+  const inferredType = type || (rawInput && rawInput.type) || (raw && raw.type) || '';
+  const path = currentPathname || (typeof window !== 'undefined' ? window.location.pathname : '');
+  const isResult = inferredType === 'result' || path.startsWith('/result') || raw.result_status !== undefined || (raw.inst_down !== undefined && raw.down_url && !raw.vacancies);
+  const isAdmitCard = inferredType === 'admit-card' || path.startsWith('/admit-card');
+  const isJob = inferredType === 'job' || path.startsWith('/job') || (!isResult && !isAdmitCard && (raw.vacancies || raw.qualification || raw.posts || raw.app_ends || raw.total_posts));
+
+  let firstCat = raw.categories?.[0] || raw.category;
+  let catName = typeof firstCat === 'object' ? (firstCat?.name || firstCat?.slug || '') : String(firstCat || '');
+  let catSlug = typeof firstCat === 'object' ? (firstCat?.slug || '') : '';
+  if (catName === '[object Object]') catName = '';
+
+  // Extract Department / Board / Agency Name
+  const extractDepartment = (rawItem) => {
+    if (rawItem.dept && String(rawItem.dept).trim() && !isPlaceholderString(rawItem.dept)) {
+      return cleanHTML(rawItem.dept);
+    }
+    if (rawItem.department) {
+      const deptStr = typeof rawItem.department === 'object' ? rawItem.department.name : String(rawItem.department);
+      if (deptStr && deptStr.trim() && deptStr !== '[object Object]' && !isPlaceholderString(deptStr)) return cleanHTML(deptStr);
+    }
+    if (rawItem.board) {
+      const boardStr = typeof rawItem.board === 'object' ? rawItem.board.name : String(rawItem.board);
+      if (boardStr && boardStr.trim() && boardStr !== '[object Object]' && !isPlaceholderString(boardStr)) return cleanHTML(boardStr);
+    }
+
+    const titleStr = (rawItem.title || '').trim();
+    const lowerTitle = titleStr.toLowerCase();
+
+    if (lowerTitle.includes('upsc')) return 'UPSC';
+    if (lowerTitle.includes('ssc')) return 'SSC';
+    if (lowerTitle.includes('aiims')) return 'AIIMS';
+    if (lowerTitle.includes('csir')) return 'CSIR';
+    if (lowerTitle.includes('iim')) return 'IIM';
+    if (lowerTitle.includes('rrb') || lowerTitle.includes('railway')) return 'Railway / RRB';
+    if (lowerTitle.includes('tiss')) return 'TISS';
+    if (lowerTitle.includes('union bank')) return 'Union Bank';
+    if (lowerTitle.includes('bank of baroda') || lowerTitle.includes('bob')) return 'Bank of Baroda';
+    if (lowerTitle.includes('sikkim') || lowerTitle.includes('spsc')) return 'SPSC / Sikkim';
+    if (lowerTitle.includes('ibps')) return 'IBPS';
+    if (lowerTitle.includes('dgqa') || lowerTitle.includes('dgaqa')) return 'DGQA';
+
+    if (catName && typeof catName === 'string' && catName.trim() && !['jobs', 'job', 'articles', 'results', 'admit card', 'uncategorized'].includes(catName.trim().toLowerCase())) {
+      return cleanHTML(catName);
+    }
+
+    if (isResult) return 'Results';
+    if (isAdmitCard) return 'Admit Card';
+    if (isJob) return 'Jobs';
+    return 'Articles';
+  };
+
+  const categoryName = extractDepartment(raw);
+  const categorySlug = catSlug || (isResult ? 'results' : isAdmitCard ? 'admit-cards' : isJob ? 'jobs' : 'articles');
+
+  // Extract authentic Author details with rich social profiles and catalogue fallback
+  let authorName = 'Vikash Sharma';
+  let authorSlug = 'DigitalDeepak';
+  let authorImage = 'https://educationmasters.in/assets/img/users/admin_1777271474.png';
+  let authorBio = 'Vikash Sharma is an education expert and digital learning strategist with over 10 years of experience in the Indian education ecosystem. As the founder of EducationMasters.in, he is dedicated to helping students and job aspirants stay updated with the latest government exams, results, and career guidance.';
+  let authorRole = 'Author';
+  let authorNicename = '';
+  let authorWebsite = '';
+  let authorTwitter = '';
+  let authorFacebook = '';
+  let authorInstagram = '';
+  let authorLinkedin = '';
+  let authorYoutube = '';
+  let authorEmail = '';
+  let authorPhone = '';
+
+  const authorParam = raw.author;
+  let catalogMatch = null;
+
+  if (authorParam) {
+    if (typeof authorParam === 'object') {
+      const rawId = authorParam._id || authorParam.id || '';
+      const rawName = (authorParam.name || '').trim();
+      const rawNice = (authorParam.nicename || '').trim();
+      const rawSlug = (authorParam.slug || '').trim();
+      const rawEmail = (authorParam.email || '').trim();
+
+      catalogMatch =
+        findAuthorInCatalog(rawId) ||
+        findAuthorInCatalog(rawSlug) ||
+        findAuthorInCatalog(rawNice) ||
+        findAuthorInCatalog(rawName) ||
+        findAuthorInCatalog(rawEmail);
+
+      authorSlug = rawNice || rawSlug || rawName || catalogMatch?.slug || catalogMatch?.nicename || 'DigitalDeepak';
+
+      if (rawName.toLowerCase() === 'admin' && rawNice) {
+        authorName = rawNice;
+      } else if (rawName.length <= 3 && rawNice && rawNice.length > rawName.length) {
+        authorName = rawNice;
+      } else if (rawName) {
+        authorName = rawName;
+      } else if (rawNice) {
+        authorName = rawNice;
+      } else if (catalogMatch?.name) {
+        authorName = catalogMatch.name;
+      }
+
+      if (authorParam.image) {
+        authorImage = getImageUrl(authorParam.image, 'https://educationmasters.in/assets/img/defaults/user.png');
+      } else if (catalogMatch?.image) {
+        authorImage = getImageUrl(catalogMatch.image, 'https://educationmasters.in/assets/img/defaults/user.png');
+      }
+
+      if (authorParam.bio && authorParam.bio.trim()) {
+        authorBio = cleanHTML(authorParam.bio);
+      } else if (catalogMatch?.bio && catalogMatch.bio.trim()) {
+        authorBio = cleanHTML(catalogMatch.bio);
+      } else {
+        authorBio = `I am ${authorName}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic decisions.`;
+      }
+
+      authorRole = authorParam.role || catalogMatch?.role || 'Author';
+      authorNicename = rawNice || catalogMatch?.nicename || '';
+      authorWebsite = authorParam.website || catalogMatch?.website || '';
+      authorTwitter = authorParam.twitter || catalogMatch?.twitter || '';
+      authorFacebook = authorParam.facebook || catalogMatch?.facebook || '';
+      authorInstagram = authorParam.instagram || catalogMatch?.instagram || '';
+      authorLinkedin = authorParam.linkedin || catalogMatch?.linkedin || '';
+      authorYoutube = authorParam.youtube || catalogMatch?.youtube || '';
+      authorEmail = authorParam.email || catalogMatch?.email || '';
+      authorPhone = authorParam.phone || catalogMatch?.phone || '';
+    } else if (typeof authorParam === 'string') {
+      catalogMatch = findAuthorInCatalog(authorParam);
+      if (catalogMatch) {
+        authorName = catalogMatch.name || authorParam;
+        authorSlug = catalogMatch.slug || catalogMatch.nicename || authorParam;
+        authorImage = getImageUrl(catalogMatch.image, 'https://educationmasters.in/assets/img/defaults/user.png');
+        authorBio = catalogMatch.bio ? cleanHTML(catalogMatch.bio) : `I am ${authorName}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content.`;
+        authorRole = catalogMatch.role || 'Author';
+        authorNicename = catalogMatch.nicename || '';
+        authorWebsite = catalogMatch.website || '';
+        authorTwitter = catalogMatch.twitter || '';
+        authorFacebook = catalogMatch.facebook || '';
+        authorInstagram = catalogMatch.instagram || '';
+        authorLinkedin = catalogMatch.linkedin || '';
+        authorYoutube = catalogMatch.youtube || '';
+        authorEmail = catalogMatch.email || '';
+        authorPhone = catalogMatch.phone || '';
+      } else {
+        authorName = authorParam;
+        authorSlug = authorParam;
+      }
+    }
+  }
+
+  const authorObj = {
+    name: authorName,
+    slug: authorSlug,
+    image: authorImage,
+    bio: authorBio,
+    role: authorRole,
+    nicename: authorNicename,
+    website: authorWebsite,
+    twitter: authorTwitter,
+    facebook: authorFacebook,
+    instagram: authorInstagram,
+    linkedin: authorLinkedin,
+    youtube: authorYoutube,
+    email: authorEmail,
+    phone: authorPhone,
+  };
+
+  const pubDate = formatDate(raw.created_at || raw.createdAt || raw.exam_rdate || raw.result_date);
+
+  // Dynamic Result / Admit Card Details Object
+  const examNameVal = cleanHTML(raw.post || raw.title || 'Government Examination 2026');
+  const rawDeptCandidate = raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department);
+  const deptNameVal = cleanHTML((rawDeptCandidate && !isPlaceholderString(rawDeptCandidate)) ? rawDeptCandidate : (categoryName || 'Official Authority'));
+  const postNameVal = cleanHTML(raw.desig || raw.post || raw.title || 'Various Posts');
+  const examDateVal = raw.exam_date ? formatDate(raw.exam_date) : (raw.dates?.exam_date ? formatDate(raw.dates.exam_date) : 'As per scheduled');
+  const examTimeVal = cleanHTML(raw.exam_time || 'As per scheduled');
+  const examModeVal = cleanHTML(raw.exam_mode || 'Offline (OMR Based)');
+  const officialWebVal = formatExternalUrl(raw.site_url || raw.website || raw.official_website || (raw.links?.site_url) || (raw.links?.official_website));
+  const downUrlVal = formatExternalUrl(raw.down_url || raw.result_url || raw.links?.down_url || raw.links?.result_url || raw.site_url);
+
+  const descriptionHtml = cleanHTML(raw.description || raw.content || '');
+  const instDownRaw = cleanHTML(raw.inst_down || raw.downloadInstructions || '');
+  const instImplRaw = cleanHTML(raw.inst_impl || raw.importantInstructions || '');
+  const faqRaw = cleanHTML(raw.faq_content || raw.faqs || '');
+
+  const parsedInstDown = parseInstructionItems(instDownRaw);
+  const parsedInstImpl = parseInstructionItems(instImplRaw);
+  const parsedFaqItems = parseFaqs(faqRaw, examNameVal);
+
+  const resultDetailsObj = (isResult || isAdmitCard) ? {
+    examName: examNameVal,
+    deptName: deptNameVal,
+    postName: postNameVal,
+    examDate: examDateVal,
+    examTime: examTimeVal,
+    examMode: examModeVal,
+    officialWebsite: officialWebVal,
+    downUrl: downUrlVal,
+    resultStatus: cleanHTML(raw.result_status || 'Declared / Out'),
+    description: descriptionHtml,
+    instDown: instDownRaw,
+    instDownItems: parsedInstDown,
+    instImpl: instImplRaw,
+    instImplItems: parsedInstImpl,
+    faqContent: faqRaw,
+    faqItems: parsedFaqItems
+  } : null;
+
+  // Standard Job Details Object
+  const rawLocationCandidate = raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state);
+  const cleanJobLocation = (rawLocationCandidate && !isPlaceholderString(rawLocationCandidate)) ? cleanHTML(rawLocationCandidate) : 'All India';
+
+  const jobDetailsObj = isJob ? {
+    postName: cleanHTML(raw.title),
+    totalVacancies: cleanHTML(raw.posts || raw.total_posts || raw.vacancies || 'N/A'),
+    jobLocation: cleanJobLocation,
+    qualification: cleanHTML(raw.qualification || 'As per notification'),
+    releaseDate: formatDate(raw.released || raw.created_at || raw.createdAt),
+    startDate: formatDate(raw.app_start || raw.dates?.start_date || raw.created_at),
+    endDate: formatDate(raw.app_ends || raw.dates?.last_date),
+    examDate: raw.exam_date ? formatDate(raw.exam_date) : 'N/A',
+    minAge: raw.min_age ? `${raw.min_age} Years` : 'N/A',
+    maxAge: raw.max_age ? `${raw.max_age} Years` : 'N/A',
+    salary: cleanHTML(raw.salary || 'As per rules'),
+    applicationFee: cleanHTML(raw.fees?.gen_fee ? `General/OBC: ₹${raw.fees.gen_fee} | SC/ST: Exempted` : (raw.fees || 'As per rules')),
+    officialLink: formatExternalUrl(raw.noti_link || raw.links?.site_url || raw.site_url),
+    applyLink: formatExternalUrl(raw.app_link || raw.links?.down_url || raw.down_url),
+    admitCardLink: formatExternalUrl(raw.admitCardNotification?.down_url || raw.links?.admit_url),
+    resultLink: formatExternalUrl(raw.resultNotification?.down_url || raw.links?.result_url)
+  } : null;
+
+  const metadataObj = raw.metadata ? {
+    m_title: cleanHTML(raw.metadata.m_title || raw.title),
+    m_desc: cleanHTML(raw.metadata.m_desc || raw.subtitle || ''),
+    m_keys: cleanHTML(raw.metadata.m_keys || ''),
+    canonical: raw.metadata.canonical || '',
+    robots: raw.metadata.robots || 1,
+    schema: raw.metadata.schema || ''
+  } : null;
+
+  return {
+    title: cleanHTML(raw.title || 'Notification Details'),
+    subtitle: cleanHTML(raw.subtitle || ''),
+    author: authorObj,
+    category: categoryName,
+    categorySlug: categorySlug,
+    date: pubDate,
+    lastDate: isJob ? formatDate(raw.app_ends || raw.dates?.last_date) : (isResult ? 'Result Declared' : 'Download Available'),
+    image: getImageUrl(raw.featured_media || raw.featured_image || raw.image || raw.banner_image, 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80'),
+    content: descriptionHtml,
+    state: raw.state,
+    dept: deptNameVal,
+    isJob,
+    isResult,
+    isAdmitCard,
+    jobDetails: jobDetailsObj,
+    resultDetails: resultDetailsObj,
+    metadata: metadataObj
+  };
+};
+
+const generateFallbackArticle = (articleSlug, currentPathname = '') => {
+  const formattedTitle = cleanHTML(articleSlug
+    .split('-')
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' '));
+
+  const isResult = (currentPathname || '').startsWith('/result') || articleSlug.includes('result');
+
+  if (isResult) {
+    return {
+      title: `${formattedTitle} Result 2026 - Check Merit List & Selection Status`,
+      subtitle: '',
+      author: {
+        name: 'adityapanwarjaat',
+        image: 'https://educationmasters.in/assets/img/defaults/user.png',
+        bio: 'I am Aditya, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic decisions.'
+      },
+      category: 'Result',
+      categorySlug: 'results',
+      date: 'Sep 21, 2026',
+      lastDate: 'Result Declared',
+      image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80',
+      isResult: true,
+      resultDetails: {
+        examName: formattedTitle,
+        deptName: 'Examination Authority',
+        postName: 'Manager, Specialist Officer & Various Posts',
+        examDate: 'As per scheduled',
+        examTime: 'As per scheduled',
+        examMode: 'Offline (OMR Based)',
+        officialWebsite: 'https://educationmasters.in',
+        downUrl: 'https://educationmasters.in',
+        resultStatus: 'Declared / Out',
+        description: `<p>The <strong>${formattedTitle} Result 2026</strong> has been announced for candidates who appeared in the examination process. Candidates can check their qualifying status, score card, and merit list through the official portal.</p><p>The result will show the qualifying status of candidates and details about the next stage of selection. Depending on the post, candidates may be shortlisted through Online Examination, Group Discussion or Personal Interview.</p>`,
+        instDownItems: [
+          'Visit the official recruitment website.',
+          'Open the Careers / Recruitment / Result section.',
+          `Find "${formattedTitle} Result 2026".`,
+          'Click on the result or shortlisted candidates link when released.',
+          'Enter your Registration Number and Password/Date of Birth, if login is required.',
+          'Submit the details.',
+          'Check your result and qualifying status.',
+          'Download and save the result PDF or scorecard for future reference.'
+        ],
+        instImplItems: [
+          'Check your name, roll number and qualifying status carefully.',
+          'Download a copy of the result for future use.',
+          'Check the next selection stage mentioned in the result.',
+          'Keep your original documents ready for Document Verification.',
+          'Regularly check the official recruitment page for further updates.'
+        ],
+        faqItems: [
+          { question: `When will ${formattedTitle} Result 2026 be released?`, answer: 'The result date has been announced on the official website. Candidates can check their status using the direct link provided above.' },
+          { question: `How can I download ${formattedTitle} Result 2026?`, answer: 'Visit the official website, open the result section, enter your login credentials and download your scorecard PDF.' },
+          { question: `What happens after the ${formattedTitle} Result 2026?`, answer: 'Qualified candidates will move to the next selection stage applicable to their post, such as Document Verification or Interview.' }
+        ]
+      }
+    };
+  }
+
+  return {
+    title: 'UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts',
+    subtitle: '',
+    author: {
+      name: 'Mohit',
+      image: 'https://educationmasters.in/assets/img/defaults/user.png',
+      bio: 'I am mohit, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic and career decisions.'
+    },
+    category: 'UPSC',
+    categorySlug: 'jobs',
+    date: 'Sep 13, 2026',
+    image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=1200&q=80',
+    isJob: true,
+    jobDetails: {
+      postName: 'UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts',
+      totalVacancies: '212 Vacancies',
+      qualification: 'Master Degree, MBBS, MD/MS, B.E/B.Tech or equivalent',
+      ageLimit: '18 to 40 Years',
+      salary: 'Pay Level 7 to Level 11 + Applicable Allowances',
+      applicationFee: 'General/OBC: ₹25 | SC/ST/Female: Exempted',
+      endDate: 'October 02, 2026',
+      officialLink: 'https://upsc.gov.in',
+      applyLink: 'https://upsconline.nic.in'
+    },
+    content: `<p>The <strong>UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts</strong> has been announced by the Union Public Service Commission.</p>`
+  };
+};
+
+export default function SingleArticlePage({ initialData = null }) {
   const params = useParams();
   const pathname = usePathname() || '';
   const slug = params?.slug || '';
 
-  const [article, setArticle] = useState(null);
+  const [article, setArticle] = useState(() => (initialData ? formatArticleData(initialData, initialData.type || '', typeof window !== 'undefined' ? window.location.pathname : '') : null));
   const [expiringJobs, setExpiringJobs] = useState(DEFAULT_EXPIRING_JOBS);
   const [relatedJobs, setRelatedJobs] = useState(DEFAULT_EXPIRING_JOBS);
   const [sidebarTab, setSidebarTab] = useState('expiring'); // 'expiring' or 'mcq'
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !initialData);
+  const [isBannerLoaded, setIsBannerLoaded] = useState(false);
   const [showLeftAd, setShowLeftAd] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
   const [internalLinkModal, setInternalLinkModal] = useState({
@@ -247,6 +603,11 @@ export default function SingleArticlePage() {
     targetUrl: '',
     targetWindow: '_self',
   });
+
+  // Reset banner loaded status when article image changes
+  useEffect(() => {
+    setIsBannerLoaded(false);
+  }, [article?.image]);
 
   const handleArticleContentClick = (e) => {
     const link = e.target.closest('a');
@@ -296,12 +657,18 @@ export default function SingleArticlePage() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    if (slug) {
+    if (initialData) {
+      const formatted = formatArticleData(initialData, initialData.type || '', pathname);
+      setArticle(formatted);
+      setLoading(false);
+      fetchSidebarJobs();
+      fetchRelatedJobs();
+    } else if (slug) {
       fetchArticleData(slug);
     } else {
       setLoading(false);
     }
-  }, [slug, pathname]);
+  }, [slug, pathname, initialData]);
 
   // Dynamically update page Title, Meta Description & Keywords
   useEffect(() => {
@@ -463,354 +830,6 @@ export default function SingleArticlePage() {
     }
   };
 
-  const formatArticleData = (raw, type) => {
-    const isResult = type === 'result' || pathname.startsWith('/result') || raw.result_status !== undefined || (raw.inst_down !== undefined && raw.down_url && !raw.vacancies);
-    const isAdmitCard = type === 'admit-card' || pathname.startsWith('/admit-card');
-    const isJob = type === 'job' || (!isResult && !isAdmitCard && (raw.vacancies || raw.qualification || raw.posts));
-
-    let firstCat = raw.categories?.[0] || raw.category;
-    let catName = typeof firstCat === 'object' ? (firstCat?.name || firstCat?.slug || '') : String(firstCat || '');
-    let catSlug = typeof firstCat === 'object' ? (firstCat?.slug || '') : '';
-    if (catName === '[object Object]') catName = '';
-
-    // Extract Department / Board / Agency Name
-    const extractDepartment = (rawItem) => {
-      if (rawItem.dept && String(rawItem.dept).trim() && !isPlaceholderString(rawItem.dept)) {
-        return cleanHTML(rawItem.dept);
-      }
-      if (rawItem.department) {
-        const deptStr = typeof rawItem.department === 'object' ? rawItem.department.name : String(rawItem.department);
-        if (deptStr && deptStr.trim() && deptStr !== '[object Object]' && !isPlaceholderString(deptStr)) return cleanHTML(deptStr);
-      }
-      if (rawItem.board) {
-        const boardStr = typeof rawItem.board === 'object' ? rawItem.board.name : String(rawItem.board);
-        if (boardStr && boardStr.trim() && boardStr !== '[object Object]' && !isPlaceholderString(boardStr)) return cleanHTML(boardStr);
-      }
-
-      const titleStr = (rawItem.title || '').trim();
-      const lowerTitle = titleStr.toLowerCase();
-
-      if (lowerTitle.includes('upsc')) return 'UPSC';
-      if (lowerTitle.includes('ssc')) return 'SSC';
-      if (lowerTitle.includes('aiims')) return 'AIIMS';
-      if (lowerTitle.includes('csir')) return 'CSIR';
-      if (lowerTitle.includes('iim')) return 'IIM';
-      if (lowerTitle.includes('rrb') || lowerTitle.includes('railway')) return 'Railway / RRB';
-      if (lowerTitle.includes('tiss')) return 'TISS';
-      if (lowerTitle.includes('union bank')) return 'Union Bank';
-      if (lowerTitle.includes('bank of baroda') || lowerTitle.includes('bob')) return 'Bank of Baroda';
-      if (lowerTitle.includes('sikkim') || lowerTitle.includes('spsc')) return 'SPSC / Sikkim';
-      if (lowerTitle.includes('ibps')) return 'IBPS';
-      if (lowerTitle.includes('dgqa') || lowerTitle.includes('dgaqa')) return 'DGQA';
-
-      if (catName && typeof catName === 'string' && catName.trim() && !['jobs', 'job', 'articles', 'results', 'admit card', 'uncategorized'].includes(catName.trim().toLowerCase())) {
-        return cleanHTML(catName);
-      }
-
-      if (isResult) return 'Results';
-      if (isAdmitCard) return 'Admit Card';
-      if (isJob) return 'Jobs';
-      return 'Articles';
-    };
-
-    const categoryName = extractDepartment(raw);
-    const categorySlug = catSlug || (isResult ? 'results' : isAdmitCard ? 'admit-cards' : isJob ? 'jobs' : 'articles');
-
-    // Extract authentic Author details with rich social profiles and catalogue fallback
-    let authorName = 'Vikash Sharma';
-    let authorSlug = 'DigitalDeepak';
-    let authorImage = 'https://educationmasters.in/assets/img/users/admin_1777271474.png';
-    let authorBio = 'Vikash Sharma is an education expert and digital learning strategist with over 10 years of experience in the Indian education ecosystem. As the founder of EducationMasters.in, he is dedicated to helping students and job aspirants stay updated with the latest government exams, results, and career guidance.';
-    let authorRole = 'Author';
-    let authorNicename = '';
-    let authorWebsite = '';
-    let authorTwitter = '';
-    let authorFacebook = '';
-    let authorInstagram = '';
-    let authorLinkedin = '';
-    let authorYoutube = '';
-    let authorEmail = '';
-    let authorPhone = '';
-
-    const authorParam = raw.author;
-    let catalogMatch = null;
-
-    if (authorParam) {
-      if (typeof authorParam === 'object') {
-        const rawId = authorParam._id || authorParam.id || '';
-        const rawName = (authorParam.name || '').trim();
-        const rawNice = (authorParam.nicename || '').trim();
-        const rawSlug = (authorParam.slug || '').trim();
-        const rawEmail = (authorParam.email || '').trim();
-
-        catalogMatch =
-          findAuthorInCatalog(rawId) ||
-          findAuthorInCatalog(rawSlug) ||
-          findAuthorInCatalog(rawNice) ||
-          findAuthorInCatalog(rawName) ||
-          findAuthorInCatalog(rawEmail);
-
-        authorSlug = rawNice || rawSlug || rawName || catalogMatch?.slug || catalogMatch?.nicename || 'DigitalDeepak';
-
-        if (rawName.toLowerCase() === 'admin' && rawNice) {
-          authorName = rawNice;
-        } else if (rawName.length <= 3 && rawNice && rawNice.length > rawName.length) {
-          authorName = rawNice;
-        } else if (rawName) {
-          authorName = rawName;
-        } else if (rawNice) {
-          authorName = rawNice;
-        } else if (catalogMatch?.name) {
-          authorName = catalogMatch.name;
-        }
-
-        if (authorParam.image) {
-          authorImage = getImageUrl(authorParam.image, 'https://educationmasters.in/assets/img/defaults/user.png');
-        } else if (catalogMatch?.image) {
-          authorImage = getImageUrl(catalogMatch.image, 'https://educationmasters.in/assets/img/defaults/user.png');
-        }
-
-        if (authorParam.bio && authorParam.bio.trim()) {
-          authorBio = cleanHTML(authorParam.bio);
-        } else if (catalogMatch?.bio && catalogMatch.bio.trim()) {
-          authorBio = cleanHTML(catalogMatch.bio);
-        } else {
-          authorBio = `I am ${authorName}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic decisions.`;
-        }
-
-        authorRole = authorParam.role || catalogMatch?.role || 'Author';
-        authorNicename = rawNice || catalogMatch?.nicename || '';
-        authorWebsite = authorParam.website || catalogMatch?.website || '';
-        authorTwitter = authorParam.twitter || catalogMatch?.twitter || '';
-        authorFacebook = authorParam.facebook || catalogMatch?.facebook || '';
-        authorInstagram = authorParam.instagram || catalogMatch?.instagram || '';
-        authorLinkedin = authorParam.linkedin || catalogMatch?.linkedin || '';
-        authorYoutube = authorParam.youtube || catalogMatch?.youtube || '';
-        authorEmail = authorParam.email || catalogMatch?.email || '';
-        authorPhone = authorParam.phone || catalogMatch?.phone || '';
-      } else if (typeof authorParam === 'string') {
-        catalogMatch = findAuthorInCatalog(authorParam);
-        if (catalogMatch) {
-          authorName = catalogMatch.name || authorParam;
-          authorSlug = catalogMatch.slug || catalogMatch.nicename || authorParam;
-          authorImage = getImageUrl(catalogMatch.image, 'https://educationmasters.in/assets/img/defaults/user.png');
-          authorBio = catalogMatch.bio ? cleanHTML(catalogMatch.bio) : `I am ${authorName}, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content.`;
-          authorRole = catalogMatch.role || 'Author';
-          authorNicename = catalogMatch.nicename || '';
-          authorWebsite = catalogMatch.website || '';
-          authorTwitter = catalogMatch.twitter || '';
-          authorFacebook = catalogMatch.facebook || '';
-          authorInstagram = catalogMatch.instagram || '';
-          authorLinkedin = catalogMatch.linkedin || '';
-          authorYoutube = catalogMatch.youtube || '';
-          authorEmail = catalogMatch.email || '';
-          authorPhone = catalogMatch.phone || '';
-        } else {
-          authorName = authorParam;
-          authorSlug = authorParam;
-        }
-      }
-    }
-
-    const authorObj = {
-      name: authorName,
-      slug: authorSlug,
-      image: authorImage,
-      bio: authorBio,
-      role: authorRole,
-      nicename: authorNicename,
-      website: authorWebsite,
-      twitter: authorTwitter,
-      facebook: authorFacebook,
-      instagram: authorInstagram,
-      linkedin: authorLinkedin,
-      youtube: authorYoutube,
-      email: authorEmail,
-      phone: authorPhone,
-    };
-
-    const pubDate = formatDate(raw.created_at || raw.createdAt || raw.exam_rdate || raw.result_date);
-
-    // Dynamic Result / Admit Card Details Object
-    const examNameVal = cleanHTML(raw.post || raw.title || 'Government Examination 2026');
-    const rawDeptCandidate = raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department);
-    const deptNameVal = cleanHTML((rawDeptCandidate && !isPlaceholderString(rawDeptCandidate)) ? rawDeptCandidate : (categoryName || 'Official Authority'));
-    const postNameVal = cleanHTML(raw.desig || raw.post || raw.title || 'Various Posts');
-    const examDateVal = raw.exam_date ? formatDate(raw.exam_date) : (raw.dates?.exam_date ? formatDate(raw.dates.exam_date) : 'As per scheduled');
-    const examTimeVal = cleanHTML(raw.exam_time || 'As per scheduled');
-    const examModeVal = cleanHTML(raw.exam_mode || 'Offline (OMR Based)');
-    const officialWebVal = formatExternalUrl(raw.site_url || raw.website || raw.official_website || (raw.links?.site_url) || (raw.links?.official_website));
-    const downUrlVal = formatExternalUrl(raw.down_url || raw.result_url || raw.links?.down_url || raw.links?.result_url || raw.site_url);
-
-    const descriptionHtml = cleanHTML(raw.description || raw.content || '');
-    const instDownRaw = cleanHTML(raw.inst_down || raw.downloadInstructions || '');
-    const instImplRaw = cleanHTML(raw.inst_impl || raw.importantInstructions || '');
-    const faqRaw = cleanHTML(raw.faq_content || raw.faqs || '');
-
-    const parsedInstDown = parseInstructionItems(instDownRaw);
-    const parsedInstImpl = parseInstructionItems(instImplRaw);
-    const parsedFaqItems = parseFaqs(faqRaw, examNameVal);
-
-    const resultDetailsObj = (isResult || isAdmitCard) ? {
-      examName: examNameVal,
-      deptName: deptNameVal,
-      postName: postNameVal,
-      examDate: examDateVal,
-      examTime: examTimeVal,
-      examMode: examModeVal,
-      officialWebsite: officialWebVal,
-      downUrl: downUrlVal,
-      resultStatus: cleanHTML(raw.result_status || 'Declared / Out'),
-      description: descriptionHtml,
-      instDown: instDownRaw,
-      instDownItems: parsedInstDown,
-      instImpl: instImplRaw,
-      instImplItems: parsedInstImpl,
-      faqContent: faqRaw,
-      faqItems: parsedFaqItems
-    } : null;
-
-    // Standard Job Details Object
-    const rawLocationCandidate = raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state);
-    const cleanJobLocation = (rawLocationCandidate && !isPlaceholderString(rawLocationCandidate)) ? cleanHTML(rawLocationCandidate) : 'All India';
-
-    const jobDetailsObj = isJob ? {
-      postName: cleanHTML(raw.title),
-      totalVacancies: cleanHTML(raw.posts || raw.total_posts || raw.vacancies || 'N/A'),
-      jobLocation: cleanJobLocation,
-      qualification: cleanHTML(raw.qualification || 'As per notification'),
-      releaseDate: formatDate(raw.released || raw.created_at || raw.createdAt),
-      startDate: formatDate(raw.app_start || raw.dates?.start_date || raw.created_at),
-      endDate: formatDate(raw.app_ends || raw.dates?.last_date),
-      examDate: raw.exam_date ? formatDate(raw.exam_date) : 'N/A',
-      minAge: raw.min_age ? `${raw.min_age} Years` : 'N/A',
-      maxAge: raw.max_age ? `${raw.max_age} Years` : 'N/A',
-      salary: cleanHTML(raw.salary || 'As per rules'),
-      applicationFee: cleanHTML(raw.fees?.gen_fee ? `General/OBC: ₹${raw.fees.gen_fee} | SC/ST: Exempted` : (raw.fees || 'As per rules')),
-      officialLink: formatExternalUrl(raw.noti_link || raw.links?.site_url || raw.site_url),
-      applyLink: formatExternalUrl(raw.app_link || raw.links?.down_url || raw.down_url),
-      admitCardLink: formatExternalUrl(raw.admitCardNotification?.down_url || raw.links?.admit_url),
-      resultLink: formatExternalUrl(raw.resultNotification?.down_url || raw.links?.result_url)
-    } : null;
-
-    const metadataObj = raw.metadata ? {
-      m_title: cleanHTML(raw.metadata.m_title || raw.title),
-      m_desc: cleanHTML(raw.metadata.m_desc || raw.subtitle || ''),
-      m_keys: cleanHTML(raw.metadata.m_keys || ''),
-      canonical: raw.metadata.canonical || '',
-      robots: raw.metadata.robots || 1,
-      schema: raw.metadata.schema || ''
-    } : null;
-
-    return {
-      title: cleanHTML(raw.title || 'Notification Details'),
-      subtitle: cleanHTML(raw.subtitle || ''),
-      author: authorObj,
-      category: categoryName,
-      categorySlug: categorySlug,
-      date: pubDate,
-      lastDate: isJob ? formatDate(raw.app_ends || raw.dates?.last_date) : (isResult ? 'Result Declared' : 'Download Available'),
-      image: getImageUrl(raw.featured_media, 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80'),
-      content: descriptionHtml,
-      state: raw.state,
-      dept: deptNameVal,
-      isJob,
-      isResult,
-      isAdmitCard,
-      jobDetails: jobDetailsObj,
-      resultDetails: resultDetailsObj,
-      metadata: metadataObj
-    };
-  };
-
-  const generateFallbackArticle = (articleSlug) => {
-    const formattedTitle = cleanHTML(articleSlug
-      .split('-')
-      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-      .join(' '));
-
-    const isResult = pathname.startsWith('/result') || articleSlug.includes('result');
-
-    if (isResult) {
-      return {
-        title: `${formattedTitle} Result 2026 - Check Merit List & Selection Status`,
-        subtitle: '',
-        author: {
-          name: 'adityapanwarjaat',
-          image: 'https://educationmasters.in/assets/img/defaults/user.png',
-          bio: 'I am Aditya, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic decisions.'
-        },
-        category: 'Result',
-        categorySlug: 'results',
-        date: 'Sep 21, 2026',
-        lastDate: 'Result Declared',
-        image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80',
-        isResult: true,
-        resultDetails: {
-          examName: formattedTitle,
-          deptName: 'Examination Authority',
-          postName: 'Manager, Specialist Officer & Various Posts',
-          examDate: 'As per scheduled',
-          examTime: 'As per scheduled',
-          examMode: 'Offline (OMR Based)',
-          officialWebsite: 'https://educationmasters.in',
-          downUrl: 'https://educationmasters.in',
-          resultStatus: 'Declared / Out',
-          description: `<p>The <strong>${formattedTitle} Result 2026</strong> has been announced for candidates who appeared in the examination process. Candidates can check their qualifying status, score card, and merit list through the official portal.</p><p>The result will show the qualifying status of candidates and details about the next stage of selection. Depending on the post, candidates may be shortlisted through Online Examination, Group Discussion or Personal Interview.</p>`,
-          instDownItems: [
-            'Visit the official recruitment website.',
-            'Open the Careers / Recruitment / Result section.',
-            `Find "${formattedTitle} Result 2026".`,
-            'Click on the result or shortlisted candidates link when released.',
-            'Enter your Registration Number and Password/Date of Birth, if login is required.',
-            'Submit the details.',
-            'Check your result and qualifying status.',
-            'Download and save the result PDF or scorecard for future reference.'
-          ],
-          instImplItems: [
-            'Check your name, roll number and qualifying status carefully.',
-            'Download a copy of the result for future use.',
-            'Check the next selection stage mentioned in the result.',
-            'Keep your original documents ready for Document Verification.',
-            'Regularly check the official recruitment page for further updates.'
-          ],
-          faqItems: [
-            { question: `When will ${formattedTitle} Result 2026 be released?`, answer: 'The result date has been announced on the official website. Candidates can check their status using the direct link provided above.' },
-            { question: `How can I download ${formattedTitle} Result 2026?`, answer: 'Visit the official website, open the result section, enter your login credentials and download your scorecard PDF.' },
-            { question: `What happens after the ${formattedTitle} Result 2026?`, answer: 'Qualified candidates will move to the next selection stage applicable to their post, such as Document Verification or Interview.' }
-          ]
-        }
-      };
-    }
-
-    return {
-      title: 'UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts',
-      subtitle: '',
-      author: {
-        name: 'Mohit',
-        image: 'https://educationmasters.in/assets/img/defaults/user.png',
-        bio: 'I am mohit, a student and Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content. I specialize in writing about government jobs, entrance exams, admissions, results, and career guidance to help students make informed academic and career decisions.'
-      },
-      category: 'UPSC',
-      categorySlug: 'jobs',
-      date: 'Sep 13, 2026',
-      image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=1200&q=80',
-      isJob: true,
-      jobDetails: {
-        postName: 'UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts',
-        totalVacancies: '212 Vacancies',
-        qualification: 'Master Degree, MBBS, MD/MS, B.E/B.Tech or equivalent',
-        ageLimit: '18 to 40 Years',
-        salary: 'Pay Level 7 to Level 11 + Applicable Allowances',
-        applicationFee: 'General/OBC: ₹25 | SC/ST/Female: Exempted',
-        endDate: 'October 02, 2026',
-        officialLink: 'https://upsc.gov.in',
-        applyLink: 'https://upsconline.nic.in'
-      },
-      content: `<p>The <strong>UPSC Recruitment 2026 for 212 Specialist, Assistant Professor and More Posts</strong> has been announced by the Union Public Service Commission.</p>`
-    };
-  };
-
   const handleCopyLink = () => {
     if (typeof window !== 'undefined') {
       navigator.clipboard.writeText(window.location.href);
@@ -902,6 +921,15 @@ export default function SingleArticlePage() {
         .article-raw-html span {
           max-width: 100% !important;
         }
+        .article-raw-html img {
+          max-width: 100% !important;
+          height: auto !important;
+          display: block !important;
+          margin: 1.25rem auto !important;
+          border-radius: 0.5rem !important;
+          background-color: #f1f5f9;
+          min-height: 140px;
+        }
       `}</style>
 
       <Header />
@@ -974,10 +1002,53 @@ export default function SingleArticlePage() {
             </nav>
 
             {loading ? (
-              <div className="space-y-4 animate-pulse">
-                <div className="h-8 bg-slate-100 rounded w-3/4"></div>
-                <div className="h-4 bg-slate-100 rounded w-1/4"></div>
-                <div className="h-72 bg-slate-100 rounded w-full"></div>
+              <div className="space-y-4 sm:space-y-5 animate-pulse" aria-busy="true" aria-label="Loading article content">
+                {/* 1. Title Skeleton */}
+                <div className="space-y-2">
+                  <div className="h-7 sm:h-8 bg-slate-200/80 rounded-md w-11/12" />
+                  <div className="h-7 sm:h-8 bg-slate-200/80 rounded-md w-3/5" />
+                </div>
+
+                {/* 2. Byline Meta Skeleton */}
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 py-1">
+                  <div className="h-4 bg-slate-200/70 rounded w-28" />
+                  <div className="h-4 bg-slate-200/70 rounded w-20" />
+                  <div className="h-4 bg-slate-200/70 rounded w-32" />
+                </div>
+
+                {/* 3. Disclaimer Box Skeleton */}
+                <div className="h-14 bg-amber-50/70 border border-amber-200/60 rounded-lg w-full" />
+
+                {/* 4. Featured Banner Image Skeleton (Matches exact banner aspect ratio & height) */}
+                <div className="w-full aspect-[16/9] sm:aspect-[21/9] md:aspect-[2/1] max-h-[460px] min-h-[200px] sm:min-h-[260px] md:min-h-[320px] bg-slate-200/80 rounded-xl border border-slate-200" />
+
+                {/* 5. Social Share Bar Skeleton */}
+                <div className="h-11 bg-slate-100/90 border border-slate-200/60 rounded-lg w-full flex items-center px-3 gap-2">
+                  <div className="h-6 w-16 bg-slate-200 rounded-full" />
+                  <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                  <div className="h-6 w-20 bg-slate-200 rounded-full" />
+                </div>
+
+                {/* 6. Overview Table / Content Skeleton */}
+                <div className="space-y-3 pt-2">
+                  <div className="h-6 bg-slate-200/80 rounded w-48" />
+                  <div className="border border-slate-200 rounded-md p-4 space-y-3 bg-slate-50/50">
+                    <div className="h-4 bg-slate-200/70 rounded w-full" />
+                    <div className="h-4 bg-slate-200/70 rounded w-5/6" />
+                    <div className="h-4 bg-slate-200/70 rounded w-4/6" />
+                    <div className="h-4 bg-slate-200/70 rounded w-full" />
+                  </div>
+                </div>
+
+                {/* 7. Article Body Lines */}
+                <div className="space-y-2.5 pt-3">
+                  <div className="h-4 bg-slate-200/60 rounded w-full" />
+                  <div className="h-4 bg-slate-200/60 rounded w-11/12" />
+                  <div className="h-4 bg-slate-200/60 rounded w-full" />
+                  <div className="h-4 bg-slate-200/60 rounded w-4/5" />
+                  <div className="h-4 bg-slate-200/60 rounded w-full" />
+                  <div className="h-4 bg-slate-200/60 rounded w-3/4" />
+                </div>
               </div>
             ) : article ? (
               <article className="space-y-3 sm:space-y-4 md:space-y-5" onClick={handleArticleContentClick}>
@@ -1040,13 +1111,31 @@ export default function SingleArticlePage() {
                   <strong className="font-semibold">Disclaimer:</strong> The content shown on this page related to government jobs, admit cards and results is either sourced from various internet portals or directly from official government websites. We do not claim any affiliation or authority over this content. It is solely for information providing purposes.
                 </div>
 
-                {/* 5. Featured Banner Image (if available) */}
+                {/* 5. Featured Banner Image (if available) - Reserved Aspect Ratio to prevent CLS */}
                 {article.image && (
-                  <div className="w-full my-1.5 sm:my-2">
+                  <div className="w-full my-2 sm:my-3.5 relative overflow-hidden rounded-xl border border-slate-200/90 bg-slate-100 shadow-2xs aspect-[16/9] sm:aspect-[21/9] md:aspect-[2/1] max-h-[460px] min-h-[200px] sm:min-h-[260px] md:min-h-[320px]">
+                    {/* Background Shimmer Placeholder while downloading */}
+                    <div
+                      className="absolute inset-0 bg-gradient-to-r from-slate-100 via-slate-200/70 to-slate-100 animate-pulse pointer-events-none"
+                      aria-hidden="true"
+                    />
                     <img
                       src={article.image}
                       alt={article.title}
-                      className="w-full h-auto max-h-[460px] object-cover rounded-md border border-slate-200"
+                      loading="eager"
+                      fetchPriority="high"
+                      decoding="async"
+                      onLoad={() => setIsBannerLoaded(true)}
+                      className="w-full h-full h-cover max-h-[440px] relative z-10"
+                      onError={(e) => {
+                        setIsBannerLoaded(true);
+                        if (!e.currentTarget.dataset.fallback) {
+                          e.currentTarget.dataset.fallback = 'true';
+                          e.currentTarget.src = '/logo.webp';
+                        } else {
+                          e.currentTarget.style.display = 'none';
+                        }
+                      }}
                     />
                   </div>
                 )}
@@ -1629,6 +1718,8 @@ export default function SingleArticlePage() {
                           <img
                             src={job.image}
                             alt={job.title}
+                            loading="lazy"
+                            decoding="async"
                             className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                             onError={(e) => {
                               if (!e.currentTarget.dataset.fallback) {
@@ -1663,12 +1754,14 @@ export default function SingleArticlePage() {
                           ? article.author.slug || article.author.nicename || article.author.name
                           : article.author) || 'DigitalDeepak'
                       )}`}
-                      className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-white border border-slate-200/90 rounded-xl p-1 shadow-xs overflow-hidden block group hover:border-blue-400 transition-all duration-300"
+                      className="w-20 h-20 sm:w-24 sm:h-24 shrink-0 bg-slate-100 border border-slate-200/90 rounded-xl p-1 shadow-xs overflow-hidden block group hover:border-blue-400 transition-all duration-300"
                       title="View Author Profile"
                     >
                       <img
                         src={typeof article.author === 'object' ? article.author.image : 'https://educationmasters.in/assets/img/defaults/user.png'}
                         alt={typeof article.author === 'object' ? article.author.name : article.author}
+                        loading="lazy"
+                        decoding="async"
                         className="w-full h-full object-cover rounded-lg group-hover:scale-105 transition-transform duration-300"
                         onError={(e) => {
                           if (!e.currentTarget.dataset.fallback) {
@@ -1855,10 +1948,12 @@ export default function SingleArticlePage() {
                           href={`/job/${job.slug}`}
                           className="flex items-start space-x-3 group block transition"
                         >
-                          <div className="w-[95px] h-[65px] shrink-0 rounded border border-slate-200 overflow-hidden bg-white">
+                          <div className="w-[95px] h-[65px] shrink-0 rounded border border-slate-200 overflow-hidden bg-slate-100">
                             <img
                               src={job.image}
                               alt={job.title}
+                              loading="lazy"
+                              decoding="async"
                               className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
                               onError={(e) => {
                                 if (!e.currentTarget.dataset.fallback) {

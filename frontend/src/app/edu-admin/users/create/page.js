@@ -458,7 +458,7 @@ export default function AddNewUserPage() {
               value={formData.phone}
               onChange={handleChange}
               onBlur={handleBlur}
-              placeholder="e.g. +91 9876543210"
+              placeholder="Enter mobile number"
               className={getInputClass('phone')}
             />
             <ErrorText fieldName="phone" />

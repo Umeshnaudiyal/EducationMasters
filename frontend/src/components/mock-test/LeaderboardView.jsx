@@ -300,38 +300,118 @@ export default function LeaderboardView({
         </div>
       </div>
 
-      {/* 4. Unified Table */}
-      <div className="overflow-x-auto">
-        {loading ? (
-          <div className="py-20 text-center space-y-2">
-            <Loader2 className="w-8 h-8 text-[#2271b1] animate-spin mx-auto" />
-            <p className="text-xs font-bold text-slate-700">Loading Leaderboard...</p>
-          </div>
-        ) : error ? (
-          <div className="py-14 text-center space-y-2">
-            <p className="text-xs font-bold text-rose-600">{error}</p>
-            <button
-              type="button"
-              onClick={fetchLeaderboard}
-              className="px-3.5 py-1.5 bg-[#2271b1] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
-            >
-              Try Again
-            </button>
-          </div>
-        ) : processedRankings.length > 0 ? (
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-100/80 border-b border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-wider">
-                <th className="py-3 px-4 sm:px-6"># Rank</th>
-                <th className="py-3 px-4 sm:px-6">Candidate</th>
-                <th className="py-3 px-4 sm:px-6 text-center">Medium</th>
-                <th className="py-3 px-4 sm:px-6 text-right">Score</th>
-                <th className="py-3 px-4 sm:px-6 text-right">Accuracy</th>
-                <th className="py-3 px-4 sm:px-6 text-right">Time Spent</th>
-                <th className="py-3 px-4 sm:px-6 text-right">Standing</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100 text-xs sm:text-sm font-medium text-slate-800">
+      {/* 4. Main Table on Desktop / Card Feed on Mobile */}
+      {loading ? (
+        <div className="py-20 text-center space-y-2">
+          <Loader2 className="w-8 h-8 text-[#2271b1] animate-spin mx-auto" />
+          <p className="text-xs font-bold text-slate-700">Loading Leaderboard...</p>
+        </div>
+      ) : error ? (
+        <div className="py-14 text-center space-y-2">
+          <p className="text-xs font-bold text-rose-600">{error}</p>
+          <button
+            type="button"
+            onClick={fetchLeaderboard}
+            className="px-3.5 py-1.5 bg-[#2271b1] text-white text-xs font-bold rounded-xl shadow-xs cursor-pointer"
+          >
+            Try Again
+          </button>
+        </div>
+      ) : processedRankings.length > 0 ? (
+        <>
+          {/* MOBILE-ONLY VIEW: Cards Feed */}
+          <div className="block md:hidden p-3 space-y-2.5 bg-slate-50/30">
+            {/* Top 3 Visual Podium on Mobile (if sorted by rank and >= 3 candidates) */}
+            {processedRankings.length >= 3 && sortBy === 'rank' && !searchQuery && (
+              <div className="bg-gradient-to-b from-slate-950 via-slate-900 to-indigo-950 text-white rounded-2xl p-3.5 pt-4 mb-2.5 border border-slate-800 shadow-md">
+                <div className="flex items-center justify-between mb-3 px-1">
+                  <span className="text-[11px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+                    <Crown size={13} className="fill-amber-400" />
+                    <span>Top 3 Standings</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-semibold">
+                    {selectedMedium}
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-3 gap-2 items-end pt-2">
+                  {/* 2nd Place */}
+                  <div className="flex flex-col items-center text-center">
+                    <div className="relative mb-1">
+                      <CandidateAvatar
+                        src={processedRankings[1]?.avatar}
+                        name={processedRankings[1]?.user_name}
+                        rank={2}
+                      />
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-slate-300 text-slate-900 rounded-full font-black text-[9px] flex items-center justify-center border border-white shadow-xs">
+                        2
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-200 truncate w-full px-1">
+                      {processedRankings[1]?.user_name}
+                    </span>
+                    <span className="text-[10px] font-extrabold text-cyan-300">
+                      {processedRankings[1]?.score !== undefined ? processedRankings[1]?.score : processedRankings[1]?.total_score} pts
+                    </span>
+                    <div className="w-full h-9 mt-1.5 bg-gradient-to-t from-slate-700/80 to-slate-600/50 rounded-t-xl border-t border-slate-400/50 flex items-center justify-center">
+                      <span className="text-xs font-black text-slate-200">🥈 2nd</span>
+                    </div>
+                  </div>
+
+                  {/* 1st Place */}
+                  <div className="flex flex-col items-center text-center -mt-3">
+                    <div className="relative mb-1">
+                      <div className="absolute -top-3 left-1/2 -translate-x-1/2 text-amber-400">
+                        <Crown size={14} className="fill-amber-400" />
+                      </div>
+                      <CandidateAvatar
+                        src={processedRankings[0]?.avatar}
+                        name={processedRankings[0]?.user_name}
+                        rank={1}
+                      />
+                      <span className="absolute -bottom-1 -right-1 w-4.5 h-4.5 bg-amber-400 text-slate-950 rounded-full font-black text-[9.5px] flex items-center justify-center border border-white shadow-xs">
+                        1
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-black text-amber-300 truncate w-full px-1">
+                      {processedRankings[0]?.user_name}
+                    </span>
+                    <span className="text-[10px] font-black text-amber-400">
+                      {processedRankings[0]?.score !== undefined ? processedRankings[0]?.score : processedRankings[0]?.total_score} pts
+                    </span>
+                    <div className="w-full h-12 mt-1.5 bg-gradient-to-t from-amber-500/40 via-amber-400/30 to-amber-300/20 rounded-t-xl border-t-2 border-amber-400 flex items-center justify-center shadow-lg shadow-amber-500/10">
+                      <span className="text-xs font-black text-amber-300">👑 1st</span>
+                    </div>
+                  </div>
+
+                  {/* 3rd Place */}
+                  <div className="flex flex-col items-center text-center">
+                    <div className="relative mb-1">
+                      <CandidateAvatar
+                        src={processedRankings[2]?.avatar}
+                        name={processedRankings[2]?.user_name}
+                        rank={3}
+                      />
+                      <span className="absolute -bottom-1 -right-1 w-4 h-4 bg-amber-700 text-white rounded-full font-black text-[9px] flex items-center justify-center border border-white shadow-xs">
+                        3
+                      </span>
+                    </div>
+                    <span className="text-[11px] font-bold text-slate-200 truncate w-full px-1">
+                      {processedRankings[2]?.user_name}
+                    </span>
+                    <span className="text-[10px] font-extrabold text-cyan-300">
+                      {processedRankings[2]?.score !== undefined ? processedRankings[2]?.score : processedRankings[2]?.total_score} pts
+                    </span>
+                    <div className="w-full h-7 mt-1.5 bg-gradient-to-t from-amber-900/60 to-amber-800/40 rounded-t-xl border-t border-amber-600/50 flex items-center justify-center">
+                      <span className="text-xs font-black text-amber-400">🥉 3rd</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Candidate Mobile Cards */}
+            <div className="space-y-2.5">
               {processedRankings.map((item, index) => {
                 const isUser = item.is_current_user;
                 const rankNum = item.rank || index + 1;
@@ -342,53 +422,54 @@ export default function LeaderboardView({
                 const itemLang = item.language || (index % 2 === 0 ? 'English' : 'Hindi');
 
                 return (
-                  <tr
+                  <div
                     key={item.attempt_id || item.user_id || index}
-                    className={`transition-colors ${
+                    className={`p-3 rounded-2xl border transition-all duration-200 ${
                       isUser
-                        ? 'bg-blue-50/90 font-bold border-l-4 border-l-blue-600'
+                        ? 'bg-gradient-to-r from-blue-50/95 via-indigo-50/70 to-white border-blue-500 shadow-md ring-2 ring-blue-300/60'
                         : rankNum === 1
-                        ? 'bg-amber-50/40 hover:bg-amber-50/70'
+                        ? 'bg-gradient-to-r from-amber-50/70 via-white to-white border-amber-300 shadow-2xs'
                         : rankNum === 2
-                        ? 'bg-slate-50/70 hover:bg-slate-100/70'
+                        ? 'bg-gradient-to-r from-slate-50/90 via-white to-white border-slate-300 shadow-2xs'
                         : rankNum === 3
-                        ? 'bg-amber-50/20 hover:bg-amber-50/50'
+                        ? 'bg-gradient-to-r from-amber-50/30 via-white to-white border-amber-200 shadow-2xs'
                         : index % 2 === 0
-                        ? 'bg-white hover:bg-slate-50/80'
-                        : 'bg-slate-50/30 hover:bg-slate-50/80'
+                        ? 'bg-white border-slate-200/90 shadow-2xs'
+                        : 'bg-slate-50/60 border-slate-200/90 shadow-2xs'
                     }`}
                   >
-                    <td className="py-3.5 px-4 sm:px-6 shrink-0">
-                      {rankNum === 1 ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs shadow-xs">
-                          <Crown size={12} className="fill-slate-950" /> #1 Champion
-                        </span>
-                      ) : rankNum === 2 ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-200 text-slate-800 font-black text-xs border border-slate-300">
-                          🥈 #2
-                        </span>
-                      ) : rankNum === 3 ? (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-800/10 text-amber-900 font-black text-xs border border-amber-700/30">
-                          🥉 #3
-                        </span>
-                      ) : (
-                        <span className="font-bold text-slate-600 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
-                          #{rankNum}
-                        </span>
-                      )}
-                    </td>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="shrink-0">
+                          {rankNum === 1 ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-[11px] shadow-xs">
+                              <Crown size={11} className="fill-slate-950" /> #1
+                            </span>
+                          ) : rankNum === 2 ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-lg bg-slate-200 text-slate-800 font-black text-[11px] border border-slate-300">
+                              🥈 #2
+                            </span>
+                          ) : rankNum === 3 ? (
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-lg bg-amber-100 text-amber-900 font-black text-[11px] border border-amber-300">
+                              🥉 #3
+                            </span>
+                          ) : (
+                            <span className="font-extrabold text-slate-600 px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200 text-[11px]">
+                              #{rankNum}
+                            </span>
+                          )}
+                        </div>
 
-                    <td className="py-3.5 px-4 sm:px-6">
-                      <div className="flex items-center gap-3 min-w-0">
                         <CandidateAvatar
                           src={item.avatar}
                           name={item.user_name}
                           rank={rankNum}
                           isUser={isUser}
                         />
+
                         <div className="min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="font-bold text-slate-900 truncate">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-extrabold text-slate-900 text-xs sm:text-sm truncate">
                               {item.user_name}
                             </span>
                             {isUser && (
@@ -396,79 +477,210 @@ export default function LeaderboardView({
                                 YOU
                               </span>
                             )}
-                            {item.is_benchmark && (
-                              <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 font-semibold text-[9px] rounded border border-slate-200">
-                                Topper Benchmark
-                              </span>
-                            )}
                           </div>
-                          <span className="text-[10.5px] text-slate-400 block">
+                          <span className="text-[10px] text-slate-400 font-medium block truncate">
                             ID: EM-{String(item.attempt_id || item.user_id || index + 1).slice(-6).toUpperCase()}
                           </span>
                         </div>
                       </div>
-                    </td>
 
-                    <td className="py-3.5 px-4 sm:px-6 text-center">
-                      <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
-                        itemLang === 'Hindi'
-                          ? 'bg-amber-50 text-amber-900 border-amber-300'
-                          : 'bg-blue-50 text-blue-900 border-blue-300'
-                      }`}>
-                        {itemLang === 'Hindi' ? '🇮🇳 Hindi' : '🇬🇧 English'}
-                      </span>
-                    </td>
-
-                    <td className="py-3.5 px-4 sm:px-6 text-right font-black text-slate-900">
-                      <span className="text-sm font-bold text-[#2271b1]">{itemScore}</span>
-                      <span className="text-xs text-slate-400 font-normal"> / {itemMax}</span>
-                    </td>
-
-                    <td className="py-3.5 px-4 sm:px-6 text-right">
-                      <div className="inline-flex flex-col items-end">
-                        <span className="font-extrabold text-emerald-700">{itemAcc}%</span>
-                        <div className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden mt-0.5">
-                          <div
-                            className="h-full bg-emerald-500 rounded-full"
-                            style={{ width: `${Math.min(100, itemAcc)}%` }}
-                          />
-                        </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <span
+                          className={`px-1.5 py-0.5 rounded text-[10px] font-bold border ${
+                            itemLang === 'Hindi'
+                              ? 'bg-amber-50 text-amber-900 border-amber-200'
+                              : 'bg-blue-50 text-blue-900 border-blue-200'
+                          }`}
+                        >
+                          {itemLang === 'Hindi' ? '🇮🇳 HI' : '🇬🇧 EN'}
+                        </span>
+                        <span className="text-[9.5px] font-bold text-slate-500 bg-slate-100 px-1.5 py-0.2 rounded">
+                          {rankNum === 1 ? 'Top 0.1%' : `Top ${Math.max(1, Math.ceil((rankNum / totalParticipants) * 100))}%`}
+                        </span>
                       </div>
-                    </td>
+                    </div>
 
-                    <td className="py-3.5 px-4 sm:px-6 text-right text-slate-600 font-medium">
-                      <div className="inline-flex items-center gap-1">
-                        <Clock size={12} className="text-slate-400" />
-                        <span>{formatTime(itemTime)}</span>
+                    <div className="grid grid-cols-3 gap-1.5 pt-2 mt-2 border-t border-slate-100 text-center">
+                      <div className="bg-slate-50/90 rounded-xl p-1.5 border border-slate-100">
+                        <span className="text-[9.5px] text-slate-400 font-semibold block uppercase tracking-wider">Score</span>
+                        <span className="text-xs font-black text-blue-600">
+                          {itemScore} <span className="text-[9px] text-slate-400 font-normal">/{itemMax}</span>
+                        </span>
                       </div>
-                    </td>
 
-                    <td className="py-3.5 px-4 sm:px-6 text-right">
-                      <span
-                        className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${
-                          rankNum === 1
-                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
-                            : rankNum <= 3
-                            ? 'bg-amber-50 text-amber-900 border border-amber-200'
-                            : rankNum <= 10
-                            ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
-                            : 'bg-slate-100 text-slate-700'
-                        }`}
-                      >
-                        {rankNum === 1 ? 'Top 0.1%' : `Top ${Math.max(1, Math.ceil((rankNum / totalParticipants) * 100))}%`}
-                      </span>
-                    </td>
-                  </tr>
+                      <div className="bg-slate-50/90 rounded-xl p-1.5 border border-slate-100">
+                        <span className="text-[9.5px] text-slate-400 font-semibold block uppercase tracking-wider">Accuracy</span>
+                        <span className="text-xs font-black text-emerald-600">
+                          {itemAcc}%
+                        </span>
+                      </div>
+
+                      <div className="bg-slate-50/90 rounded-xl p-1.5 border border-slate-100">
+                        <span className="text-[9.5px] text-slate-400 font-semibold block uppercase tracking-wider">Time</span>
+                        <span className="text-xs font-bold text-slate-700">
+                          {formatTime(itemTime)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
-        ) : (
-          <div className="py-14 text-center space-y-2">
-            <p className="text-xs font-bold text-slate-700">No candidates found</p>
+            </div>
           </div>
-        )}
-      </div>
+
+          {/* DESKTOP VIEW: Standard Table */}
+          <div className="hidden md:block overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-100/80 border-b border-slate-200 text-[11px] font-black text-slate-500 uppercase tracking-wider">
+                  <th className="py-3 px-4 sm:px-6"># Rank</th>
+                  <th className="py-3 px-4 sm:px-6">Candidate</th>
+                  <th className="py-3 px-4 sm:px-6 text-center">Medium</th>
+                  <th className="py-3 px-4 sm:px-6 text-right">Score</th>
+                  <th className="py-3 px-4 sm:px-6 text-right">Accuracy</th>
+                  <th className="py-3 px-4 sm:px-6 text-right">Time Spent</th>
+                  <th className="py-3 px-4 sm:px-6 text-right">Standing</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-xs sm:text-sm font-medium text-slate-800">
+                {processedRankings.map((item, index) => {
+                  const isUser = item.is_current_user;
+                  const rankNum = item.rank || index + 1;
+                  const itemScore = item.score !== undefined ? item.score : item.total_score;
+                  const itemMax = item.max_score || maxScore;
+                  const itemAcc = item.accuracy !== undefined ? item.accuracy : item.avg_accuracy || 92;
+                  const itemTime = item.time_spent_seconds || item.total_time_spent || 0;
+                  const itemLang = item.language || (index % 2 === 0 ? 'English' : 'Hindi');
+
+                  return (
+                    <tr
+                      key={item.attempt_id || item.user_id || index}
+                      className={`transition-colors ${
+                        isUser
+                          ? 'bg-blue-50/90 font-bold border-l-4 border-l-blue-600'
+                          : rankNum === 1
+                          ? 'bg-amber-50/40 hover:bg-amber-50/70'
+                          : rankNum === 2
+                          ? 'bg-slate-50/70 hover:bg-slate-100/70'
+                          : rankNum === 3
+                          ? 'bg-amber-50/20 hover:bg-amber-50/50'
+                          : index % 2 === 0
+                          ? 'bg-white hover:bg-slate-50/80'
+                          : 'bg-slate-50/30 hover:bg-slate-50/80'
+                      }`}
+                    >
+                      <td className="py-3.5 px-4 sm:px-6 shrink-0">
+                        {rankNum === 1 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 text-slate-950 font-black text-xs shadow-xs">
+                            <Crown size={12} className="fill-slate-950" /> #1 Champion
+                          </span>
+                        ) : rankNum === 2 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-200 text-slate-800 font-black text-xs border border-slate-300">
+                            🥈 #2
+                          </span>
+                        ) : rankNum === 3 ? (
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-amber-800/10 text-amber-900 font-black text-xs border border-amber-700/30">
+                            🥉 #3
+                          </span>
+                        ) : (
+                          <span className="font-bold text-slate-600 px-2.5 py-1 rounded-lg bg-slate-100 border border-slate-200">
+                            #{rankNum}
+                          </span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-4 sm:px-6">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <CandidateAvatar
+                            src={item.avatar}
+                            name={item.user_name}
+                            rank={rankNum}
+                            isUser={isUser}
+                          />
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-slate-900 truncate">
+                                {item.user_name}
+                              </span>
+                              {isUser && (
+                                <span className="px-1.5 py-0.2 bg-blue-600 text-white font-extrabold text-[9px] rounded uppercase shadow-2xs">
+                                  YOU
+                                </span>
+                              )}
+                              {item.is_benchmark && (
+                                <span className="px-1.5 py-0.2 bg-slate-100 text-slate-600 font-semibold text-[9px] rounded border border-slate-200">
+                                  Topper Benchmark
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10.5px] text-slate-400 block">
+                              ID: EM-{String(item.attempt_id || item.user_id || index + 1).slice(-6).toUpperCase()}
+                            </span>
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 sm:px-6 text-center">
+                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold border ${
+                          itemLang === 'Hindi'
+                            ? 'bg-amber-50 text-amber-900 border-amber-300'
+                            : 'bg-blue-50 text-blue-900 border-blue-300'
+                        }`}>
+                          {itemLang === 'Hindi' ? '🇮🇳 Hindi' : '🇬🇧 English'}
+                        </span>
+                      </td>
+
+                      <td className="py-3.5 px-4 sm:px-6 text-right font-black text-slate-900">
+                        <span className="text-sm font-bold text-[#2271b1]">{itemScore}</span>
+                        <span className="text-xs text-slate-400 font-normal"> / {itemMax}</span>
+                      </td>
+
+                      <td className="py-3.5 px-4 sm:px-6 text-right">
+                        <div className="inline-flex flex-col items-end">
+                          <span className="font-extrabold text-emerald-700">{itemAcc}%</span>
+                          <div className="w-14 h-1.5 bg-slate-200 rounded-full overflow-hidden mt-0.5">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full"
+                              style={{ width: `${Math.min(100, itemAcc)}%` }}
+                            />
+                          </div>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 sm:px-6 text-right text-slate-600 font-medium">
+                        <div className="inline-flex items-center gap-1">
+                          <Clock size={12} className="text-slate-400" />
+                          <span>{formatTime(itemTime)}</span>
+                        </div>
+                      </td>
+
+                      <td className="py-3.5 px-4 sm:px-6 text-right">
+                        <span
+                          className={`inline-block px-2.5 py-1 rounded-lg text-xs font-bold ${
+                            rankNum === 1
+                              ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                              : rankNum <= 3
+                              ? 'bg-amber-50 text-amber-900 border border-amber-200'
+                              : rankNum <= 10
+                              ? 'bg-emerald-50 text-emerald-900 border border-emerald-200'
+                              : 'bg-slate-100 text-slate-700'
+                          }`}
+                        >
+                          {rankNum === 1 ? 'Top 0.1%' : `Top ${Math.max(1, Math.ceil((rankNum / totalParticipants) * 100))}%`}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
+      ) : (
+        <div className="py-14 text-center space-y-2">
+          <p className="text-xs font-bold text-slate-700">No candidates found</p>
+        </div>
+      )}
     </div>
   );
 }
