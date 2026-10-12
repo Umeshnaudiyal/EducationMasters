@@ -40,7 +40,11 @@ const instituteSchema = new mongoose.Schema(
 
     courses: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Course' }],
     facilities: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Facility' }],
-    media: [{ name: String, path: String, file: String }],
+    category: { type: String, default: 'Coaching Institute', trim: true },
+    services: [{ type: String, trim: true }],
+    paymentMode: [{ type: String, trim: true }],
+    openingHours: { type: mongoose.Schema.Types.Mixed, default: {} },
+    media: { type: [mongoose.Schema.Types.Mixed], default: [] },
     deleted_at: { type: Date, default: null },
   },
   { timestamps: true }

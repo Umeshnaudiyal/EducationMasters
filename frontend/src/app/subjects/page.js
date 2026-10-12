@@ -17,16 +17,48 @@ export const metadata = {
   },
 };
 
+const subjectsCollectionSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  'name': 'All Subjects - MCQ Questions, Study Material & Mock Tests | Education Masters',
+  'description': 'Explore all subjects for competitive exam preparation. Practice chapter-wise and topic-wise MCQ questions for History, Geography, Polity, Science, Computer, Economics, English, and more.',
+  'url': 'https://educationmasters.in/subjects/',
+  'breadcrumb': {
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      {
+        '@type': 'ListItem',
+        'position': 1,
+        'name': 'Home',
+        'item': 'https://educationmasters.in'
+      },
+      {
+        '@type': 'ListItem',
+        'position': 2,
+        'name': 'Subjects',
+        'item': 'https://educationmasters.in/subjects/'
+      }
+    ]
+  }
+};
+
 export default function Page() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-white">
-          <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
-      <SubjectsPage />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(subjectsCollectionSchema) }}
+      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-white">
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <SubjectsPage />
+      </Suspense>
+    </>
   );
 }
+

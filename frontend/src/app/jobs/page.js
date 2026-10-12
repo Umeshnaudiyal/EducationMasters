@@ -904,16 +904,48 @@ function JobsContent() {
   );
 }
 
+const jobsCollectionSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  'name': 'Latest Government Jobs 2026 - Sarkari Naukri Notifications',
+  'description': 'Find latest government job recruitments, notification details, vacancy counts, eligibility criteria, and direct application links at Education Masters.',
+  'url': 'https://educationmasters.in/jobs',
+  'breadcrumb': {
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      {
+        '@type': 'ListItem',
+        'position': 1,
+        'name': 'Home',
+        'item': 'https://educationmasters.in'
+      },
+      {
+        '@type': 'ListItem',
+        'position': 2,
+        'name': 'Jobs',
+        'item': 'https://educationmasters.in/jobs'
+      }
+    ]
+  }
+};
+
 export default function JobsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen bg-white flex items-center justify-center">
-          <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
-        </div>
-      }
-    >
-      <JobsContent />
-    </Suspense>
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jobsCollectionSchema) }}
+      />
+      <Suspense
+        fallback={
+          <div className="min-h-screen bg-white flex items-center justify-center">
+            <div className="w-8 h-8 border-3 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        }
+      >
+        <JobsContent />
+      </Suspense>
+    </>
   );
 }
+

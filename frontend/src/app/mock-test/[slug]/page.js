@@ -61,5 +61,59 @@ export default async function MockTestSeriesDetailPage({ params }) {
     notFound();
   }
 
-  return <SingleSeriesClient series={series} allSeries={allSeries} />;
+  const seriesSchema = [
+    {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        {
+          '@type': 'ListItem',
+          'position': 1,
+          'name': 'Home',
+          'item': 'https://educationmasters.in'
+        },
+        {
+          '@type': 'ListItem',
+          'position': 2,
+          'name': 'Mock Tests',
+          'item': 'https://educationmasters.in/mock-tests'
+        },
+        {
+          '@type': 'ListItem',
+          'position': 3,
+          'name': series.title,
+          'item': `https://educationmasters.in/mock-test/${resolvedParams.slug}`
+        }
+      ]
+    },
+    {
+      '@context': 'https://schema.org',
+      '@type': 'Course',
+      'name': series.title,
+      'description': series.description || `${series.title} online mock test series with sectional and full-length practice tests.`,
+      'provider': {
+        '@type': 'Organization',
+        'name': 'Education Masters',
+        'sameAs': 'https://educationmasters.in'
+      },
+      'isAccessibleForFree': !series.pricing?.is_paid,
+      'offers': {
+        '@type': 'Offer',
+        'price': series.pricing?.sale_price || series.pricing?.base_price || 0,
+        'priceCurrency': 'INR',
+        'availability': 'https://schema.org/InStock'
+      }
+    }
+  ];
+
+  return (
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(seriesSchema) }}
+      />
+      <SingleSeriesClient series={series} allSeries={allSeries} />
+    </>
+  );
 }
+

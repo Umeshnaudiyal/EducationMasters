@@ -159,6 +159,11 @@ export const createInstitute = asyncHandler(async (req, res) => {
     courses,
     facilities,
     author_id,
+    category,
+    services,
+    paymentMode,
+    openingHours,
+    media,
   } = req.body;
 
   // Validation
@@ -205,6 +210,10 @@ export const createInstitute = asyncHandler(async (req, res) => {
   const validAuthor = isValidObjectId(author_id) ? author_id : (isValidObjectId(req.user?._id) ? req.user._id : null);
   const validCourses = Array.isArray(courses) ? courses.filter(isValidObjectId) : [];
   const validFacilities = Array.isArray(facilities) ? facilities.filter(isValidObjectId) : [];
+  const validServices = Array.isArray(services) ? services.map(s => String(s).trim()).filter(Boolean) : [];
+  const validPaymentModes = Array.isArray(paymentMode) ? paymentMode.map(p => String(p).trim()).filter(Boolean) : [];
+  const validOpeningHours = typeof openingHours === 'object' && openingHours !== null ? openingHours : {};
+  const validMedia = Array.isArray(media) ? media : [];
 
   const normalizedStatus =
     status === 'publish' || status === 'published'
@@ -229,6 +238,11 @@ export const createInstitute = asyncHandler(async (req, res) => {
     cover: cover || null,
     address: address ? String(address).trim() : '',
     about: about || '',
+    category: category ? String(category).trim() : 'Coaching Institute',
+    services: validServices,
+    paymentMode: validPaymentModes,
+    openingHours: validOpeningHours,
+    media: validMedia,
     status: normalizedStatus,
     author: validAuthor,
     state: validState,
@@ -317,6 +331,27 @@ export const updateInstitute = asyncHandler(async (req, res) => {
   if (req.body.about !== undefined) institute.about = req.body.about;
   if (req.body.logo !== undefined) institute.logo = req.body.logo || null;
   if (req.body.cover !== undefined) institute.cover = req.body.cover || null;
+
+  if (req.body.category !== undefined) institute.category = String(req.body.category).trim();
+  if (req.body.services !== undefined) {
+    institute.services = Array.isArray(req.body.services)
+      ? req.body.services.map((s) => String(s).trim()).filter(Boolean)
+      : [];
+  }
+  if (req.body.paymentMode !== undefined) {
+    institute.paymentMode = Array.isArray(req.body.paymentMode)
+      ? req.body.paymentMode.map((p) => String(p).trim()).filter(Boolean)
+      : [];
+  }
+  if (req.body.openingHours !== undefined) {
+    institute.openingHours =
+      typeof req.body.openingHours === 'object' && req.body.openingHours !== null
+        ? req.body.openingHours
+        : {};
+  }
+  if (req.body.media !== undefined) {
+    institute.media = Array.isArray(req.body.media) ? req.body.media : [];
+  }
 
   if (req.body.status !== undefined) {
     const s = String(req.body.status).toLowerCase();

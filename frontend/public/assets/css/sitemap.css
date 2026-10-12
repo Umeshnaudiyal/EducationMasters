@@ -1,0 +1,178 @@
+/**
+ * Education Masters Sitemap Styles
+ * Design: All in One SEO / Yoast Style XML Sitemap
+ * Copyright: Education Masters
+ */
+body {
+  margin: 0;
+  font-size: 68.5%;
+  font-family: Helvetica, Arial, sans-serif;
+  color: #333;
+  background-color: #fff;
+}
+.empty-sitemap, table {
+  margin: 20px 40px;
+  width: 75%;
+}
+#content-head {
+  padding: 20px 40px;
+  background-color: #141b38;
+}
+#content-head a, #content-head h1, #content-head p {
+  color: #fff;
+  font-size: 1.2em;
+}
+#content-head h1 {
+  font-size: 2em;
+  margin-top: 0;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+#content-head p {
+  margin: 6px 0;
+  line-height: 1.4;
+}
+#content-head a {
+  color: #fff;
+  text-decoration: underline;
+}
+table {
+  border: none;
+  font-size: 1em;
+  border-collapse: collapse;
+}
+th {
+  padding: 15px 5px;
+  font-size: 14px;
+  text-align: left;
+  border-bottom: 1px solid #ccc;
+  color: #141b38;
+  font-weight: 700;
+}
+td {
+  padding: 10px 5px;
+  border-left: 3px solid #fff;
+  font-size: 13px;
+  vertical-align: middle;
+}
+tr.stripe {
+  background-color: #f7f7f7;
+}
+table td a {
+  color: #0b66c2;
+  text-decoration: none;
+}
+table td a:hover {
+  text-decoration: underline;
+}
+table td a:not(.localized) {
+  display: block;
+  word-break: break-all;
+}
+table td a img {
+  margin: 6px 3px;
+  max-height: 30px;
+}
+.item-count {
+  font-weight: 600;
+  color: #333;
+}
+.datetime .date {
+  font-weight: 600;
+  color: #222;
+}
+.datetime .time {
+  color: #666;
+  font-size: 11px;
+  margin-top: 2px;
+}
+.priority {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.priority--high {
+  background-color: #e6f4ea;
+  color: #137333;
+}
+.priority--medium {
+  background-color: #fef7e0;
+  color: #b06000;
+}
+.priority--low {
+  background-color: #f1f3f4;
+  color: #5f6368;
+}
+.empty-sitemap__title {
+  margin: 12px 0;
+  font-size: 18px;
+  line-height: 125%;
+}
+.empty-sitemap svg {
+  width: 140px;
+  height: 140px;
+}
+.empty-sitemap__buttons {
+  margin-bottom: 30px;
+}
+.empty-sitemap__buttons .button {
+  margin-right: 5px;
+  padding: 8px 16px;
+  background-color: #141b38;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+  display: inline-block;
+  font-size: 14px;
+}
+.breadcrumb {
+  width: 75%;
+  margin: 20px 40px;
+  display: flex;
+  font-size: 12px;
+  align-items: center;
+  font-weight: 600;
+}
+.breadcrumb a {
+  color: #141b38;
+  text-decoration: none;
+}
+.breadcrumb a:hover {
+  text-decoration: underline;
+}
+.breadcrumb span {
+  color: #333;
+}
+.breadcrumb svg {
+  margin: 0 10px;
+}
+@media (max-width: 1023px) {
+  .empty-sitemap, table, .breadcrumb {
+    width: 92%;
+    margin: 15px 4%;
+  }
+  #content-head {
+    padding: 15px 4%;
+  }
+  .breadcrumb a:not(:last-of-type), .breadcrumb span, .breadcrumb svg:not(.back) {
+    display: none;
+  }
+  .breadcrumb a:last-of-type::before {
+    content: 'Back';
+  }
+}
+@media (min-width: 1024px) {
+  .breadcrumb {
+    font-size: 14px;
+  }
+  .breadcrumb a {
+    font-weight: 400;
+  }
+  .breadcrumb svg.back {
+    display: none;
+  }
+}

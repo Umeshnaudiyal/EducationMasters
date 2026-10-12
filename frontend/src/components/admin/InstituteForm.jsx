@@ -41,7 +41,16 @@ import {
   X,
   Layers,
   CheckSquare,
-  AlertTriangle
+  AlertTriangle,
+  Clock,
+  CreditCard,
+  CheckCircle2,
+  Video,
+  Images,
+  Copy,
+  Tag,
+  Eye,
+  HelpCircle,
 } from 'lucide-react';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
@@ -49,6 +58,50 @@ import { getAuthToken } from '@/utils/auth';
 import { getImageUrl } from '@/utils/image';
 import { toast } from '@/context/ToastContext';
 import { BACKEND_URL } from '@/utils/api';
+
+const POPULAR_CATEGORIES = [
+  'Coaching Institute',
+  'Competitive Exam Coaching',
+  'Training Academy',
+  'Computer & IT Institute',
+  'Degree College',
+  'Skill Development Center',
+  'Language & IELTS Institute',
+  'Engineering & Medical Coaching',
+];
+
+const DEFAULT_SERVICES = [
+  'Comprehensive Study Material & Notes',
+  'Weekly Mock Tests & Performance Analysis',
+  'One-on-One Doubt Clearing Sessions',
+  'Experienced & Certified Faculty Guidance',
+  'Career Counseling & Interview Preparation',
+  'Flexible Morning & Evening Batches',
+  'Hostel & PG Assistance',
+  'Online / Hybrid Video Classes',
+];
+
+const DEFAULT_PAYMENT_MODES = [
+  'Cash',
+  'UPI / QR Code',
+  'Debit Card',
+  'Credit Card',
+  'Net Banking',
+  'Cheque / DD',
+  'EMI / Installments',
+];
+
+const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+
+const DEFAULT_OPENING_HOURS = {
+  Monday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+  Tuesday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+  Wednesday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+  Thursday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+  Friday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+  Saturday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+  Sunday: { enabled: false, from: '09:00 AM', to: '02:00 PM', open24h: false },
+};
 
 const slugify = (text) => {
   return String(text || '')
@@ -144,6 +197,57 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
   const [city, setCity] = useState(initialData?.city || '');
   const [address, setAddress] = useState(initialData?.address || '');
   const [gmap, setGmap] = useState(initialData?.gmap || '');
+  const [video, setVideo] = useState(initialData?.video || '');
+  const [category, setCategory] = useState(initialData?.category || 'Coaching Institute');
+  const [customCategory, setCustomCategory] = useState(
+    initialData?.category && !POPULAR_CATEGORIES.includes(initialData.category)
+      ? initialData.category
+      : ''
+  );
+  const [services, setServices] = useState(
+    Array.isArray(initialData?.services) && initialData.services.length > 0
+      ? initialData.services
+      : (!isEdit ? DEFAULT_SERVICES.slice(0, 6) : [])
+  );
+  const [newServiceInput, setNewServiceInput] = useState('');
+  const [paymentModes, setPaymentModes] = useState(
+    Array.isArray(initialData?.paymentMode) && initialData.paymentMode.length > 0
+      ? initialData.paymentMode
+      : (!isEdit ? ['Cash', 'UPI / QR Code', 'Debit Card', 'Credit Card', 'Net Banking'] : [])
+  );
+  const [newPaymentModeInput, setNewPaymentModeInput] = useState('');
+  const [gallery, setGallery] = useState(
+    Array.isArray(initialData?.media)
+      ? initialData.media
+          .map((m) => (typeof m === 'object' && m ? (m.file || m.url || m.path) : m))
+          .filter(Boolean)
+      : []
+  );
+  const [openingHours, setOpeningHours] = useState(() => {
+    if (initialData?.openingHours && typeof initialData.openingHours === 'object' && Object.keys(initialData.openingHours).length > 0) {
+      const merged = { ...DEFAULT_OPENING_HOURS };
+      DAYS.forEach((day) => {
+        const d = initialData.openingHours[day];
+        if (d && typeof d === 'object') {
+          merged[day] = {
+            enabled: d.enabled !== false,
+            from: d.from || '08:30 AM',
+            to: d.to || '08:30 PM',
+            open24h: Boolean(d.open24h),
+          };
+        } else if (typeof d === 'string') {
+          merged[day] = {
+            enabled: !d.toLowerCase().includes('closed'),
+            from: '08:30 AM',
+            to: '08:30 PM',
+            open24h: d.toLowerCase().includes('24'),
+          };
+        }
+      });
+      return merged;
+    }
+    return DEFAULT_OPENING_HOURS;
+  });
   const [logo, setLogo] = useState(initialData?.logo || '');
   const [cover, setCover] = useState(initialData?.cover || '');
   const [status, setStatus] = useState(
@@ -176,7 +280,7 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
 
   // Media picker modal state
   const [mediaModalOpen, setMediaModalOpen] = useState(false);
-  const [mediaTarget, setMediaTarget] = useState('cover'); // 'cover' | 'logo'
+  const [mediaTarget, setMediaTarget] = useState('cover'); // 'cover' | 'logo' | 'gallery'
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
 
   // Error and Alert states
@@ -211,8 +315,58 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
       setCity(initialData.city || '');
       setAddress(initialData.address || '');
       setGmap(initialData.gmap || '');
+      setVideo(initialData.video || '');
       setLogo(initialData.logo || '');
       setCover(initialData.cover || '');
+
+      const cat = initialData.category || 'Coaching Institute';
+      if (POPULAR_CATEGORIES.includes(cat)) {
+        setCategory(cat);
+        setCustomCategory('');
+      } else {
+        setCategory('Other');
+        setCustomCategory(cat);
+      }
+
+      if (Array.isArray(initialData.services)) {
+        setServices(initialData.services);
+      }
+
+      if (Array.isArray(initialData.paymentMode)) {
+        setPaymentModes(initialData.paymentMode);
+      }
+
+      if (initialData.openingHours && typeof initialData.openingHours === 'object') {
+        const merged = { ...DEFAULT_OPENING_HOURS };
+        DAYS.forEach((day) => {
+          const d = initialData.openingHours[day];
+          if (d && typeof d === 'object') {
+            merged[day] = {
+              enabled: d.enabled !== false,
+              from: d.from || '08:30 AM',
+              to: d.to || '08:30 PM',
+              open24h: Boolean(d.open24h),
+            };
+          } else if (typeof d === 'string') {
+            merged[day] = {
+              enabled: !d.toLowerCase().includes('closed'),
+              from: '08:30 AM',
+              to: '08:30 PM',
+              open24h: d.toLowerCase().includes('24'),
+            };
+          }
+        });
+        setOpeningHours(merged);
+      }
+
+      if (Array.isArray(initialData.media)) {
+        setGallery(
+          initialData.media
+            .map((m) => (typeof m === 'object' && m ? (m.file || m.url || m.path) : m))
+            .filter(Boolean)
+        );
+      }
+
       setStatus(
         initialData.status === 'draft'
           ? 'draft'
@@ -348,8 +502,116 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
       setCover(url);
     } else if (mediaTarget === 'logo') {
       setLogo(url);
+    } else if (mediaTarget === 'gallery') {
+      if (url && !gallery.includes(url)) {
+        setGallery((prev) => [...prev, url]);
+      }
     }
     setMediaModalOpen(false);
+  };
+
+  // Gallery Helpers
+  const removeGalleryImage = (idx) => {
+    setGallery((prev) => prev.filter((_, i) => i !== idx));
+  };
+
+  // Services Helpers
+  const toggleService = (item) => {
+    setServices((prev) =>
+      prev.includes(item) ? prev.filter((s) => s !== item) : [...prev, item]
+    );
+  };
+
+  const addCustomService = () => {
+    const trimmed = newServiceInput.trim();
+    if (!trimmed) return;
+    if (!services.includes(trimmed)) {
+      setServices((prev) => [...prev, trimmed]);
+    }
+    setNewServiceInput('');
+  };
+
+  const removeService = (item) => {
+    setServices((prev) => prev.filter((s) => s !== item));
+  };
+
+  // Payment Modes Helpers
+  const togglePaymentMode = (mode) => {
+    setPaymentModes((prev) =>
+      prev.includes(mode) ? prev.filter((m) => m !== mode) : [...prev, mode]
+    );
+  };
+
+  const addCustomPaymentMode = () => {
+    const trimmed = newPaymentModeInput.trim();
+    if (!trimmed) return;
+    if (!paymentModes.includes(trimmed)) {
+      setPaymentModes((prev) => [...prev, trimmed]);
+    }
+    setNewPaymentModeInput('');
+  };
+
+  const removePaymentMode = (mode) => {
+    setPaymentModes((prev) => prev.filter((s) => s !== mode));
+  };
+
+  // Operating Hours Helpers
+  const updateDayHours = (day, field, value) => {
+    setOpeningHours((prev) => ({
+      ...prev,
+      [day]: {
+        ...(prev[day] || { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false }),
+        [field]: value,
+      },
+    }));
+  };
+
+  const applyHoursPreset = (type) => {
+    if (type === 'standard') {
+      setOpeningHours({
+        Monday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+        Tuesday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+        Wednesday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+        Thursday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+        Friday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+        Saturday: { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false },
+        Sunday: { enabled: false, from: '09:00 AM', to: '02:00 PM', open24h: false },
+      });
+    } else if (type === 'all7days') {
+      const updated = {};
+      DAYS.forEach((d) => {
+        updated[d] = { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false };
+      });
+      setOpeningHours(updated);
+    } else if (type === '24x7') {
+      const updated = {};
+      DAYS.forEach((d) => {
+        updated[d] = { enabled: true, from: '12:00 AM', to: '11:59 PM', open24h: true };
+      });
+      setOpeningHours(updated);
+    } else if (type === 'corporate') {
+      const updated = {};
+      DAYS.forEach((d) => {
+        if (d === 'Saturday' || d === 'Sunday') {
+          updated[d] = { enabled: false, from: '09:00 AM', to: '06:00 PM', open24h: false };
+        } else {
+          updated[d] = { enabled: true, from: '09:00 AM', to: '06:00 PM', open24h: false };
+        }
+      });
+      setOpeningHours(updated);
+    }
+  };
+
+  const copyMondayToWeekdays = () => {
+    const mon = openingHours.Monday || { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false };
+    setOpeningHours((prev) => ({
+      ...prev,
+      Tuesday: { ...mon },
+      Wednesday: { ...mon },
+      Thursday: { ...mon },
+      Friday: { ...mon },
+      Saturday: { ...mon },
+    }));
   };
 
   // Toggle Course Selection
@@ -418,6 +680,9 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
       setLoading(true);
       const aboutHtml = editorRef.current ? editorRef.current.innerHTML : '';
 
+      const resolvedCategory =
+        category === 'Other' ? (customCategory.trim() || 'Coaching Institute') : category;
+
       const payload = {
         name: name.trim(),
         slug: slug.trim() || slugify(name),
@@ -429,6 +694,12 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
         city: city.trim(),
         address: address.trim(),
         gmap: gmap.trim(),
+        video: video.trim(),
+        category: resolvedCategory,
+        services: services.map((s) => String(s).trim()).filter(Boolean),
+        paymentMode: paymentModes.map((p) => String(p).trim()).filter(Boolean),
+        openingHours,
+        media: gallery,
         about: aboutHtml,
         logo: logo || null,
         cover: cover || null,
@@ -868,6 +1139,65 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
                 )}
               </div>
 
+              {/* Category / Institute Type */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Tag size={12} className="text-[#2271b1]" />
+                    <span>Institute Category / Type</span>
+                  </span>
+                  <span className="text-[10.5px] text-slate-400 font-normal">Badge in profile</span>
+                </label>
+                <select
+                  value={POPULAR_CATEGORIES.includes(category) ? category : 'Other'}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (val === 'Other') {
+                      setCategory('Other');
+                      if (!customCategory) setCustomCategory('');
+                    } else {
+                      setCategory(val);
+                      setCustomCategory('');
+                    }
+                  }}
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
+                >
+                  {POPULAR_CATEGORIES.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                  <option value="Other">Other / Custom Category...</option>
+                </select>
+                {category === 'Other' && (
+                  <input
+                    type="text"
+                    value={customCategory}
+                    onChange={(e) => setCustomCategory(e.target.value)}
+                    placeholder="Enter custom category (e.g. Polytechnic Institute)"
+                    className="w-full mt-1.5 px-3 py-1.5 bg-slate-50 border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
+                  />
+                )}
+              </div>
+
+              {/* Campus Video Tour */}
+              <div className="space-y-1">
+                <label className="block text-xs font-semibold text-slate-700 flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Video size={12} className="text-red-600" />
+                    <span>Campus Video Tour</span>
+                  </span>
+                  <span className="text-[10.5px] text-slate-400 font-normal">YouTube / Embed URL</span>
+                </label>
+                <input
+                  type="url"
+                  value={video}
+                  onChange={handleFieldChange('video', setVideo)}
+                  placeholder="https://www.youtube.com/watch?v=..."
+                  className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
+                />
+              </div>
+
               {/* Institute Google Map Location */}
               <div className="space-y-1 sm:col-span-2">
                 <label className="block text-xs font-semibold text-slate-700">
@@ -1039,6 +1369,181 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
               </div>
             </div>
           </div>
+
+          {/* Section 2: Services Offered */}
+          <div className="bg-white border border-slate-200 rounded shadow-2xs p-5 space-y-4">
+            <div className="border-b border-slate-200 pb-2 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <CheckCircle2 size={16} className="text-emerald-600" />
+                  <span>2. Services Offered</span>
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Select or add services provided to students (notes, test series, mentorship, batches).
+                </p>
+              </div>
+              <span className="text-[11px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
+                {services.length} Selected
+              </span>
+            </div>
+
+            {/* Popular Service Chips */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-slate-600">
+                Quick Add Popular Services:
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {DEFAULT_SERVICES.map((s) => {
+                  const isSelected = services.includes(s);
+                  return (
+                    <button
+                      key={s}
+                      type="button"
+                      onClick={() => toggleService(s)}
+                      className={`inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-full border transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-700 font-semibold shadow-2xs'
+                          : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                      }`}
+                    >
+                      {isSelected ? <Check size={11} /> : <Plus size={11} />}
+                      <span>{s}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Service Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                value={newServiceInput}
+                onChange={(e) => setNewServiceInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomService();
+                  }
+                }}
+                placeholder="Add custom service (e.g. Free Interview Mentorship)..."
+                className="flex-1 px-3 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
+              />
+              <button
+                type="button"
+                onClick={addCustomService}
+                className="px-3 py-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-semibold shadow-2xs flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Plus size={13} />
+                <span>Add</span>
+              </button>
+            </div>
+
+            {/* Selected Services Tags */}
+            {services.length > 0 && (
+              <div className="pt-2 border-t border-slate-100">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-[11px] font-semibold text-slate-700">Active Services:</span>
+                  <button
+                    type="button"
+                    onClick={() => setServices([])}
+                    className="text-[10.5px] text-red-600 hover:underline cursor-pointer"
+                  >
+                    Clear All
+                  </button>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  {services.map((item) => (
+                    <span
+                      key={item}
+                      className="inline-flex items-center gap-1.5 text-xs bg-emerald-50 text-emerald-900 px-2.5 py-1 rounded-md border border-emerald-200 group"
+                    >
+                      <CheckCircle2 size={12} className="text-emerald-600 shrink-0" />
+                      <span>{item}</span>
+                      <button
+                        type="button"
+                        onClick={() => removeService(item)}
+                        className="text-emerald-600/70 hover:text-red-600 p-0.5 rounded cursor-pointer transition-colors"
+                        title="Remove service"
+                      >
+                        <X size={11} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Section 3: Payment Modes Accepted */}
+          <div className="bg-white border border-slate-200 rounded shadow-2xs p-5 space-y-4">
+            <div className="border-b border-slate-200 pb-2 flex items-center justify-between">
+              <div>
+                <h2 className="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+                  <CreditCard size={16} className="text-emerald-600" />
+                  <span>3. Payment Modes Accepted</span>
+                </h2>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Select payment methods accepted for admissions and course fees.
+                </p>
+              </div>
+              <span className="text-[11px] font-bold px-2 py-0.5 bg-emerald-50 text-emerald-700 rounded border border-emerald-200">
+                {paymentModes.length} Selected
+              </span>
+            </div>
+
+            {/* Popular Payment Modes Toggles */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-semibold text-slate-600">
+                Select Accepted Methods:
+              </label>
+              <div className="flex flex-wrap gap-2">
+                {DEFAULT_PAYMENT_MODES.map((mode) => {
+                  const isSelected = paymentModes.includes(mode);
+                  return (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => togglePaymentMode(mode)}
+                      className={`inline-flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-700 font-semibold shadow-2xs'
+                          : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-300'
+                      }`}
+                    >
+                      {isSelected ? <Check size={12} /> : <Plus size={12} />}
+                      <span>{mode}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Custom Payment Mode Input */}
+            <div className="flex items-center gap-2 pt-1">
+              <input
+                type="text"
+                value={newPaymentModeInput}
+                onChange={(e) => setNewPaymentModeInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    addCustomPaymentMode();
+                  }
+                }}
+                placeholder="Add custom payment mode (e.g. Demand Draft, Crypto)..."
+                className="flex-1 px-3 py-1.5 bg-white border border-slate-300 rounded text-xs text-slate-800 focus:outline-none focus:border-[#2271b1]"
+              />
+              <button
+                type="button"
+                onClick={addCustomPaymentMode}
+                className="px-3 py-1.5 bg-[#2271b1] hover:bg-[#135e96] text-white rounded text-xs font-semibold shadow-2xs flex items-center gap-1 cursor-pointer transition-colors"
+              >
+                <Plus size={13} />
+                <span>Add</span>
+              </button>
+            </div>
+          </div>
         </div>
 
         {/* Right Sidebar: Publish Box + Courses Box + Facilities Box (4 Cols) */}
@@ -1146,7 +1651,186 @@ export default function InstituteForm({ initialData = null, isEdit = false }) {
             </div>
           </div>
 
-          {/* 2. Courses Box (Right-aligned Sidebar Meta Box) */}
+          {/* 2. Weekly Operating Hours Box */}
+          <div className="bg-white border border-slate-200 rounded shadow-2xs overflow-hidden">
+            <div className="bg-[#f6f7f7] border-b border-slate-200 px-3.5 py-2 flex items-center justify-between">
+              <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                <Clock size={13} className="text-[#2271b1]" />
+                <span>Weekly Operating Hours</span>
+              </span>
+              <button
+                type="button"
+                onClick={copyMondayToWeekdays}
+                className="text-[10.5px] text-[#2271b1] hover:underline flex items-center gap-1 font-semibold cursor-pointer"
+                title="Copy Monday timings to Tue - Sat"
+              >
+                <Copy size={11} />
+                <span>Copy Mon</span>
+              </button>
+            </div>
+
+            <div className="p-3 space-y-2.5">
+              {/* Presets Row */}
+              <div className="flex flex-wrap items-center gap-1">
+                <span className="text-[10px] text-slate-400 font-medium mr-0.5">Presets:</span>
+                <button
+                  type="button"
+                  onClick={() => applyHoursPreset('standard')}
+                  className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-semibold border border-slate-200 transition-colors cursor-pointer"
+                >
+                  Standard
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyHoursPreset('all7days')}
+                  className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-semibold border border-slate-200 transition-colors cursor-pointer"
+                >
+                  All 7 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => applyHoursPreset('24x7')}
+                  className="px-1.5 py-0.5 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded text-[10px] font-semibold border border-slate-200 transition-colors cursor-pointer"
+                >
+                  24x7
+                </button>
+              </div>
+
+              {/* Days Schedule */}
+              <div className="space-y-1.5 divide-y divide-slate-100 pt-0.5">
+                {DAYS.map((day) => {
+                  const dayData = openingHours[day] || { enabled: true, from: '08:30 AM', to: '08:30 PM', open24h: false };
+                  return (
+                    <div
+                      key={day}
+                      className={`pt-1.5 flex flex-col gap-1 p-1.5 rounded transition-colors ${
+                        dayData.enabled ? 'bg-slate-50/70' : 'bg-red-50/30'
+                      }`}
+                    >
+                      {/* Top row: Status toggle + Day Name + 24h checkbox */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => updateDayHours(day, 'enabled', !dayData.enabled)}
+                            className={`w-12 py-0.5 text-[9.5px] font-bold rounded uppercase transition-colors text-center cursor-pointer ${
+                              dayData.enabled
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-rose-600 text-white hover:bg-rose-700'
+                            }`}
+                          >
+                            {dayData.enabled ? 'Open' : 'Closed'}
+                          </button>
+                          <span className="text-xs font-bold text-slate-800">{day}</span>
+                        </div>
+
+                        {dayData.enabled && (
+                          <label className="inline-flex items-center gap-1 text-[10.5px] text-slate-600 cursor-pointer select-none">
+                            <input
+                              type="checkbox"
+                              checked={Boolean(dayData.open24h)}
+                              onChange={(e) => updateDayHours(day, 'open24h', e.target.checked)}
+                              className="rounded border-slate-300 text-blue-600 scale-90"
+                            />
+                            <span>24 Hours</span>
+                          </label>
+                        )}
+                      </div>
+
+                      {/* Bottom row: Time inputs if enabled and not 24h */}
+                      {dayData.enabled && !dayData.open24h && (
+                        <div className="flex items-center gap-1 pt-0.5">
+                          <input
+                            type="text"
+                            value={dayData.from || ''}
+                            onChange={(e) => updateDayHours(day, 'from', e.target.value)}
+                            placeholder="08:30 AM"
+                            className="flex-1 min-w-0 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[11px] text-slate-800 focus:outline-none focus:border-[#2271b1] text-center"
+                          />
+                          <span className="text-slate-400 text-[11px] font-semibold">–</span>
+                          <input
+                            type="text"
+                            value={dayData.to || ''}
+                            onChange={(e) => updateDayHours(day, 'to', e.target.value)}
+                            placeholder="08:30 PM"
+                            className="flex-1 min-w-0 px-1.5 py-0.5 bg-white border border-slate-300 rounded text-[11px] text-slate-800 focus:outline-none focus:border-[#2271b1] text-center"
+                          />
+                        </div>
+                      )}
+
+                      {!dayData.enabled && (
+                        <span className="text-[10px] text-rose-500 font-semibold italic pl-1">
+                          Closed all day
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* 3. Campus Photo Gallery Box */}
+          <div className="bg-white border border-slate-200 rounded shadow-2xs overflow-hidden">
+            <div className="bg-[#f6f7f7] border-b border-slate-200 px-3.5 py-2 flex items-center justify-between">
+              <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">
+                <Images size={13} className="text-[#2271b1]" />
+                <span>Campus Photo Gallery</span>
+              </span>
+              <span className="text-[10.5px] font-semibold text-[#2271b1] bg-blue-50 px-2 py-0.5 rounded border border-blue-200">
+                {gallery.length} Photos
+              </span>
+            </div>
+
+            <div className="p-3 space-y-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setMediaTarget('gallery');
+                  setMediaModalOpen(true);
+                }}
+                className="w-full py-2 bg-white hover:bg-slate-50 text-slate-700 border-2 border-dashed border-slate-300 hover:border-[#2271b1] rounded text-xs font-bold transition-colors flex items-center justify-center gap-1.5 cursor-pointer shadow-2xs"
+              >
+                <Plus size={14} className="text-[#2271b1]" />
+                <span>Add Gallery Photos</span>
+              </button>
+
+              {gallery.length === 0 ? (
+                <div className="py-4 text-center text-slate-400 text-xs space-y-1">
+                  <ImageIcon size={22} className="mx-auto text-slate-300" />
+                  <p>No campus photos added yet.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-2 max-h-56 overflow-y-auto custom-scrollbar p-1">
+                  {gallery.map((imgUrl, idx) => {
+                    const full = getImageUrl(imgUrl);
+                    return (
+                      <div
+                        key={idx}
+                        className="group relative h-20 bg-slate-100 rounded border border-slate-200 overflow-hidden shadow-2xs"
+                      >
+                        <img
+                          src={full}
+                          alt={`Campus ${idx + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeGalleryImage(idx)}
+                          className="absolute top-1 right-1 p-1 bg-red-600/90 hover:bg-red-700 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer shadow"
+                          title="Remove Photo"
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* 3. Courses Box (Right-aligned Sidebar Meta Box) */}
           <div className="bg-white border border-slate-200 rounded shadow-2xs overflow-hidden">
             <div className="bg-[#f6f7f7] border-b border-slate-200 px-3.5 py-2 flex items-center justify-between">
               <span className="font-bold text-xs text-slate-800 flex items-center gap-1.5">

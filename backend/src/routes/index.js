@@ -26,7 +26,9 @@ import mockTestSeriesRoutes from './mockTestSeries.routes.js';
 import mockTestRoutes from './mockTest.routes.js';
 import mockTestPlanRoutes from './mockTestPlan.routes.js';
 import paymentRoutes from './payment.routes.js';
+import backupRoutes from './backup.routes.js';
 import stickyNoteRoutes from './stickyNote.routes.js';
+import sitemapRoutes from './sitemap.routes.js';
 
 import { getPublicAuthorsList } from '../controllers/user.controller.js';
 
@@ -75,6 +77,8 @@ router.get('/', (req, res) => {
   });
 });
 
+router.use('/sitemap', sitemapRoutes);
+router.use('/backup', backupRoutes);
 router.use('/sticky-notes', stickyNoteRoutes);
 router.use('/sticky-note', stickyNoteRoutes);
 router.use('/payments', paymentRoutes);

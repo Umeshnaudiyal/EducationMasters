@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import McqQuestionPage from '@/components/McqQuestionPage';
 import { getTaxonomyInfo } from '@/utils/mcqTaxonomies';
+import { generateMcqJsonLd } from '@/utils/seo';
 
 export async function generateMetadata({ params }) {
   const { slug } = await params;
@@ -26,19 +27,30 @@ export async function generateMetadata({ params }) {
 export default async function Page({ params }) {
   const { slug } = await params;
   const taxInfo = getTaxonomyInfo(slug);
+  const canonicalUrl = `https://educationmasters.in/mcq-questions/${slug}/`;
+  const jsonLd = generateMcqJsonLd({ slug, taxInfo, canonicalUrl });
 
   return (
-    <Suspense
-      fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
-          <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
-        </div>
-      }
-    >
-      <McqQuestionPage
-        initialSlug={slug}
-        initialSubjectName={taxInfo.name}
-      />
-    </Suspense>
+    <>
+      {jsonLd && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+      )}
+      <Suspense
+        fallback={
+          <div className="min-h-screen flex items-center justify-center bg-[#f0f2f5]">
+            <div className="w-10 h-10 border-3 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          </div>
+        }
+      >
+        <McqQuestionPage
+          initialSlug={slug}
+          initialSubjectName={taxInfo.name}
+        />
+      </Suspense>
+    </>
   );
 }
+

@@ -21,7 +21,7 @@ import {
   Share2,
   ExternalLink
 } from 'lucide-react';
-import { API_BASE } from '@/utils/api';
+import { API_BASE } from '@/utils                               /api';
 
 // Theme colors and icons for subjects without custom images
 const SUBJECT_STYLING = {

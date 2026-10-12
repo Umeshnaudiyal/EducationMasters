@@ -105,9 +105,14 @@ export default function ResultsPage() {
   const endItem = Math.min(page * LIMIT, totalItems);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans">
-      <Header />
-      <LiveTicker />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(resultsCollectionSchema) }}
+      />
+      <div className="min-h-screen flex flex-col bg-white text-slate-900 font-sans">
+        <Header />
+        <LiveTicker />
 
       <div className="max-w-[1550px] mx-auto px-3 sm:px-4 py-6 flex-1 w-full bg-white">
 
@@ -440,5 +445,32 @@ export default function ResultsPage() {
 
       <Footer />
     </div>
+    </>
   );
 }
+
+const resultsCollectionSchema = {
+  '@context': 'https://schema.org',
+  '@type': 'CollectionPage',
+  'name': 'Latest Examination Results 2026 - Sarkari Result & Merit List',
+  'description': 'Check latest government examination results, merit lists, scorecards, and cut off marks on Education Masters.',
+  'url': 'https://educationmasters.in/results',
+  'breadcrumb': {
+    '@type': 'BreadcrumbList',
+    'itemListElement': [
+      {
+        '@type': 'ListItem',
+        'position': 1,
+        'name': 'Home',
+        'item': 'https://educationmasters.in'
+      },
+      {
+        '@type': 'ListItem',
+        'position': 2,
+        'name': 'Results',
+        'item': 'https://educationmasters.in/results'
+      }
+    ]
+  }
+};
+
