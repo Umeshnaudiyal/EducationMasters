@@ -139,6 +139,7 @@ export default function Footer() {
             <ul className="space-y-3 text-base sm:text-lg font-semibold">
               <li><Link href="/" className="text-blue-600 hover:text-blue-800 hover:underline transition">Home</Link></li>
               <li><Link href="/authors" className="text-blue-600 hover:text-blue-800 hover:underline transition">Our Authors</Link></li>
+              <li><Link href="/editorial-policy" className="text-blue-600 hover:text-blue-800 hover:underline transition">Editorial Policy</Link></li>
               <li><Link href="/disclaimer" className="text-blue-600 hover:text-blue-800 hover:underline transition">Disclaimer</Link></li>
               <li><Link href="/terms-of-service#contact" className="text-blue-600 hover:text-blue-800 hover:underline transition">Contact Us</Link></li>
               <li><Link href="/syllabus" className="text-blue-600 hover:text-blue-800 hover:underline transition">Syllabus</Link></li>

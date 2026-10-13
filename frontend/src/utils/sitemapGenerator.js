@@ -28,7 +28,7 @@ export async function generateSitemapIndex() {
   try {
     const apiBase = getApiBaseUrl();
     const res = await fetch(`${apiBase}/sitemap/index`, {
-      next: { revalidate: 600 },
+      cache: 'no-store',
     });
     if (res.ok) {
       const data = await res.json();
@@ -48,8 +48,8 @@ export async function generateSitemapIndex() {
       { name: 'blogs-sitemap.xml', loc: `${SITE_URL}/blogs-sitemap.xml/`, count: 1000, lastmod: '2022-09-13T06:26:13+00:00' },
       { name: 'blogs-sitemap2.xml', loc: `${SITE_URL}/blogs-sitemap2.xml/`, count: 1000, lastmod: '2022-09-13T06:26:16+00:00' },
       { name: 'blogs-sitemap3.xml', loc: `${SITE_URL}/blogs-sitemap3.xml/`, count: 668, lastmod: '2026-08-05T09:53:36+00:00' },
-      { name: 'pages-sitemap.xml', loc: `${SITE_URL}/pages-sitemap.xml/`, count: 18, lastmod: '2022-09-14T13:00:13+00:00' },
-      { name: 'categories-sitemap.xml', loc: `${SITE_URL}/categories-sitemap.xml/`, count: 123, lastmod: '2025-12-12T04:43:28+00:00' },
+      { name: 'pages-sitemap.xml', loc: `${SITE_URL}/pages-sitemap.xml/`, count: 38, lastmod: '2026-10-13T10:39:00+00:00' },
+      { name: 'categories-sitemap.xml', loc: `${SITE_URL}/categories-sitemap.xml/`, count: 155, lastmod: '2022-10-11T10:14:00+00:00' },
       { name: 'institutes-sitemap.xml', loc: `${SITE_URL}/institutes-sitemap.xml/`, count: 625, lastmod: '2022-10-21T12:00:02+00:00' },
       { name: 'departments-sitemap.xml', loc: `${SITE_URL}/departments-sitemap.xml/`, count: 62, lastmod: '2025-10-08T18:34:06+00:00' },
       { name: 'results-sitemap.xml', loc: `${SITE_URL}/results-sitemap.xml/`, count: 102, lastmod: '2026-09-21T08:26:21+00:00' },
@@ -88,6 +88,47 @@ ${xmlEntries}
   });
 }
 
+const FALLBACK_PAGES = [
+  { loc: `${SITE_URL}/departments/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/expiring-jobs/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/privacy-policy/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/terms-of-service/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/editorial-policy/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/admit-cards/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/results/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/categories/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/subjects/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/blogs/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/institutes/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/author/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/contact-us/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/disclaimer/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/refer-and-earn/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { loc: `${SITE_URL}/about-us/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-17T08:03:00+00:00' },
+  { loc: `${SITE_URL}/jobs/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-17T12:18:00+00:00' },
+  { loc: `${SITE_URL}/home/`, priority: '0.5', changefreq: 'monthly', lastmod: '2022-09-14T18:30:00+00:00' },
+  { loc: `${SITE_URL}/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/jobs-expiring-in-30-days/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/syllabus/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/mock-tests/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/mock-test/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/mcq-questions/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/typing-test/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/leaderboard/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/authors/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/articles/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/article/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/terms-and-conditions/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/dmca/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/education/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/state/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/admit-card/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/result/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/category/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/department/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { loc: `${SITE_URL}/search/`, priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+];
+
 /**
  * Generate XML Sub-Sitemap (urlset)
  */
@@ -97,7 +138,7 @@ export async function generateSubSitemap(type, page = 1) {
   try {
     const apiBase = getApiBaseUrl();
     const res = await fetch(`${apiBase}/sitemap/urls/${type}?page=${page}&limit=1000`, {
-      next: { revalidate: 600 },
+      cache: 'no-store',
     });
     if (res.ok) {
       const data = await res.json();
@@ -107,6 +148,10 @@ export async function generateSubSitemap(type, page = 1) {
     }
   } catch (err) {
     console.error(`Failed to fetch ${type} sitemap urls:`, err?.message);
+  }
+
+  if ((!urls || urls.length === 0) && type === 'pages') {
+    urls = FALLBACK_PAGES;
   }
 
   const generatedDate = formatNowDate();

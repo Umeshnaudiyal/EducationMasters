@@ -192,8 +192,8 @@
                                         <xsl:when test="contains(sitemap:loc, 'blogs-sitemap.xml')">1000</xsl:when>
                                         <xsl:when test="contains(sitemap:loc, 'blogs-sitemap2.xml')">1000</xsl:when>
                                         <xsl:when test="contains(sitemap:loc, 'blogs-sitemap3.xml')">668</xsl:when>
-                                        <xsl:when test="contains(sitemap:loc, 'pages-sitemap.xml')">18</xsl:when>
-                                        <xsl:when test="contains(sitemap:loc, 'categories-sitemap.xml')">123</xsl:when>
+                                        <xsl:when test="contains(sitemap:loc, 'pages-sitemap.xml')">38</xsl:when>
+                                        <xsl:when test="contains(sitemap:loc, 'categories-sitemap.xml')">155</xsl:when>
                                         <xsl:when test="contains(sitemap:loc, 'institutes-sitemap.xml')">625</xsl:when>
                                         <xsl:when test="contains(sitemap:loc, 'departments-sitemap.xml')">62</xsl:when>
                                         <xsl:otherwise>1000</xsl:otherwise>
@@ -230,7 +230,32 @@
             <svg width="6" height="8" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M.727 7.06L3.78 4 .727.94l.94-.94 4 4-4 4-.94-.94z" fill="#141B38" />
             </svg>
-            <span>XML Sitemap</span>
+            <xsl:choose>
+                <xsl:when test="contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/category/')">
+                    <span>Categories XML Sitemap</span>
+                </xsl:when>
+                <xsl:when test="contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/departments') or contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/privacy-policy') or contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/about-us')">
+                    <span>Pages XML Sitemap</span>
+                </xsl:when>
+                <xsl:when test="contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/department/')">
+                    <span>Departments XML Sitemap</span>
+                </xsl:when>
+                <xsl:when test="contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/job/')">
+                    <span>Jobs XML Sitemap</span>
+                </xsl:when>
+                <xsl:when test="contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/institute/')">
+                    <span>Institutes XML Sitemap</span>
+                </xsl:when>
+                <xsl:when test="contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/admit-card/')">
+                    <span>Admit Cards XML Sitemap</span>
+                </xsl:when>
+                <xsl:when test="contains(sitemap:urlset/sitemap:url[1]/sitemap:loc, '/result/')">
+                    <span>Results XML Sitemap</span>
+                </xsl:when>
+                <xsl:otherwise>
+                    <span>XML Sitemap</span>
+                </xsl:otherwise>
+            </xsl:choose>
         </div>
 
         <div class="table-wrapper">
