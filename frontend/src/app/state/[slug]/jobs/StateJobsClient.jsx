@@ -162,7 +162,7 @@ export default function StateJobsClient({ stateSlug }) {
 
   const fetchExpiringJobs = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&state=${encodeURIComponent(stateSlug)}`);
+      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&days=30&state=${encodeURIComponent(stateSlug)}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setExpiringJobs(data.data);

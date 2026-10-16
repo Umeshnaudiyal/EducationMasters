@@ -816,7 +816,9 @@ function JobsExpiringContent() {
                       <span className="text-slate-700 font-normal whitespace-nowrap">
                         {selectedState && selectedState !== 'all' && activeStateName
                           ? `${expiringJobs.length > 0 ? expiringJobs.length : totalJobs} ${activeStateName} Jobs expiring in 30 Days`
-                          : `${totalJobs > 0 ? totalJobs : 28} Jobs are expiring in 30 Days`}
+                          : (totalJobs > 0 || expiringJobs.length > 0)
+                            ? `${totalJobs || expiringJobs.length} ${(totalJobs || expiringJobs.length) === 1 ? 'Job is' : 'Jobs are'} expiring in 30 Days`
+                            : '0 Jobs expiring in 30 Days'}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Link

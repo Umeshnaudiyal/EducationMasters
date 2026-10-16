@@ -1640,7 +1640,7 @@ export default function McqQuestionPage({
                           ? `${expiringJobs.length} ${taxonomy.title} Jobs expiring in 30 Days`
                           : expiringJobs.length > 0
                           ? `${expiringJobs.length} Jobs are expiring soon`
-                          : '28 Jobs are expiring in 30 Days'}
+                          : 'Latest Government Jobs'}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Link

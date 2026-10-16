@@ -424,7 +424,9 @@ export default function DepartmentJobsPage({ deptSlug }) {
                 <div>
                   <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
                     <span className="font-normal text-slate-600">
-                      11 Jobs are expiring in 30 Days
+                      {expiringJobs.length > 0
+                        ? `${expiringJobs.length} Jobs are expiring in 30 Days`
+                        : 'Latest Government Jobs'}
                     </span>
                     <div className="flex items-center space-x-1.5">
                       <Link

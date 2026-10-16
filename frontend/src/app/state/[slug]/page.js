@@ -98,7 +98,7 @@ export default function StateProfilePage() {
 
     async function fetchSidebarJobs() {
       try {
-        const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&state=${encodeURIComponent(slug)}`);
+        const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&days=30&state=${encodeURIComponent(slug)}`);
         const json = await res.json();
         if (isMounted && json.success && Array.isArray(json.data)) {
           setExpiringJobs(json.data);

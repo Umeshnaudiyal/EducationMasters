@@ -130,6 +130,7 @@ export default function AuthorPage() {
   const [hoveredSlice, setHoveredSlice] = useState(null);
   const [sidebarTab, setSidebarTab] = useState('expiring');
   const [expiringJobs, setExpiringJobs] = useState([]);
+  const [expiringTotal, setExpiringTotal] = useState(0);
   const [isChartAnimated, setIsChartAnimated] = useState(false);
 
   // Pagination / Load More states
@@ -168,10 +169,11 @@ export default function AuthorPage() {
 
     async function fetchSidebarJobs() {
       try {
-        const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6`);
+        const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&days=30`);
         const json = await res.json();
         if (isMounted && json.success && Array.isArray(json.data)) {
           setExpiringJobs(json.data);
+          setExpiringTotal(json.total ?? json.count ?? json.data.length ?? 0);
         }
       } catch (err) {
         console.error('Error fetching expiring jobs:', err);
@@ -1185,7 +1187,9 @@ export default function AuthorPage() {
                     <div>
                       <div className="flex items-center justify-between text-[11px] sm:text-xs mb-2.5 pb-2 border-b border-slate-300 gap-1.5">
                         <span className="text-slate-700 font-medium whitespace-nowrap">
-                          {expiringJobs.length} Jobs expiring in 30 Days
+                          {expiringTotal > 0
+                            ? `${expiringTotal} ${expiringTotal === 1 ? 'Job is' : 'Jobs are'} expiring in 30 Days`
+                            : '0 Jobs expiring in 30 Days'}
                         </span>
                         <div className="flex items-center gap-1.5 shrink-0">
                           <Link

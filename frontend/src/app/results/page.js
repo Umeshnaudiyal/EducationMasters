@@ -14,6 +14,7 @@ const LIMIT = 12;
 export default function ResultsPage() {
   const [items, setItems] = useState([]);
   const [expiringJobs, setExpiringJobs] = useState([]);
+  const [expiringTotal, setExpiringTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -58,10 +59,11 @@ export default function ResultsPage() {
 
   const fetchExpiringJobs = async () => {
     try {
-      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6`);
+      const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6&days=30`);
       const data = await res.json();
       if (data.success && data.data) {
         setExpiringJobs(data.data);
+        setExpiringTotal(data.total ?? data.count ?? data.data.length ?? 0);
       }
     } catch (err) {
       console.error('Error fetching expiring jobs:', err);
@@ -352,7 +354,9 @@ export default function ResultsPage() {
                   <div>
                     <div className="flex items-center justify-between text-[11px] sm:text-xs mb-3 pb-2.5 border-b border-slate-300 gap-1.5">
                       <span className="text-slate-700 font-normal whitespace-nowrap">
-                        28 Jobs are expiring in 30 Days
+                        {expiringTotal > 0
+                          ? `${expiringTotal} ${expiringTotal === 1 ? 'Job is' : 'Jobs are'} expiring in 30 Days`
+                          : '0 Jobs expiring in 30 Days'}
                       </span>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Link href="/jobs-expiring-in-30-days" className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs">

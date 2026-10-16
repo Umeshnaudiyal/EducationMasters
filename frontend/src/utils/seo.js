@@ -184,7 +184,7 @@ export function generateJsonLd({ result, slug, canonicalPath }) {
   const data = result?.data;
   if (!data) return null;
 
-  const isJob = result?.type === 'job';
+  const isJob = result?.type === 'job' || canonicalPath.includes('/job');
   const isResult = result?.type === 'result' || canonicalPath.includes('/result');
   const isAdmitCard = result?.type === 'admit-card' || canonicalPath.includes('/admit-card');
   const canonicalUrl = `${SITE_URL}${canonicalPath.startsWith('/') ? canonicalPath : '/' + canonicalPath}`;
@@ -340,6 +340,17 @@ export function generateJsonLd({ result, slug, canonicalPath }) {
 
   const eligibilitySnippet = stripHtml(data.eligibility || 'Candidate must possess the required educational qualification and criteria as specified.');
 
+  let orgSameAs = SITE_URL;
+  const rawSameAs = data.links?.site_url || data.noti_link || data.app_link;
+  if (rawSameAs && typeof rawSameAs === 'string') {
+    const trimmed = rawSameAs.trim();
+    if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+      orgSameAs = trimmed;
+    } else if (trimmed.length > 3 && !trimmed.startsWith('javascript:')) {
+      orgSameAs = `https://${trimmed.replace(/^\/+/, '')}`;
+    }
+  }
+
   const jobPosting = {
     '@context': 'https://schema.org',
     '@type': 'JobPosting',
@@ -351,7 +362,7 @@ export function generateJsonLd({ result, slug, canonicalPath }) {
     'hiringOrganization': {
       '@type': 'Organization',
       'name': deptName,
-      'sameAs': data.links?.site_url || data.noti_link || data.app_link || SITE_URL,
+      'sameAs': orgSameAs,
       'logo': DEFAULT_LOGO
     },
     'jobLocation': {
@@ -364,10 +375,6 @@ export function generateJsonLd({ result, slug, canonicalPath }) {
         'postalCode': locInfo.pin,
         'addressCountry': 'IN'
       }
-    },
-    'applicantLocationRequirements': {
-      '@type': 'Country',
-      'name': 'India'
     },
     'baseSalary': extractSalaryRange(data.salary),
     'identifier': {

@@ -494,7 +494,11 @@ export default function SubjectsPage() {
               {sidebarTab === 'expiring' ? (
                 <div>
                   <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
-                    <span className="font-normal text-slate-600">25 Jobs are expiring in 30 Days</span>
+                    <span className="font-normal text-slate-600">
+                      {expiringJobs.length > 0
+                        ? `${expiringJobs.length} Jobs are expiring in 30 Days`
+                        : 'Latest Government Jobs'}
+                    </span>
                     <div className="flex items-center space-x-1.5">
                       <Link href="/jobs-expiring-in-30-days" className="text-[#2563eb] font-medium hover:underline">View All</Link>
                       <span className="bg-[#2563eb] text-white text-[11px] font-semibold px-2 py-0.5 rounded flex items-center space-x-1">

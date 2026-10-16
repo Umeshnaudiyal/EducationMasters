@@ -179,56 +179,7 @@ const parseInstructionItems = (htmlStr) => {
   return items;
 };
 
-const DEFAULT_EXPIRING_JOBS = [
-  {
-    id: 1,
-    title: 'AIIMS Rishikesh Group A & B Recruitment 2026',
-    slug: 'aiims-rishikesh-group-a-b-recruitment-2026',
-    lastDate: 'Sep 14',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 2,
-    title: 'IIM Udaipur Research Assistant/Associate Recruitment 2026 - Apply Online',
-    slug: 'iim-udaipur-research-assistantassociate-recruitment-2026',
-    lastDate: 'Sep 14',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 3,
-    title: 'TISS Recruitment 2026 - Apply Online for Senior Administrative Assistant',
-    slug: 'tiss-recruitment-2026-senior-administrative-assistant',
-    lastDate: 'Sep 15',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 4,
-    title: 'BSVS Bank of Baroda Tonk Attender Recruitment 2026 - Apply Offline',
-    slug: 'bsvs-bank-of-baroda-tonk-attender-recruitment-2026',
-    lastDate: 'Sep 15',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1523240795612-9a054b0db644?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 5,
-    title: 'CSIR AMPRI Recruitment 2026 - Walk-in for Project Associate, JRF & More',
-    slug: 'csir-ampri-recruitment-2026-project-associate',
-    lastDate: 'Sep 15',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 6,
-    title: 'CSIR Director Recruitment 2026 - Apply Offline',
-    slug: 'sikkim-all-government-exams-list-2026-complete-list-of-govt-exams-eligibility-jobs',
-    lastDate: 'Sep 15',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=300&q=80'
-  }
-];
+
 
 const formatArticleData = (rawInput, type = '', currentPathname = '') => {
   if (!rawInput) return null;
@@ -591,8 +542,10 @@ export default function SingleArticlePage({ initialData = null }) {
   const slug = params?.slug || '';
 
   const [article, setArticle] = useState(() => (initialData ? formatArticleData(initialData, initialData.type || '', typeof window !== 'undefined' ? window.location.pathname : '') : null));
-  const [expiringJobs, setExpiringJobs] = useState(DEFAULT_EXPIRING_JOBS);
-  const [relatedJobs, setRelatedJobs] = useState(DEFAULT_EXPIRING_JOBS);
+  const [expiringJobs, setExpiringJobs] = useState([]);
+  const [relatedJobs, setRelatedJobs] = useState([]);
+  const [expiringCount, setExpiringCount] = useState(0);
+  const [sidebarLoading, setSidebarLoading] = useState(true);
   const [sidebarTab, setSidebarTab] = useState('expiring'); // 'expiring' or 'mcq'
   const [loading, setLoading] = useState(() => !initialData);
   const [isBannerLoaded, setIsBannerLoaded] = useState(false);
@@ -792,21 +745,64 @@ export default function SingleArticlePage({ initialData = null }) {
 
   const fetchSidebarJobs = async () => {
     try {
+      setSidebarLoading(true);
       const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6`);
       const data = await res.json();
-      if (data.success && data.data && data.data.length > 0) {
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
         const formatted = data.data.map((item, idx) => ({
           id: item._id || idx,
           title: cleanHTML(item.title),
           slug: item.slug || `job-${idx}`,
           lastDate: formatDate(item.app_ends || item.dates?.last_date),
           category: 'Jobs',
-          image: getImageUrl(item.featured_media, DEFAULT_EXPIRING_JOBS[idx % DEFAULT_EXPIRING_JOBS.length].image)
+          image: getImageUrl(item.featured_media, '/logo.webp')
         }));
         setExpiringJobs(formatted);
+        setExpiringCount(data.total || data.count || formatted.length);
+      } else {
+        // When no jobs are expiring in the next 30 days, load real published jobs from database
+        const fallbackRes = await fetch(`${API_BASE}/jobs?status=publish&limit=6`);
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.success && Array.isArray(fallbackData.data) && fallbackData.data.length > 0) {
+          const formatted = fallbackData.data.map((item, idx) => ({
+            id: item._id || idx,
+            title: cleanHTML(item.title),
+            slug: item.slug || `job-${idx}`,
+            lastDate: formatDate(item.app_ends || item.dates?.last_date),
+            category: 'Jobs',
+            image: getImageUrl(item.featured_media, '/logo.webp')
+          }));
+          setExpiringJobs(formatted);
+          setExpiringCount(0); // 0 indicates showing latest jobs
+        } else {
+          setExpiringJobs([]);
+          setExpiringCount(0);
+        }
       }
     } catch (err) {
       console.error('Sidebar fetch error:', err);
+      try {
+        const fallbackRes = await fetch(`${API_BASE}/jobs?status=publish&limit=6`);
+        const fallbackData = await fallbackRes.json();
+        if (fallbackData.success && Array.isArray(fallbackData.data) && fallbackData.data.length > 0) {
+          const formatted = fallbackData.data.map((item, idx) => ({
+            id: item._id || idx,
+            title: cleanHTML(item.title),
+            slug: item.slug || `job-${idx}`,
+            lastDate: formatDate(item.app_ends || item.dates?.last_date),
+            category: 'Jobs',
+            image: getImageUrl(item.featured_media, '/logo.webp')
+          }));
+          setExpiringJobs(formatted);
+          setExpiringCount(0);
+        } else {
+          setExpiringJobs([]);
+        }
+      } catch (fbErr) {
+        setExpiringJobs([]);
+      }
+    } finally {
+      setSidebarLoading(false);
     }
   };
 
@@ -814,19 +810,22 @@ export default function SingleArticlePage({ initialData = null }) {
     try {
       const res = await fetch(`${API_BASE}/jobs?status=publish&limit=6`);
       const data = await res.json();
-      if (data.success && data.data && data.data.length > 0) {
+      if (data.success && Array.isArray(data.data) && data.data.length > 0) {
         const formatted = data.data.map((item, idx) => ({
           id: item._id || idx,
           title: cleanHTML(item.title),
           slug: item.slug || `job-${idx}`,
           lastDate: formatDate(item.app_ends || item.dates?.last_date),
           category: 'Jobs',
-          image: getImageUrl(item.featured_media, DEFAULT_EXPIRING_JOBS[idx % DEFAULT_EXPIRING_JOBS.length].image)
+          image: getImageUrl(item.featured_media, '/logo.webp')
         }));
         setRelatedJobs(formatted);
+      } else {
+        setRelatedJobs([]);
       }
     } catch (err) {
       console.error('Related jobs fetch error:', err);
+      setRelatedJobs([]);
     }
   };
 
@@ -1929,7 +1928,11 @@ export default function SingleArticlePage({ initialData = null }) {
               {sidebarTab === 'expiring' ? (
                 <div>
                   <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
-                    <span className="font-normal text-slate-600">28 Jobs are expiring in 30 Days</span>
+                    <span className="font-normal text-slate-600">
+                      {expiringCount > 0
+                        ? `${expiringCount} ${expiringCount === 1 ? 'Job is' : 'Jobs are'} expiring in 30 Days`
+                        : '0 Jobs expiring in 30 Days'}
+                    </span>
                     <div className="flex items-center space-x-1.5">
                       <Link href="/jobs-expiring-in-30-days" className="text-[#2563eb] font-medium hover:underline">View All</Link>
                       <span className="bg-[#2563eb] text-white text-[11px] font-semibold px-2 py-0.5 rounded flex items-center space-x-1">
@@ -1941,46 +1944,64 @@ export default function SingleArticlePage({ initialData = null }) {
                   <hr className="border-slate-200 mb-3.5" />
 
                   {/* Expiring Jobs List Rows */}
-                  <div className="space-y-3">
-                    {expiringJobs.slice(0, 6).map((job, idx) => (
-                      <div key={job.id || idx}>
-                        <Link
-                          href={`/job/${job.slug}`}
-                          className="flex items-start space-x-3 group block transition"
-                        >
-                          <div className="w-[95px] h-[65px] shrink-0 rounded border border-slate-200 overflow-hidden bg-slate-100">
-                            <img
-                              src={job.image}
-                              alt={job.title}
-                              loading="lazy"
-                              decoding="async"
-                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                              onError={(e) => {
-                                if (!e.currentTarget.dataset.fallback) {
-                                  e.currentTarget.dataset.fallback = 'true';
-                                  e.currentTarget.src = '/logo.webp';
-                                } else {
-                                  e.currentTarget.style.display = 'none';
-                                }
-                              }}
-                            />
+                  {sidebarLoading && expiringJobs.length === 0 ? (
+                    <div className="space-y-3 py-1">
+                      {[1, 2, 3, 4].map((n) => (
+                        <div key={n} className="flex items-start space-x-3 animate-pulse">
+                          <div className="w-[95px] h-[65px] rounded bg-slate-200 shrink-0" />
+                          <div className="flex-1 space-y-2 py-1">
+                            <div className="h-3 bg-slate-200 rounded w-full" />
+                            <div className="h-2.5 bg-slate-200 rounded w-2/3" />
                           </div>
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <h4 className="text-xs sm:text-sm font-normal text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-                              {job.title}
-                            </h4>
-                            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                              <span className="text-slate-500 font-normal">
-                                Last Date: <span className="text-slate-600">{job.lastDate}</span>
-                              </span>
-                              <span className="text-[#2563eb] font-medium">Jobs</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : expiringJobs.length > 0 ? (
+                    <div className="space-y-3">
+                      {expiringJobs.slice(0, 6).map((job, idx) => (
+                        <div key={job.id || idx}>
+                          <Link
+                            href={`/job/${job.slug}`}
+                            className="flex items-start space-x-3 group block transition"
+                          >
+                            <div className="w-[95px] h-[65px] shrink-0 rounded border border-slate-200 overflow-hidden bg-slate-100">
+                              <img
+                                src={job.image}
+                                alt={job.title}
+                                loading="lazy"
+                                decoding="async"
+                                className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                                onError={(e) => {
+                                  if (!e.currentTarget.dataset.fallback) {
+                                    e.currentTarget.dataset.fallback = 'true';
+                                    e.currentTarget.src = '/logo.webp';
+                                  } else {
+                                    e.currentTarget.style.display = 'none';
+                                  }
+                                }}
+                              />
                             </div>
-                          </div>
-                        </Link>
-                        {idx < 5 && <hr className="border-slate-200/80 my-3" />}
-                      </div>
-                    ))}
-                  </div>
+                            <div className="flex-1 min-w-0 space-y-1">
+                              <h4 className="text-xs sm:text-sm font-normal text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+                                {job.title}
+                              </h4>
+                              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                                <span className="text-slate-500 font-normal">
+                                  Last Date: <span className="text-slate-600">{job.lastDate}</span>
+                                </span>
+                                <span className="text-[#2563eb] font-medium">Jobs</span>
+                              </div>
+                            </div>
+                          </Link>
+                          {idx < Math.min(expiringJobs.length, 6) - 1 && <hr className="border-slate-200/80 my-3" />}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center text-xs text-slate-500">
+                      <p>No active jobs available at this moment.</p>
+                    </div>
+                  )}
                 </div>
               ) : (
                 /* MCQ Tab Content */

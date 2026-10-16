@@ -205,6 +205,25 @@ export default function CategoriesPage() {
             ),
           }));
           setExpiringJobs(mapped);
+        } else {
+          const fbRes = await fetch(`${API_BASE}/jobs?status=publish&limit=6`);
+          const fbJson = await fbRes.json();
+          if (fbJson.success && Array.isArray(fbJson.data) && fbJson.data.length > 0) {
+            const mapped = fbJson.data.map((item, idx) => ({
+              id: item._id || idx,
+              title: item.title,
+              slug: item.slug || `job-${idx}`,
+              lastDate: item.app_ends
+                ? new Date(item.app_ends).toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: '2-digit',
+                  })
+                : 'As Scheduled',
+              category: 'Jobs',
+              image: getImageUrl(item.featured_media, '/logo.webp'),
+            }));
+            setExpiringJobs(mapped);
+          }
         }
       } catch (e) {
         console.warn('Sidebar jobs fetch fallback:', e);
@@ -542,7 +561,9 @@ export default function CategoriesPage() {
                 <div>
                   <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
                     <span className="font-normal text-slate-600">
-                      25 Jobs are expiring in 30 Days
+                      {expiringJobs.length > 0
+                        ? `${expiringJobs.length} Jobs are expiring in 30 Days`
+                        : 'Latest Government Jobs'}
                     </span>
                     <div className="flex items-center space-x-1.5">
                       <Link
