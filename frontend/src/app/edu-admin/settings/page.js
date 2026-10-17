@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
   Settings,
@@ -62,6 +63,14 @@ import {
   Archive,
   FileArchive,
   ChevronDown,
+  MessageSquare,
+  Key,
+  EyeOff,
+  Send,
+  Smartphone,
+  Radio,
+  ArrowRight,
+  ShieldAlert,
 } from 'lucide-react';
 import { BACKEND_URL } from '@/utils/api';
 
@@ -119,9 +128,36 @@ export default function AdminSettingsPage() {
     allowIndexing: true,
     defaultTrialDays: 14,
     defaultMaxStaff: 5,
-    smtpHost: 'smtp.gmail.com',
-    smtpPort: '587',
+    smtp: {
+      host: 'smtp.gmail.com',
+      port: 587,
+      user: '',
+      pass: '',
+      secure: false,
+      fromName: 'Education Masters',
+      fromEmail: 'noreply@educationmasters.in',
+      isConfigured: false,
+      status: 'UNCONFIGURED',
+      lastTestedAt: null,
+      lastError: '',
+    },
+    whatsapp: {
+      isEnabled: true,
+      defaultCountryCode: '91',
+      maxWorkers: 3,
+      otpExpiryMinutes: 10,
+      otpTemplate: 'Your verification OTP for Education Masters is: *{{OTP}}*\n\nThis OTP is valid for {{MINUTES}} minutes. Please do not share this OTP with anyone.\n\nThank you,\nEducation Masters Team',
+      autoReconnect: true,
+    },
   });
+
+  const [showSmtpPassword, setShowSmtpPassword] = useState(false);
+  const [testingSmtp, setTestingSmtp] = useState(false);
+  const [smtpTestResult, setSmtpTestResult] = useState(null);
+  const [testEmailTo, setTestEmailTo] = useState('');
+  const [sendingTestEmail, setSendingTestEmail] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState(null);
+  const [savingSettings, setSavingSettings] = useState(false);
 
   // Backup Engine State
   const [manifest, setManifest] = useState(null);
@@ -190,10 +226,199 @@ export default function AdminSettingsPage() {
     fetchManifest();
   }, [fetchManifest]);
 
-  const handleSave = (e) => {
+  // Fetch live settings on mount
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/apis/v1/settings`, {
+        headers: getAuthHeaders(),
+      });
+      const json = await res.json();
+      if (res.ok && json.success && json.data) {
+        const d = json.data;
+        setFormData((prev) => ({
+          ...prev,
+          siteName: d.siteName ?? prev.siteName,
+          tagline: d.tagline ?? prev.tagline,
+          adminEmail: d.adminEmail ?? prev.adminEmail,
+          contactPhone: d.contactPhone ?? prev.contactPhone,
+          metaTitle: d.metaTitle ?? prev.metaTitle,
+          metaDescription: d.metaDescription ?? prev.metaDescription,
+          metaKeywords: d.metaKeywords ?? prev.metaKeywords,
+          allowIndexing: d.allowIndexing ?? prev.allowIndexing,
+          smtp: {
+            ...prev.smtp,
+            ...(d.smtp || {}),
+            pass: d.smtp?.pass || '',
+          },
+          whatsapp: {
+            ...prev.whatsapp,
+            ...(d.whatsapp || {}),
+          },
+        }));
+      }
+    } catch (err) {
+      console.error('Failed to load portal settings:', err);
+    }
+  }, [getAuthHeaders]);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
+
+  const handleSave = async (e) => {
     if (e) e.preventDefault();
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+    try {
+      setSavingSettings(true);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/settings`, {
+        method: 'PUT',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          siteName: formData.siteName,
+          tagline: formData.tagline,
+          adminEmail: formData.adminEmail,
+          contactPhone: formData.contactPhone,
+          metaTitle: formData.metaTitle,
+          metaDescription: formData.metaDescription,
+          metaKeywords: formData.metaKeywords,
+          allowIndexing: formData.allowIndexing,
+          smtp: {
+            host: formData.smtp?.host,
+            port: Number(formData.smtp?.port) || 587,
+            user: formData.smtp?.user,
+            pass: formData.smtp?.pass,
+            secure: Boolean(formData.smtp?.secure),
+            fromName: formData.smtp?.fromName,
+            fromEmail: formData.smtp?.fromEmail,
+          },
+          whatsapp: {
+            isEnabled: formData.whatsapp?.isEnabled,
+            defaultCountryCode: formData.whatsapp?.defaultCountryCode,
+            maxWorkers: Number(formData.whatsapp?.maxWorkers) || 3,
+            otpExpiryMinutes: Number(formData.whatsapp?.otpExpiryMinutes) || 10,
+            otpTemplate: formData.whatsapp?.otpTemplate,
+            autoReconnect: Boolean(formData.whatsapp?.autoReconnect),
+          },
+        }),
+      });
+      const json = await res.json();
+      if (res.ok && json.success) {
+        setSavedSuccess(true);
+        setStatusNotification({
+          type: 'success',
+          title: 'Settings Saved Successfully',
+          message: 'All portal configurations, WhatsApp pool and SMTP settings updated.',
+        });
+        setTimeout(() => setSavedSuccess(false), 3000);
+      } else {
+        setStatusNotification({
+          type: 'error',
+          title: 'Failed to Save Settings',
+          message: json.message || 'Error occurred while saving settings.',
+        });
+      }
+    } catch (err) {
+      setStatusNotification({
+        type: 'error',
+        title: 'Connection Error',
+        message: err.message || 'Could not connect to settings API.',
+      });
+    } finally {
+      setSavingSettings(false);
+      setTimeout(() => setStatusNotification(null), 5000);
+    }
+  };
+
+  const handleTestSmtp = async () => {
+    const hasCreds = Boolean(
+      formData.smtp?.user?.trim() && (formData.smtp?.pass?.trim() || formData.smtp?.hasPassword)
+    );
+    if (!hasCreds) {
+      setSmtpTestResult({
+        success: false,
+        message: 'Both SMTP Username/Email and App Password must be provided and stored to test connection.',
+      });
+      return;
+    }
+
+    try {
+      setTestingSmtp(true);
+      setSmtpTestResult(null);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/smtp/test`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          smtp: {
+            host: formData.smtp?.host,
+            port: Number(formData.smtp?.port) || 587,
+            user: formData.smtp?.user?.trim(),
+            pass: formData.smtp?.pass?.trim() || undefined,
+            secure: Boolean(formData.smtp?.secure),
+            fromName: formData.smtp?.fromName,
+            fromEmail: formData.smtp?.fromEmail,
+          },
+        }),
+      });
+      const json = await res.json();
+      setSmtpTestResult(json);
+      if (json.success && json.status === 'CONNECTED') {
+        setFormData((prev) => ({
+          ...prev,
+          smtp: {
+            ...prev.smtp,
+            status: 'CONNECTED',
+            isConfigured: true,
+            lastTestedAt: new Date().toISOString(),
+          },
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          smtp: {
+            ...prev.smtp,
+            status: json.status || 'ERROR',
+            isConfigured: false,
+          },
+        }));
+      }
+    } catch (err) {
+      setSmtpTestResult({ success: false, message: err.message || 'Connection test failed.' });
+    } finally {
+      setTestingSmtp(false);
+    }
+  };
+
+  const handleSendTestEmail = async (e) => {
+    if (e) e.preventDefault();
+    if (!testEmailTo) return;
+    try {
+      setSendingTestEmail(true);
+      setTestEmailResult(null);
+      const res = await fetch(`${BACKEND_URL}/apis/v1/smtp/send-test`, {
+        method: 'POST',
+        headers: getAuthHeaders(),
+        body: JSON.stringify({
+          to: testEmailTo,
+          customConfig: {
+            host: formData.smtp?.host,
+            port: Number(formData.smtp?.port) || 587,
+            user: formData.smtp?.user,
+            pass: formData.smtp?.pass,
+            secure: Boolean(formData.smtp?.secure),
+            fromName: formData.smtp?.fromName,
+            fromEmail: formData.smtp?.fromEmail,
+          },
+        }),
+      });
+      const json = await res.json();
+      setTestEmailResult(json);
+    } catch (err) {
+      setTestEmailResult({
+        success: false,
+        message: err.message || 'Failed to dispatch test email.',
+      });
+    } finally {
+      setSendingTestEmail(false);
+    }
   };
 
   // Trigger browser file download helper
@@ -552,6 +777,8 @@ export default function AdminSettingsPage() {
 
   const tabs = [
     { id: 'general', label: 'General Portal', icon: Globe },
+    { id: 'whatsapp', label: 'WhatsApp Pool', icon: MessageSquare },
+    { id: 'smtp', label: 'Global SMTP', icon: Mail },
     { id: 'seo', label: 'SEO Defaults', icon: Layers },
     { id: 'crm', label: 'CRM & Institutes', icon: Building2 },
     {
@@ -845,6 +1072,519 @@ export default function AdminSettingsPage() {
               </div>
             </div>
           </form>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB: WHATSAPP POOL SETTINGS */}
+        {/* ============================================================ */}
+        {activeTab === 'whatsapp' && (
+          <form onSubmit={handleSave} className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+              <div>
+                <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-bold">
+                    <MessageSquare size={15} />
+                  </div>
+                  <span>WhatsApp Connection Pooling & OTP Configuration</span>
+                </h3>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Powered by Baileys multi-device socket engine with round-robin worker pooling for high concurrency.
+                </p>
+              </div>
+
+              <Link
+                href="/edu-admin/whatsapp"
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold transition shadow-xs cursor-pointer shrink-0"
+              >
+                <span>Live QR &amp; Worker Sessions</span>
+                <ArrowRight size={13} />
+              </Link>
+            </div>
+
+            {/* Enable switch & Pool specs */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 block">WhatsApp Service Engine</label>
+                    <span className="text-[11px] text-slate-500">Enable or disable WhatsApp OTPs across the portal</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(formData.whatsapp?.isEnabled)}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          whatsapp: { ...formData.whatsapp, isEnabled: e.target.checked },
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                  <div>
+                    <label className="text-xs font-bold text-slate-800 block">Auto-Reconnect Pool</label>
+                    <span className="text-[11px] text-slate-500">Automatically reconnect sockets if disconnected</span>
+                  </div>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(formData.whatsapp?.autoReconnect)}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          whatsapp: { ...formData.whatsapp, autoReconnect: e.target.checked },
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Max Pool Workers</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={10}
+                    value={formData.whatsapp?.maxWorkers || 3}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        whatsapp: { ...formData.whatsapp, maxWorkers: parseInt(e.target.value) || 3 },
+                      })
+                    }
+                    className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg font-bold text-slate-800"
+                  />
+                  <p className="text-[10.5px] text-slate-400 mt-1">Simultaneous Baileys sessions</p>
+                </div>
+
+                <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">OTP Validity (Mins)</label>
+                  <input
+                    type="number"
+                    min={1}
+                    max={60}
+                    value={formData.whatsapp?.otpExpiryMinutes || 10}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        whatsapp: {
+                          ...formData.whatsapp,
+                          otpExpiryMinutes: parseInt(e.target.value) || 10,
+                        },
+                      })
+                    }
+                    className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg font-bold text-slate-800"
+                  />
+                  <p className="text-[10.5px] text-slate-400 mt-1">Default: 10 minutes</p>
+                </div>
+
+                <div className="col-span-2 p-3.5 rounded-xl bg-slate-50 border border-slate-200">
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Default Country Code</label>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-bold text-slate-500">+</span>
+                    <input
+                      type="text"
+                      value={formData.whatsapp?.defaultCountryCode || '91'}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          whatsapp: {
+                            ...formData.whatsapp,
+                            defaultCountryCode: e.target.value.replace(/\D/g, ''),
+                          },
+                        })
+                      }
+                      className="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg font-bold text-slate-800"
+                      placeholder="91"
+                    />
+                  </div>
+                  <p className="text-[10.5px] text-slate-400 mt-1">Used when recipient phone does not include international prefix</p>
+                </div>
+              </div>
+            </div>
+
+            {/* Template Editor with Live Chat Simulation */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-2">
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700">
+                    OTP Message Template
+                  </label>
+                  <span className="text-[10.5px] text-slate-400">Markdown formatting supported (*bold*, _italic_)</span>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <span className="text-[10.5px] font-bold text-slate-500">Insert Tag:</span>
+                  {[
+                    { tag: '{{OTP}}', desc: '6-digit OTP' },
+                    { tag: '{{MINUTES}}', desc: 'Expiry' },
+                    { tag: '{{PORTAL}}', desc: 'Site Name' },
+                  ].map((chip) => (
+                    <button
+                      key={chip.tag}
+                      type="button"
+                      onClick={() => {
+                        const current = formData.whatsapp?.otpTemplate || '';
+                        setFormData({
+                          ...formData,
+                          whatsapp: {
+                            ...formData.whatsapp,
+                            otpTemplate: `${current} ${chip.tag}`,
+                          },
+                        });
+                      }}
+                      className="px-2 py-0.5 rounded-md bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 text-[10.5px] font-bold transition cursor-pointer"
+                    >
+                      {chip.tag} <span className="text-[9.5px] text-emerald-500">({chip.desc})</span>
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  rows={6}
+                  value={formData.whatsapp?.otpTemplate || ''}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      whatsapp: { ...formData.whatsapp, otpTemplate: e.target.value },
+                    })
+                  }
+                  className="w-full text-xs font-mono p-3 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  placeholder="Your OTP is {{OTP}}..."
+                />
+              </div>
+
+              {/* WhatsApp Chat Preview Bubble */}
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-700">
+                  Real-time WhatsApp Message Preview
+                </label>
+                <div className="p-4 rounded-xl bg-[#e5ddd5] dark:bg-[#0b141a] border border-[#d1d7db] min-h-[170px] flex items-center justify-center">
+                  <div className="max-w-[280px] sm:max-w-[320px] bg-white dark:bg-[#202c33] rounded-lg p-3 shadow-md border-t-2 border-emerald-500 relative">
+                    <p className="text-xs text-slate-800 dark:text-slate-100 whitespace-pre-wrap leading-relaxed font-sans">
+                      {(formData.whatsapp?.otpTemplate || 'Your verification OTP is: {{OTP}}')
+                        .replace(/\{\{OTP\}\}/g, '489215')
+                        .replace(/\{\{MINUTES\}\}/g, String(formData.whatsapp?.otpExpiryMinutes || 10))
+                        .replace(/\{\{PORTAL\}\}/g, formData.siteName || 'Education Masters')}
+                    </p>
+                    <div className="flex items-center justify-end gap-1 mt-1 text-[10px] text-slate-400">
+                      <span>12:30 PM</span>
+                      <span className="text-blue-500 font-bold">✓✓</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+              <button
+                type="submit"
+                disabled={savingSettings}
+                className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm transition cursor-pointer disabled:opacity-60"
+              >
+                {savingSettings ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                <span>Save WhatsApp Settings</span>
+              </button>
+            </div>
+          </form>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB: GLOBAL SMTP SETTINGS */}
+        {/* ============================================================ */}
+        {activeTab === 'smtp' && (
+          <div className="space-y-6">
+            <form onSubmit={handleSave} className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                <div>
+                  <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                    <div className="w-7 h-7 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-bold">
+                      <Mail size={15} />
+                    </div>
+                    <span>Global SMTP Mail Server Configuration</span>
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Configure the transactional SMTP provider used across the entire application for OTPs, notifications, and alerts.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <span
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                      formData.smtp?.status === 'CONNECTED'
+                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        : formData.smtp?.status === 'ERROR'
+                        ? 'bg-rose-50 text-rose-700 border-rose-200'
+                        : 'bg-amber-50 text-amber-700 border-amber-200'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        formData.smtp?.status === 'CONNECTED'
+                          ? 'bg-emerald-500 animate-pulse'
+                          : formData.smtp?.status === 'ERROR'
+                          ? 'bg-rose-500'
+                          : 'bg-amber-500'
+                      }`}
+                    />
+                    <span>{formData.smtp?.status || 'UNCONFIGURED'}</span>
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={handleTestSmtp}
+                    disabled={testingSmtp}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 text-xs font-bold transition cursor-pointer disabled:opacity-60"
+                  >
+                    {testingSmtp ? <Loader2 size={13} className="animate-spin" /> : <RefreshCw size={13} />}
+                    <span>{testingSmtp ? 'Testing...' : 'Test Connection'}</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Live SMTP Diagnostic Feedback Banner */}
+              {smtpTestResult && (
+                <div
+                  className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs animate-in fade-in duration-150 ${
+                    smtpTestResult.success
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                      : 'bg-rose-50 border-rose-300 text-rose-950'
+                  }`}
+                >
+                  {smtpTestResult.success ? (
+                    <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1">
+                    <p className="font-bold">{smtpTestResult.message}</p>
+                    {smtpTestResult.data?.host && (
+                      <p className="text-[11px] opacity-80 mt-0.5 font-mono">
+                        Handshake verified at {smtpTestResult.data.host}:{smtpTestResult.data.port}
+                      </p>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setSmtpTestResult(null)}
+                    className="text-slate-400 hover:text-slate-700 p-0.5"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
+
+              {/* SMTP Credentials Form */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    SMTP Server Host
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.smtp?.host || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        smtp: { ...formData.smtp, host: e.target.value },
+                      })
+                    }
+                    placeholder="smtp.gmail.com or mail.educationmasters.in"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Port
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.smtp?.port || 587}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        smtp: { ...formData.smtp, port: parseInt(e.target.value) || 587 },
+                      })
+                    }
+                    placeholder="587"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    SMTP Username / Email
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.smtp?.user || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        smtp: { ...formData.smtp, user: e.target.value },
+                      })
+                    }
+                    placeholder="your-email@gmail.com"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    SMTP Password / App Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showSmtpPassword ? 'text' : 'password'}
+                      value={formData.smtp?.pass || ''}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          smtp: { ...formData.smtp, pass: e.target.value },
+                        })
+                      }
+                      placeholder="••••••••"
+                      className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 pr-9"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSmtpPassword(!showSmtpPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      {showSmtpPassword ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  <span className="text-[10px] text-slate-400 block mt-1">
+                    For Gmail, use a 16-character Google App Password.
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-2 pt-2 md:col-span-3">
+                  <input
+                    type="checkbox"
+                    id="secureSmtp"
+                    checked={Boolean(formData.smtp?.secure)}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        smtp: { ...formData.smtp, secure: e.target.checked },
+                      })
+                    }
+                    className="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500 cursor-pointer"
+                  />
+                  <label htmlFor="secureSmtp" className="text-xs font-semibold text-slate-700 cursor-pointer">
+                    Enable SSL/TLS Direct Encryption (typically checked for Port 465, leave unchecked for Port 587 STARTTLS)
+                  </label>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Sender "From" Display Name
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.smtp?.fromName || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        smtp: { ...formData.smtp, fromName: e.target.value },
+                      })
+                    }
+                    placeholder="Education Masters"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+
+                <div className="md:col-span-2">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Sender "From" Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.smtp?.fromEmail || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        smtp: { ...formData.smtp, fromEmail: e.target.value },
+                      })
+                    }
+                    placeholder="noreply@educationmasters.in"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end pt-3 border-t border-slate-100">
+                <button
+                  type="submit"
+                  disabled={savingSettings}
+                  className="inline-flex items-center gap-1.5 px-4 py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-sm transition cursor-pointer disabled:opacity-60"
+                >
+                  {savingSettings ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
+                  <span>Save SMTP Configuration</span>
+                </button>
+              </div>
+            </form>
+
+            {/* Diagnostic Email Dispatch Tester */}
+            <div className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
+              <h4 className="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Send size={13} className="text-blue-600" />
+                <span>Send Diagnostic Test Email</span>
+              </h4>
+              <p className="text-xs text-slate-500">
+                Verify end-to-end email delivery to your inbox before sending production alerts to users.
+              </p>
+
+              <form onSubmit={handleSendTestEmail} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
+                <input
+                  type="email"
+                  value={testEmailTo}
+                  onChange={(e) => setTestEmailTo(e.target.value)}
+                  placeholder="Enter your personal or test email (e.g. you@gmail.com)"
+                  className="flex-1 text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={sendingTestEmail || !testEmailTo}
+                  className="px-4 py-2.5 bg-slate-900 hover:bg-slate-800 active:scale-95 text-white text-xs font-bold rounded-lg flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                >
+                  {sendingTestEmail ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                  <span>{sendingTestEmail ? 'Sending...' : 'Send Test Mail'}</span>
+                </button>
+              </form>
+
+              {testEmailResult && (
+                <div
+                  className={`p-3 rounded-lg border text-xs flex items-center justify-between ${
+                    testEmailResult.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                      : 'bg-rose-50 border-rose-200 text-rose-800'
+                  }`}
+                >
+                  <span>{testEmailResult.message}</span>
+                  <button
+                    type="button"
+                    onClick={() => setTestEmailResult(null)}
+                    className="p-1 hover:opacity-75"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {/* ============================================================ */}

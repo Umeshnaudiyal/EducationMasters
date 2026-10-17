@@ -21,6 +21,18 @@ import {
   AnimatedChevronRight,
 } from '@/components/AnimatedIcons';
 
+const WhatsAppIcon = ({ size = 16, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={`shrink-0 ${className}`}
+  >
+    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 012.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 01-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.19.53-1.06 1.04-1.46 1.1-.38.07-.86.1-2.49-.58-1.97-.82-3.23-2.83-3.33-2.96-.1-.14-.8-1.07-.8-2.04s.51-1.45.69-1.65c.19-.19.41-.24.55-.24.14 0 .28 0 .4.01.13.01.3.05.47.45.17.41.6 1.45.65 1.55.05.1.09.22.02.35-.07.14-.11.22-.21.35-.11.12-.23.28-.33.37-.11.11-.23.23-.1.45.13.22.58.96 1.25 1.56.86.77 1.59 1.01 1.81 1.12.22.11.35.1.48-.05.14-.14.58-.68.74-.91.16-.23.32-.19.53-.11.22.08 1.39.66 1.63.78.24.12.4.18.46.28.06.1.06.6-.13 1.13z" />
+  </svg>
+);
+
 export default function AdminSidebar({
   userRole = 'admin',
   isCollapsed,
@@ -35,6 +47,7 @@ export default function AdminSidebar({
     posts: false,
     media: false,
     institutes: true,
+    questionBank: false,
     mcqs: false,
     users: false,
     settings: false,
@@ -64,8 +77,12 @@ export default function AdminSidebar({
     } else if (pathname.includes('/edu-admin/media')) {
       setOpenMenus((prev) => ({ ...prev, media: true }));
     } else if (
-      pathname.includes('/edu-admin/mcq') ||
       pathname.includes('/edu-admin/question') ||
+      pathname.includes('/edu-admin/questions')
+    ) {
+      setOpenMenus((prev) => ({ ...prev, questionBank: true }));
+    } else if (
+      pathname.includes('/edu-admin/mcq') ||
       pathname.includes('/edu-admin/exams') ||
       pathname.includes('/edu-admin/states') ||
       pathname.includes('/edu-admin/subjects') ||
@@ -155,8 +172,20 @@ export default function AdminSidebar({
       ],
     },
     {
+      id: 'questionBank',
+      label: 'Question Bank',
+      icon: AnimatedCheckSquare,
+      hasSubmenu: true,
+      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+      subItems: [
+        { label: 'All Questions', href: '/edu-admin/questions' },
+        { label: 'Question Reports', href: '/edu-admin/question-reports' },
+        { label: 'Add New Question', href: '/edu-admin/questions/create' },
+      ],
+    },
+    {
       id: 'mcqs',
-      label: "MCQ's",
+      label: "MCQ's Taxonomy",
       icon: AnimatedCheckSquare,
       hasSubmenu: true,
       roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
@@ -167,7 +196,6 @@ export default function AdminSidebar({
         { label: 'Subjects', href: '/edu-admin/subjects' },
         { label: 'Topics', href: '/edu-admin/topics' },
         { label: 'Topic Groups', href: '/edu-admin/topic-groups' },
-        { label: 'Questions', href: '/edu-admin/questions' },
       ],
     },
     {
@@ -205,6 +233,13 @@ export default function AdminSidebar({
       icon: AnimatedUser,
       href: '/edu-admin/profile',
       roles: ['editor', 'author', 'writer', 'institute', 'institute_admin', 'institute_employee'],
+    },
+    {
+      id: 'whatsapp',
+      label: 'WhatsApp',
+      icon: WhatsAppIcon,
+      href: '/edu-admin/whatsapp',
+      roles: ['superadmin', 'admin'],
     },
     {
       id: 'settings',

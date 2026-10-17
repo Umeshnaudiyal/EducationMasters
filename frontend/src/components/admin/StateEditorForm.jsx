@@ -19,13 +19,15 @@ import {
   Sparkles,
   ChevronDown,
   ChevronUp,
+  Briefcase,
+  ExternalLink,
 } from 'lucide-react';
 import JoditEditorWrapper from '@/components/admin/JoditEditorWrapper';
 import MediaLibraryModal from '@/components/admin/MediaLibraryModal';
 import { getImageUrl } from '@/utils/image';
 import { toast } from '@/context/ToastContext';
 import { getAuthToken } from '@/utils/auth';
-import { cleanHtmlContent } from '@/utils/cleanHtml';
+import { cleanHtmlContent, stripHtmlToPlainText } from '@/utils/cleanHtml';
 import { BACKEND_URL } from '@/utils/api';
 
 export default function StateEditorForm({ stateId = null, isEdit = false }) {
@@ -62,6 +64,14 @@ export default function StateEditorForm({ stateId = null, isEdit = false }) {
     description: '',
     description_hi: '',
     job_description: '',
+    jobs_title: '',
+    jobs_subtitle: '',
+    jobs_seo: {
+      allow_indexing: true,
+      meta_title: '',
+      meta_keywords: '',
+      meta_description: '',
+    },
     seo: {
       allow_indexing: true,
       meta_title: '',
@@ -126,6 +136,14 @@ export default function StateEditorForm({ stateId = null, isEdit = false }) {
             description: cleanHtmlContent(item.description || ''),
             description_hi: cleanHtmlContent(item.description_hi || ''),
             job_description: cleanHtmlContent(item.job_description || ''),
+            jobs_title: item.jobs_title || '',
+            jobs_subtitle: item.jobs_subtitle || '',
+            jobs_seo: {
+              allow_indexing: item.jobs_seo?.allow_indexing ?? true,
+              meta_title: item.jobs_seo?.meta_title || '',
+              meta_keywords: item.jobs_seo?.meta_keywords || '',
+              meta_description: item.jobs_seo?.meta_description || '',
+            },
             seo: {
               allow_indexing: item.seo?.allow_indexing ?? true,
               meta_title: item.seo?.meta_title || '',
@@ -173,7 +191,39 @@ export default function StateEditorForm({ stateId = null, isEdit = false }) {
     }
   };
 
-  // Handle SEO Changes
+  // Handle Jobs SEO Changes
+  const handleJobsSeoChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      jobs_seo: {
+        ...prev.jobs_seo,
+        [field]: value,
+      },
+    }));
+  };
+
+  // Auto-generate default Jobs SEO
+  const generateDefaultJobsSeo = () => {
+    const stateName = formData.name?.trim() || 'State';
+    const defTitle = `${stateName} Government Jobs 2026 - Latest Recruitment Notifications | Education Masters`;
+    const defDesc = `Explore latest ${stateName} government jobs, recruitment notifications, admit cards, and application forms in 2026. Apply online for ${stateName} PSC, Police, Teaching, and State Department vacancies.`;
+    const defKeywords = `${stateName} government jobs, ${stateName} sarkari naukri, ${stateName} recruitment 2026, ${stateName} vacancy, ${stateName} PSC jobs, ${stateName} police bharti`;
+
+    setFormData((prev) => ({
+      ...prev,
+      jobs_title: prev.jobs_title || `${stateName} Government Jobs 2026`,
+      jobs_subtitle: prev.jobs_subtitle || `Latest Notifications, Online Application Forms & Vacancies in ${stateName}`,
+      jobs_seo: {
+        allow_indexing: prev.jobs_seo?.allow_indexing ?? true,
+        meta_title: prev.jobs_seo?.meta_title || defTitle,
+        meta_description: prev.jobs_seo?.meta_description || defDesc,
+        meta_keywords: prev.jobs_seo?.meta_keywords || defKeywords,
+      },
+    }));
+    toast.success('Generated default Jobs Title & SEO suggestions!');
+  };
+
+  // Handle General State SEO Changes
   const handleSeoChange = (lang, field, value) => {
     setFormData((prev) => {
       if (lang === 'en') {
@@ -242,6 +292,25 @@ export default function StateEditorForm({ stateId = null, isEdit = false }) {
 
       const payload = {
         ...formData,
+        jobs_title: stripHtmlToPlainText(formData.jobs_title || ''),
+        jobs_subtitle: stripHtmlToPlainText(formData.jobs_subtitle || ''),
+        jobs_seo: {
+          allow_indexing: formData.jobs_seo?.allow_indexing ?? true,
+          meta_title: stripHtmlToPlainText(formData.jobs_seo?.meta_title || ''),
+          meta_keywords: stripHtmlToPlainText(formData.jobs_seo?.meta_keywords || ''),
+          meta_description: stripHtmlToPlainText(formData.jobs_seo?.meta_description || ''),
+        },
+        seo: {
+          allow_indexing: formData.seo?.allow_indexing ?? true,
+          meta_title: stripHtmlToPlainText(formData.seo?.meta_title || ''),
+          meta_keywords: stripHtmlToPlainText(formData.seo?.meta_keywords || ''),
+          meta_description: stripHtmlToPlainText(formData.seo?.meta_description || ''),
+        },
+        seo_hi: {
+          meta_title: stripHtmlToPlainText(formData.seo_hi?.meta_title || ''),
+          meta_keywords: stripHtmlToPlainText(formData.seo_hi?.meta_keywords || ''),
+          meta_description: stripHtmlToPlainText(formData.seo_hi?.meta_description || ''),
+        },
         description: cleanHtmlContent(formData.description),
         description_hi: cleanHtmlContent(formData.description_hi),
         job_description: cleanHtmlContent(formData.job_description),
@@ -321,7 +390,19 @@ export default function StateEditorForm({ stateId = null, isEdit = false }) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2.5">
+        <div className="flex items-center gap-2.5 flex-wrap">
+          {formData.slug && (
+            <a
+              href={`/state/${formData.slug}/jobs`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-3 py-2 text-xs font-semibold text-blue-700 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded-lg transition-colors flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              title="Open live state jobs page in new tab"
+            >
+              <ExternalLink size={13} />
+              <span>View Jobs Page</span>
+            </a>
+          )}
           <Link
             href="/edu-admin/states"
             className="px-3.5 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
@@ -686,7 +767,237 @@ export default function StateEditorForm({ stateId = null, isEdit = false }) {
         </div>
       </div>
 
-      {/* Main Grid: Card 3 - SEO Configuration */}
+      {/* Main Grid: Card 3 - State Jobs Page Customization & Jobs SEO (/state/{slug}/jobs) */}
+      <div className="bg-white rounded-xl border border-blue-200/90 shadow-xs overflow-hidden">
+        <div className="bg-gradient-to-r from-blue-50/80 via-indigo-50/50 to-slate-50 px-5 py-3.5 border-b border-blue-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center shadow-2xs shrink-0">
+              <Briefcase size={16} />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                  State Jobs Page Customization &amp; SEO
+                </h2>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-100 text-blue-800 border border-blue-200">
+                  /state/{formData.slug || 'state'}/jobs
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Configure the dynamic title, description, guidelines, and search engine metadata for this state's dedicated jobs portal.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2 self-start sm:self-auto">
+            <button
+              type="button"
+              onClick={generateDefaultJobsSeo}
+              className="px-3 py-1.5 bg-white hover:bg-blue-50 text-blue-700 border border-blue-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+              title="Automatically generate recommended jobs title and SEO tags"
+            >
+              <Sparkles size={13} className="text-blue-600" />
+              <span>Auto-Suggest SEO</span>
+            </button>
+            {formData.slug && (
+              <a
+                href={`/state/${formData.slug}/jobs`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 transition-colors shadow-2xs cursor-pointer"
+                title="Preview live jobs portal in new tab"
+              >
+                <ExternalLink size={13} />
+                <span>Preview Jobs Page</span>
+              </a>
+            )}
+          </div>
+        </div>
+
+        <div className="p-5 sm:p-6 space-y-6">
+          {/* Section 1: Page Banner Headings */}
+          <div className="space-y-4">
+            <div className="border-b border-slate-100 pb-2">
+              <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                <span>1. Jobs Page Banner Headings</span>
+              </h3>
+              <p className="text-[11px] text-slate-500">
+                These headlines appear prominently at the top of the state's jobs stream.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Jobs Page Main Title (H1 Headline)
+                </label>
+                <input
+                  type="text"
+                  value={formData.jobs_title || ''}
+                  onChange={(e) => handleInputChange('jobs_title', e.target.value)}
+                  placeholder={`e.g. ${formData.name || 'Uttarakhand'} Government Jobs 2026`}
+                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:border-[#2271b1] focus:outline-none"
+                />
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  Leave empty to auto-display: <strong className="text-slate-600">{formData.name || 'State'} Government Jobs 2026</strong>
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Jobs Page Subtitle / Short Tagline
+                </label>
+                <input
+                  type="text"
+                  value={formData.jobs_subtitle || ''}
+                  onChange={(e) => handleInputChange('jobs_subtitle', e.target.value)}
+                  placeholder={`e.g. Latest Recruitment Notifications, Online Application Forms & Vacancy Updates`}
+                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:border-[#2271b1] focus:outline-none"
+                />
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  Displayed beneath the banner heading to give candidates quick context.
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Jobs Page SEO Metadata */}
+          <div className="space-y-4 pt-2">
+            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <Globe size={13} className="text-[#2271b1]" />
+                  <span>2. Jobs Page Search Engine Optimization (SEO &amp; Meta Tags)</span>
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Custom meta title, meta description, and keywords specifically for Google search results on /state/{formData.slug || 'state'}/jobs.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="jobs_seo_indexing"
+                  checked={formData.jobs_seo?.allow_indexing ?? true}
+                  onChange={(e) => handleJobsSeoChange('allow_indexing', e.target.checked)}
+                  className="w-4 h-4 text-[#2271b1] rounded border-slate-300 focus:ring-[#2271b1] cursor-pointer"
+                />
+                <label htmlFor="jobs_seo_indexing" className="text-xs font-semibold text-slate-800 cursor-pointer select-none">
+                  Allow Indexing (index, follow)
+                </label>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-xs font-semibold text-slate-700">Jobs Meta Title</label>
+                  <span className={`text-[10px] font-mono font-semibold ${
+                    (formData.jobs_seo?.meta_title || '').length > 65
+                      ? 'text-amber-600'
+                      : 'text-slate-400'
+                  }`}>
+                    {(formData.jobs_seo?.meta_title || '').length} / 60 chars
+                  </span>
+                </div>
+                <input
+                  type="text"
+                  value={formData.jobs_seo?.meta_title || ''}
+                  onChange={(e) => handleJobsSeoChange('meta_title', e.target.value)}
+                  placeholder={`e.g. ${formData.name || 'Uttarakhand'} Government Jobs 2026 - Latest Notifications | Education Masters`}
+                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:border-[#2271b1] focus:outline-none"
+                />
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  Specifies the HTML &lt;title&gt; tag for the state jobs page.
+                </span>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 mb-1">
+                  Jobs Meta Keywords
+                </label>
+                <input
+                  type="text"
+                  value={formData.jobs_seo?.meta_keywords || ''}
+                  onChange={(e) => handleJobsSeoChange('meta_keywords', e.target.value)}
+                  placeholder={`e.g. ${formData.name || 'uttarakhand'} jobs, sarkari naukri, recruitment 2026, psc vacancy`}
+                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:border-[#2271b1] focus:outline-none"
+                />
+                <span className="text-[10px] text-slate-400 block mt-1">
+                  Comma-separated keywords for search engine indexing.
+                </span>
+              </div>
+            </div>
+
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <label className="text-xs font-semibold text-slate-700">Jobs Meta Description</label>
+                <span className={`text-[10px] font-mono font-semibold ${
+                  (formData.jobs_seo?.meta_description || '').length > 165
+                    ? 'text-amber-600'
+                    : 'text-slate-400'
+                }`}>
+                  {(formData.jobs_seo?.meta_description || '').length} / 160 chars
+                </span>
+              </div>
+              <textarea
+                rows={2}
+                value={formData.jobs_seo?.meta_description || ''}
+                onChange={(e) => handleJobsSeoChange('meta_description', e.target.value)}
+                placeholder={`e.g. Explore latest ${formData.name || 'Uttarakhand'} government jobs, recruitment notifications, admit cards, and application forms in 2026. Apply online for PSC, Police, Teaching, and State Department vacancies.`}
+                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-lg focus:border-[#2271b1] focus:outline-none resize-none"
+              />
+              <span className="text-[10px] text-slate-400 block mt-1">
+                A compelling summary snippet (150-160 characters) displayed in search engine results.
+              </span>
+            </div>
+
+            {/* Live Google Search Result Preview Card */}
+            <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-xl space-y-1 text-left">
+              <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                <span className="w-4 h-4 rounded-full bg-blue-100 text-blue-700 text-[10px] font-bold flex items-center justify-center">
+                  G
+                </span>
+                <span className="truncate">https://educationmasters.in &gt; state &gt; {formData.slug || 'state'} &gt; jobs</span>
+              </div>
+              <div className="text-sm font-semibold text-[#1a0dab] hover:underline cursor-pointer leading-snug line-clamp-1">
+                {formData.jobs_seo?.meta_title || formData.jobs_title || `${formData.name || 'State'} Government Jobs 2026 - Latest Recruitment Notifications | Education Masters`}
+              </div>
+              <p className="text-xs text-[#4d5156] line-clamp-2 leading-relaxed">
+                {formData.jobs_seo?.meta_description ||
+                  (formData.job_description ? stripHtmlToPlainText(formData.job_description).slice(0, 160) : '') ||
+                  `Explore latest ${formData.name || 'State'} government jobs, recruitment notifications, admit cards, and application forms in 2026. Apply online for ${formData.name || 'State'} PSC, Police, Teaching, and State Department vacancies.`}
+              </p>
+            </div>
+          </div>
+
+          {/* Section 3: State Job Description & Employment Guidelines */}
+          <div className="space-y-2 pt-2">
+            <div className="border-b border-slate-100 pb-2 flex items-center justify-between">
+              <div>
+                <h3 className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                  <FileText size={13} className="text-[#2271b1]" />
+                  <span>3. State Job Description &amp; Employment Guidelines (Rich Content)</span>
+                </h3>
+                <p className="text-[11px] text-slate-500">
+                  Comprehensive recruitment overview, eligibility criteria, and department details displayed on /state/{formData.slug || 'state'}/jobs.
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full">
+              <JoditEditorWrapper
+                value={formData.job_description}
+                onChange={(val) => handleInputChange('job_description', val)}
+                height={400}
+                placeholder={`Write recruitment details regarding ${formData.name || 'State'} Govt Jobs, State PSC, Police Recruitment, Teacher eligibility, and employment updates...`}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Main Grid: Card 4 - General State Profile SEO (English & Hindi) */}
       <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden">
         <div
           onClick={() => setIsSeoOpen(!isSeoOpen)}

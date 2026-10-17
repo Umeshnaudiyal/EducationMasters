@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useSession } from 'next-auth/react';
 import { useAuthModal } from '@/context/AuthModalContext';
 import { useToast } from '@/context/ToastContext';
@@ -45,6 +45,9 @@ export default function EduAiAnalysisModal({
   stopwatchSeconds = 0,
   taxonomy = {},
   onJumpToQuestion,
+  initialTab = 'subjects',
+  lastAnalyzedAnswers = null,
+  onAnalysisComplete,
 }) {
   const { data: session } = useSession();
   const { openAuthModal } = useAuthModal();
@@ -53,7 +56,38 @@ export default function EduAiAnalysisModal({
   const [analyzing, setAnalyzing] = useState(true);
   const [analysisProgress, setAnalysisProgress] = useState(0);
   const [analysisStep, setAnalysisStep] = useState(0);
-  const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' | 'insights' | 'matrix'
+  const [activeTab, setActiveTab] = useState('subjects'); // 'subjects' | 'insights' | 'matrix' | 'mistakes'
+  const [mistakeViewMode, setMistakeViewMode] = useState('session'); // 'session' | 'allTime'
+  const [allTimeMistakes, setAllTimeMistakes] = useState([]);
+
+  // Fingerprint of current user answers
+  const answersFingerprint = useMemo(() => {
+    return JSON.stringify(userAnswers || {});
+  }, [userAnswers]);
+
+  // Sync initial tab when modal opens
+  useEffect(() => {
+    if (isOpen && initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [isOpen, initialTab]);
+
+  // Load all-time stored wrong questions whenever modal opens or tab changes
+  useEffect(() => {
+    if (isOpen) {
+      try {
+        const stored = localStorage.getItem('attempted_wrong_mcqs');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          setAllTimeMistakes(Object.values(parsed).reverse());
+        } else {
+          setAllTimeMistakes([]);
+        }
+      } catch (e) {
+        setAllTimeMistakes([]);
+      }
+    }
+  }, [isOpen, activeTab]);
 
   // Registered users and 1-question minimum protection
   useEffect(() => {
@@ -97,16 +131,42 @@ export default function EduAiAnalysisModal({
     { label: 'Generating personalized recommendations...', icon: Brain },
   ];
 
-  // Snappy 2.2s Animated Scanner on open
+  // Decoupled refs to prevent parent re-renders (like stopwatch ticking every second) from resetting scanning
+  const onAnalysisCompleteRef = useRef(onAnalysisComplete);
+  useEffect(() => {
+    onAnalysisCompleteRef.current = onAnalysisComplete;
+  }, [onAnalysisComplete]);
+
+  const lastAnalyzedAnswersRef = useRef(lastAnalyzedAnswers);
+  useEffect(() => {
+    lastAnalyzedAnswersRef.current = lastAnalyzedAnswers;
+  }, [lastAnalyzedAnswers]);
+
+  const answersFingerprintRef = useRef(answersFingerprint);
+  useEffect(() => {
+    answersFingerprintRef.current = answersFingerprint;
+  }, [answersFingerprint]);
+
+  // Snappy 1.8s Animated Scanner on open - ONLY triggers when isOpen changes
   useEffect(() => {
     if (!isOpen) return;
+
+    const currentFp = answersFingerprintRef.current;
+
+    // Check if answers have not changed since last analysis
+    if (lastAnalyzedAnswersRef.current && lastAnalyzedAnswersRef.current === currentFp) {
+      // User hasn't changed answers - directly show results without re-analyzing!
+      setAnalyzing(false);
+      setAnalysisProgress(100);
+      return;
+    }
 
     setAnalyzing(true);
     setAnalysisProgress(0);
     setAnalysisStep(0);
 
     const startTime = Date.now();
-    const duration = 2200; // 2.2 seconds (snappy & high-tech)
+    const duration = 1800; // 1.8 seconds
 
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
@@ -121,6 +181,8 @@ export default function EduAiAnalysisModal({
       if (elapsed >= duration) {
         clearInterval(interval);
         setAnalyzing(false);
+        lastAnalyzedAnswersRef.current = currentFp;
+        onAnalysisCompleteRef.current?.(currentFp);
       }
     }, 40);
 
@@ -133,6 +195,7 @@ export default function EduAiAnalysisModal({
     let attempted = 0;
     let correct = 0;
     let incorrect = 0;
+    const incorrectQuestions = [];
 
     // Subject Grouping
     const subjectMap = {};
@@ -160,8 +223,24 @@ export default function EduAiAnalysisModal({
 
       if (isAttempted) {
         attempted += 1;
-        if (isCorrect) correct += 1;
-        else incorrect += 1;
+        if (isCorrect) {
+          correct += 1;
+        } else {
+          incorrect += 1;
+          incorrectQuestions.push({
+            questionNum: idx + 1,
+            idx,
+            id: qId,
+            content: q.content || q.question_text || q.question || 'Question content',
+            options: q.options || [],
+            userSelected,
+            userSelectedText: q.options?.[userSelected]?.text || '',
+            correctIndex,
+            correctText: q.options?.[correctIndex]?.text || '',
+            ans_info: q.ans_info || q.explanation || '',
+            subject: q.subject_name || q.subject?.name || taxonomy?.name || 'General Studies',
+          });
+        }
       }
 
       // Determine subject name dynamically
@@ -311,6 +390,7 @@ export default function EduAiAnalysisModal({
       subjectsList,
       strongestSubject,
       weakestSubject,
+      incorrectQuestions,
     };
   }, [questions, userAnswers, stopwatchSeconds, taxonomy]);
 
@@ -325,7 +405,8 @@ export default function EduAiAnalysisModal({
     setAnalysisProgress(0);
     setAnalysisStep(0);
     const startTime = Date.now();
-    const duration = 2000;
+    const duration = 1800;
+    const currentFp = answersFingerprintRef.current;
     const interval = setInterval(() => {
       const elapsed = Date.now() - startTime;
       const progress = Math.min(Math.round((elapsed / duration) * 100), 100);
@@ -338,8 +419,44 @@ export default function EduAiAnalysisModal({
       if (elapsed >= duration) {
         clearInterval(interval);
         setAnalyzing(false);
+        lastAnalyzedAnswersRef.current = currentFp;
+        onAnalysisCompleteRef.current?.(currentFp);
       }
     }, 40);
+  };
+
+  const handleRemoveSingleMistake = (qId) => {
+    try {
+      const storageKey = 'attempted_wrong_mcqs';
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        delete parsed[String(qId)];
+        localStorage.setItem(storageKey, JSON.stringify(parsed));
+        setAllTimeMistakes(Object.values(parsed).reverse());
+        showToast({
+          type: 'info',
+          title: 'Removed from Mistake Bank',
+          message: 'Question removed from your mistake bank.',
+          duration: 3000,
+        });
+      }
+    } catch (e) {}
+  };
+
+  const handleClearAllMistakes = () => {
+    if (typeof window !== 'undefined' && window.confirm('Clear all stored wrong questions from your Mistake Bank?')) {
+      try {
+        localStorage.removeItem('attempted_wrong_mcqs');
+        setAllTimeMistakes([]);
+        showToast({
+          type: 'info',
+          title: 'Mistake Bank Cleared',
+          message: 'All stored wrong questions have been cleared.',
+          duration: 3000,
+        });
+      } catch (e) {}
+    }
   };
 
   if (!isOpen) return null;
@@ -531,7 +648,11 @@ export default function EduAiAnalysisModal({
                   <CheckCircle2 size={18} className="text-emerald-500" />
                 </div>
 
-                <div className="bg-white border border-slate-200 rounded-xl p-2.5 shadow-2xs flex items-center justify-between">
+                <div
+                  onClick={() => setActiveTab('mistakes')}
+                  className="bg-white border border-slate-200 hover:border-rose-300 hover:bg-rose-50/50 rounded-xl p-2.5 shadow-2xs flex items-center justify-between cursor-pointer transition"
+                  title="Click to review mistakes"
+                >
                   <div>
                     <span className="text-[10px] text-slate-500 font-semibold block">Mistakes</span>
                     <span className="text-lg font-black text-rose-600">{analyticsData.incorrect}</span>
@@ -558,11 +679,11 @@ export default function EduAiAnalysisModal({
               </div>
 
               {/* Segmented Tab Bar */}
-              <div className="flex p-1 bg-slate-200/70 rounded-xl max-w-sm mx-auto">
+              <div className="flex p-1 bg-slate-200/70 rounded-xl max-w-lg mx-auto">
                 <button
                   type="button"
                   onClick={() => setActiveTab('subjects')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  className={`flex-1 py-1.5 px-1.5 sm:px-2 rounded-lg font-bold text-[11px] sm:text-xs transition-all flex items-center justify-center gap-1 cursor-pointer ${
                     activeTab === 'subjects'
                       ? 'bg-white text-blue-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -575,7 +696,7 @@ export default function EduAiAnalysisModal({
                 <button
                   type="button"
                   onClick={() => setActiveTab('insights')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  className={`flex-1 py-1.5 px-1.5 sm:px-2 rounded-lg font-bold text-[11px] sm:text-xs transition-all flex items-center justify-center gap-1 cursor-pointer ${
                     activeTab === 'insights'
                       ? 'bg-white text-blue-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -588,7 +709,7 @@ export default function EduAiAnalysisModal({
                 <button
                   type="button"
                   onClick={() => setActiveTab('matrix')}
-                  className={`flex-1 py-1.5 px-2 rounded-lg font-bold text-xs transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                  className={`flex-1 py-1.5 px-1.5 sm:px-2 rounded-lg font-bold text-[11px] sm:text-xs transition-all flex items-center justify-center gap-1 cursor-pointer ${
                     activeTab === 'matrix'
                       ? 'bg-white text-blue-600 shadow-xs'
                       : 'text-slate-600 hover:text-slate-900'
@@ -596,6 +717,19 @@ export default function EduAiAnalysisModal({
                 >
                   <Layers size={13} />
                   <span>Questions</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setActiveTab('mistakes')}
+                  className={`flex-1 py-1.5 px-1.5 sm:px-2 rounded-lg font-bold text-[11px] sm:text-xs transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                    activeTab === 'mistakes'
+                      ? 'bg-rose-600 text-white shadow-xs'
+                      : 'text-rose-700 hover:bg-rose-100/60'
+                  }`}
+                >
+                  <XCircle size={13} />
+                  <span>Mistakes ({analyticsData.incorrect})</span>
                 </button>
               </div>
 
@@ -761,6 +895,238 @@ export default function EduAiAnalysisModal({
                       );
                     })}
                   </div>
+                </div>
+              )}
+
+              {/* ================================================================= */}
+              {/* TAB 4: ATTEMPTED WRONG QUESTIONS (MISTAKES REVIEW & REMEDIATION)  */}
+              {/* ================================================================= */}
+              {activeTab === 'mistakes' && (
+                <div className="bg-white rounded-2xl border border-slate-200 p-3.5 sm:p-4 space-y-3.5 shadow-2xs">
+                  {/* Header */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-100">
+                    <div>
+                      <div className="flex items-center gap-1.5 text-xs sm:text-sm font-bold text-slate-900">
+                        <XCircle size={15} className="text-rose-600 shrink-0" />
+                        <span>Mistake Review & Weak Concepts</span>
+                      </div>
+                      <p className="text-[10px] sm:text-xs text-slate-500 font-normal">
+                        Review questions answered incorrectly. Conceptual explanations & corrections are stored for continuous revision.
+                      </p>
+                    </div>
+
+                    {/* Filter Pill: Session Mistakes vs All-Time Stored Bank */}
+                    <div className="flex items-center gap-1 p-0.5 bg-slate-100 rounded-lg text-[10px] font-bold shrink-0 self-start sm:self-auto">
+                      <button
+                        type="button"
+                        onClick={() => setMistakeViewMode('session')}
+                        className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                          mistakeViewMode === 'session'
+                            ? 'bg-white text-rose-700 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        This Session ({analyticsData.incorrectQuestions.length})
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMistakeViewMode('allTime')}
+                        className={`px-2.5 py-1 rounded-md transition cursor-pointer ${
+                          mistakeViewMode === 'allTime'
+                            ? 'bg-white text-rose-700 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        Saved Bank ({allTimeMistakes.length})
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Content: Session Mistakes */}
+                  {mistakeViewMode === 'session' && (
+                    <>
+                      {analyticsData.incorrectQuestions.length === 0 ? (
+                        <div className="py-8 px-4 text-center rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
+                          <CheckCircle2 size={32} className="text-emerald-500 mx-auto" />
+                          <h4 className="text-xs sm:text-sm font-bold text-emerald-950">
+                            No Mistakes in Current Attempt!
+                          </h4>
+                          <p className="text-[11px] sm:text-xs text-emerald-800/80 max-w-sm mx-auto">
+                            You haven&apos;t answered any question incorrectly yet in this session. Keep up the high accuracy!
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                          {analyticsData.incorrectQuestions.map((item, mIdx) => (
+                            <div
+                              key={item.id || mIdx}
+                              className="p-3 sm:p-3.5 rounded-xl border border-rose-200 bg-rose-50/30 space-y-2 transition hover:border-rose-300"
+                            >
+                              {/* Question Header */}
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="w-5 h-5 rounded-md bg-rose-600 text-white font-mono font-bold text-[10px] flex items-center justify-center shrink-0">
+                                    Q{item.questionNum}
+                                  </span>
+                                  <span className="text-[10px] font-bold text-slate-600 px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
+                                    {item.subject}
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    onClose();
+                                    if (onJumpToQuestion) onJumpToQuestion(item.idx);
+                                  }}
+                                  className="text-[10px] sm:text-[11px] font-bold text-blue-600 hover:text-blue-800 hover:underline flex items-center gap-1 shrink-0 cursor-pointer"
+                                >
+                                  <span>Jump to Question</span>
+                                  <ArrowRight size={11} />
+                                </button>
+                              </div>
+
+                              {/* Question text */}
+                              <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-snug">
+                                {item.content}
+                              </p>
+
+                              {/* Comparison Row */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-1">
+                                <div className="p-2 rounded-lg bg-rose-100/70 border border-rose-300 text-[11px] text-rose-950 flex items-start gap-1.5">
+                                  <XCircle size={14} className="text-rose-600 shrink-0 mt-0.5" />
+                                  <div>
+                                    <span className="font-bold block text-[10px] text-rose-800 uppercase tracking-wider">
+                                      Your Answer:
+                                    </span>
+                                    <span className="font-medium">
+                                      {item.userSelected >= 0
+                                        ? `Option ${String.fromCharCode(65 + item.userSelected)}: ${item.userSelectedText}`
+                                        : 'None'}
+                                    </span>
+                                  </div>
+                                </div>
+
+                                <div className="p-2 rounded-lg bg-emerald-100/70 border border-emerald-300 text-[11px] text-emerald-950 flex items-start gap-1.5">
+                                  <CheckCircle2 size={14} className="text-emerald-600 shrink-0 mt-0.5" />
+                                  <div>
+                                    <span className="font-bold block text-[10px] text-emerald-800 uppercase tracking-wider">
+                                      Correct Answer:
+                                    </span>
+                                    <span className="font-medium">
+                                      {item.correctIndex >= 0
+                                        ? `Option ${String.fromCharCode(65 + item.correctIndex)}: ${item.correctText}`
+                                        : 'Option A'}
+                                    </span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Explanation */}
+                              {item.ans_info && (
+                                <div className="p-2 rounded-lg bg-white border border-slate-200 text-[11px] text-slate-700 leading-relaxed font-normal">
+                                  <strong className="text-slate-900 font-semibold">Explanation: </strong>
+                                  {item.ans_info}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+
+                  {/* Content: All-Time Stored Bank */}
+                  {mistakeViewMode === 'allTime' && (
+                    <>
+                      {allTimeMistakes.length === 0 ? (
+                        <div className="py-8 px-4 text-center rounded-xl bg-slate-50 border border-slate-200 space-y-2">
+                          <Layers size={32} className="text-slate-400 mx-auto" />
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-800">
+                            Your Mistake Bank is Empty
+                          </h4>
+                          <p className="text-[11px] sm:text-xs text-slate-500 max-w-sm mx-auto">
+                            Any questions you answer incorrectly during practice are automatically saved here for revision.
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="space-y-3 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar">
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 px-1">
+                            <span>{allTimeMistakes.length} saved wrong questions in browser</span>
+                            <button
+                              type="button"
+                              onClick={handleClearAllMistakes}
+                              className="text-rose-600 hover:text-rose-800 font-semibold hover:underline cursor-pointer"
+                            >
+                              Clear All
+                            </button>
+                          </div>
+
+                          {allTimeMistakes.map((item, bIdx) => (
+                            <div
+                              key={item.id || bIdx}
+                              className="p-3 sm:p-3.5 rounded-xl border border-slate-200 bg-white space-y-2 hover:border-slate-300 transition"
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-[10px] font-bold text-slate-600 px-1.5 py-0.5 rounded-md bg-slate-100 border border-slate-200">
+                                    {item.subject || 'General Studies'}
+                                  </span>
+                                  {item.isResolved && (
+                                    <span className="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-md">
+                                      ✓ Mastered Later
+                                    </span>
+                                  )}
+                                  <span className="text-[9px] text-slate-400">
+                                    {item.attemptedAt ? new Date(item.attemptedAt).toLocaleDateString() : ''}
+                                  </span>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => handleRemoveSingleMistake(item.id)}
+                                  className="text-[10px] text-slate-400 hover:text-rose-600 font-semibold cursor-pointer"
+                                  title="Remove from Mistake Bank"
+                                >
+                                  Remove
+                                </button>
+                              </div>
+
+                              <p className="text-xs sm:text-sm font-semibold text-slate-900 leading-snug">
+                                {item.questionText}
+                              </p>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                                <div className="p-1.5 rounded-md bg-rose-50 border border-rose-200 text-[11px] text-rose-950">
+                                  <span className="font-bold block text-[9px] text-rose-700 uppercase">You chose:</span>
+                                  <span>
+                                    {item.selectedOptionIndex >= 0
+                                      ? `Option ${String.fromCharCode(65 + item.selectedOptionIndex)}: ${item.selectedOptionText}`
+                                      : 'Option A'}
+                                  </span>
+                                </div>
+                                <div className="p-1.5 rounded-md bg-emerald-50 border border-emerald-200 text-[11px] text-emerald-950">
+                                  <span className="font-bold block text-[9px] text-emerald-700 uppercase">Correct:</span>
+                                  <span>
+                                    {item.correctOptionIndex >= 0
+                                      ? `Option ${String.fromCharCode(65 + item.correctOptionIndex)}: ${item.correctOptionText}`
+                                      : 'Option B'}
+                                  </span>
+                                </div>
+                              </div>
+
+                              {item.ansInfo && (
+                                <p className="text-[11px] text-slate-600 leading-relaxed pt-1 border-t border-slate-100">
+                                  <strong className="text-slate-800 font-semibold">Solution: </strong>
+                                  {item.ansInfo}
+                                </p>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </div>
               )}
 

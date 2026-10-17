@@ -10,7 +10,9 @@ import {
   ShieldAlert,
   Loader2,
   AlertCircle,
+  Mail,
 } from 'lucide-react';
+import { WhatsAppHeaderDrawer, SmtpHeaderDrawer } from './HeaderIntegrationModals';
 import {
   AnimatedLogIn,
   AnimatedLogOut,
@@ -29,11 +31,26 @@ import {
 } from '@/components/AnimatedIcons';
 import { BACKEND_URL } from '@/utils/api';
 
+const WhatsAppIcon = ({ size = 16, className = '' }) => (
+  <svg
+    width={size}
+    height={size}
+    viewBox="0 0 24 24"
+    fill="currentColor"
+    className={`shrink-0 ${className}`}
+  >
+    <path d="M12.04 2c-5.46 0-9.91 4.45-9.91 9.91 0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21 5.46 0 9.91-4.45 9.91-9.91 0-2.65-1.03-5.14-2.9-7.01A9.816 9.816 0 0012.04 2m.01 1.67c2.2 0 4.26.86 5.82 2.42a8.225 8.225 0 012.41 5.83c0 4.54-3.7 8.24-8.24 8.24-1.48 0-2.93-.4-4.2-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.196 8.196 0 01-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24m4.52 11.66c-.19.53-1.06 1.04-1.46 1.1-.38.07-.86.1-2.49-.58-1.97-.82-3.23-2.83-3.33-2.96-.1-.14-.8-1.07-.8-2.04s.51-1.45.69-1.65c.19-.19.41-.24.55-.24.14 0 .28 0 .4.01.13.01.3.05.47.45.17.41.6 1.45.65 1.55.05.1.09.22.02.35-.07.14-.11.22-.21.35-.11.12-.23.28-.33.37-.11.11-.23.23-.1.45.13.22.58.96 1.25 1.56.86.77 1.59 1.01 1.81 1.12.22.11.35.1.48-.05.14-.14.58-.68.74-.91.16-.23.32-.19.53-.11.22.08 1.39.66 1.63.78.24.12.4.18.46.28.06.1.06.6-.13 1.13z" />
+  </svg>
+);
+
 export default function AdminHeader({ session, onToggleMobileSidebar }) {
   const [showNewMenu, setShowNewMenu] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [showSessionDetail, setShowSessionDetail] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [isWhatsAppDrawerOpen, setIsWhatsAppDrawerOpen] = useState(false);
+  const [isSmtpDrawerOpen, setIsSmtpDrawerOpen] = useState(false);
+  const [globalStatus, setGlobalStatus] = useState(null);
 
   const profileRef = useRef(null);
   const profileTimerRef = useRef(null);
@@ -146,6 +163,25 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
     const interval = setInterval(fetchSessionInfo, 60000); // refresh every minute
     return () => clearInterval(interval);
   }, [fetchSessionInfo]);
+
+  // Fetch live global status for WhatsApp and SMTP
+  const fetchGlobalStatus = useCallback(async () => {
+    try {
+      const res = await fetch(`${BACKEND_URL}/apis/v1/settings/status`);
+      const json = await res.json();
+      if (json.success && json.data) {
+        setGlobalStatus(json.data);
+      }
+    } catch (err) {
+      // ignore
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchGlobalStatus();
+    const interval = setInterval(fetchGlobalStatus, 15000);
+    return () => clearInterval(interval);
+  }, [fetchGlobalStatus]);
 
   // Live Countdown to 12:00 AM Midnight with Active Day Checking
   const [countdownText, setCountdownText] = useState('');
@@ -405,9 +441,208 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
         </Link>
       </div>
 
-      {/* Middle/Right: Session Time Widget (Interactive Animated Badges with Hover Tooltips) */}
-      <div className="flex items-center gap-1.5 sm:gap-3">
-        {/* Session Time Status Badges Capsule */}
+      {/* Middle/Right: WhatsApp & SMTP Integration Badges (At Left of Login Time) + Session Time Widget */}
+      <div className="flex items-center gap-1.5 sm:gap-2.5">
+        {/* 1. WhatsApp Connection Pool Button with Smooth Hover Slide-in Status Animation */}
+        <div className="relative group">
+          <button
+            type="button"
+            onClick={() => {
+              setIsWhatsAppDrawerOpen((prev) => !prev);
+              setIsSmtpDrawerOpen(false);
+              setShowProfileMenu(false);
+            }}
+            className="relative flex items-center h-7 sm:h-8 px-2 sm:px-2.5 rounded-xl bg-[#2c3338]/90 hover:bg-[#343b42] border border-[#3c434a] hover:border-emerald-500/50 text-emerald-400 transition-all duration-300 ease-out shadow-2xs cursor-pointer group"
+          >
+            {/* WhatsApp Green Brand Icon */}
+            <div className="shrink-0 flex items-center justify-center text-[#25D366]">
+              <WhatsAppIcon size={16} />
+            </div>
+
+            {/* Smooth Slide Animation on Hover: Expands to show WhatsApp Connected / Disconnected Status */}
+            <div className="max-w-0 group-hover:max-w-[220px] opacity-0 group-hover:opacity-100 overflow-hidden transition-all duration-300 ease-out whitespace-nowrap flex items-center gap-1.5 pl-0 group-hover:pl-2">
+              <span
+                className={`text-[11px] font-bold tracking-tight flex items-center gap-1.5 ${globalStatus?.whatsapp?.status === 'CONNECTED'
+                    ? 'text-emerald-400'
+                    : globalStatus?.whatsapp?.status === 'SCAN_QR'
+                      ? 'text-amber-400'
+                      : 'text-rose-400'
+                  }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${globalStatus?.whatsapp?.status === 'CONNECTED'
+                      ? 'bg-emerald-400 animate-pulse'
+                      : globalStatus?.whatsapp?.status === 'SCAN_QR'
+                        ? 'bg-amber-400 animate-ping'
+                        : 'bg-rose-400'
+                    }`}
+                />
+                <span>
+                  {globalStatus?.whatsapp?.status === 'CONNECTED'
+                    ? (globalStatus.whatsapp.activeName || 'WhatsApp Connected')
+                    : globalStatus?.whatsapp?.status === 'SCAN_QR'
+                      ? 'Scan QR Required'
+                      : 'WhatsApp Disconnected'}
+                </span>
+              </span>
+            </div>
+
+            {/* Top-Right Status Dot Indicator */}
+            <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none">
+              {globalStatus?.whatsapp?.status === 'CONNECTED' ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border-2 border-[#1d2327]"></span>
+                </>
+              ) : globalStatus?.whatsapp?.status === 'SCAN_QR' ? (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-amber-500 border-2 border-[#1d2327]"></span>
+                </>
+              ) : (
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border-2 border-[#1d2327]"></span>
+              )}
+            </span>
+          </button>
+
+          {/* Floating Animated Tooltip on Hover */}
+          <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transform group-hover:translate-y-0 translate-y-1 transition-all duration-200">
+            <div className="bg-[#23282d] border border-emerald-500/30 rounded-xl shadow-2xl p-2.5 w-52 text-[11px] text-slate-200 backdrop-blur-md">
+              <div className="flex items-center justify-between border-b border-slate-700/60 pb-1 mb-1.5">
+                <span className="text-emerald-400 font-bold flex items-center gap-1.5">
+                  <WhatsAppIcon size={12} className="text-[#25D366]" />
+                  <span>WhatsApp Status</span>
+                </span>
+                <span
+                  className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${globalStatus?.whatsapp?.status === 'CONNECTED'
+                      ? 'bg-emerald-500/20 text-emerald-400'
+                      : globalStatus?.whatsapp?.status === 'SCAN_QR'
+                        ? 'bg-amber-500/20 text-amber-300'
+                        : 'bg-rose-500/20 text-rose-400'
+                    }`}
+                >
+                  {globalStatus?.whatsapp?.status || 'DISCONNECTED'}
+                </span>
+              </div>
+              <p className="text-white font-semibold">
+                {globalStatus?.whatsapp?.status === 'CONNECTED'
+                  ? `Connected: ${globalStatus.whatsapp.activePhone
+                    ? `+${String(globalStatus.whatsapp.activePhone).trim().replace(/^\++/, '')}`
+                    : 'Active Line'
+                  }`
+                  : globalStatus?.whatsapp?.status === 'SCAN_QR'
+                    ? 'Scan QR with phone to connect'
+                    : 'Offline / Disconnected'}
+              </p>
+              <p className="text-[10px] text-slate-400 mt-1">
+                Click to open live QR &amp; worker pool
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Global SMTP Mail Button (Dark styled matching header) */}
+        {(() => {
+          const isSmtpConnected = Boolean(
+            globalStatus?.smtp?.status === 'CONNECTED' &&
+            globalStatus?.smtp?.user &&
+            globalStatus?.smtp?.hasCredentials
+          );
+          const hasCredentials = Boolean(
+            globalStatus?.smtp?.user && globalStatus?.smtp?.hasCredentials
+          );
+
+          return (
+            <div className="relative group">
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSmtpDrawerOpen((prev) => !prev);
+                  setIsWhatsAppDrawerOpen(false);
+                  setShowProfileMenu(false);
+                }}
+                title={`Global SMTP: ${isSmtpConnected ? 'Connected' : hasCredentials ? 'Offline / Untested' : 'Unconfigured'
+                  }`}
+                className="relative flex items-center h-7 sm:h-8 px-2 sm:px-2 rounded-xl bg-[#2c3338]/90 hover:bg-[#343b42] border border-[#3c434a] hover:border-cyan-500/50 text-cyan-400 transition-all duration-300 ease-out shadow-2xs cursor-pointer group"
+              >
+                <div className="shrink-0 flex items-center justify-center">
+                  <Mail className="w-4 h-4 text-cyan-400" />
+                </div>
+
+                {/* Smooth Slide Animation on Hover for SMTP */}
+                <div className="max-w-0 group-hover:max-w-[170px] opacity-0 group-hover:opacity-100 overflow-hidden transition-all duration-300 ease-out whitespace-nowrap flex items-center gap-1.5 pl-0 group-hover:pl-2">
+                  <span
+                    className={`text-[11px] font-bold tracking-tight flex items-center gap-1.5 ${isSmtpConnected ? 'text-emerald-400' : 'text-rose-400'
+                      }`}
+                  >
+                    <span
+                      className={`w-1.5 h-1.5 rounded-full ${isSmtpConnected ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'
+                        }`}
+                    />
+                    <span>
+                      {isSmtpConnected
+                        ? 'SMTP Connected'
+                        : !hasCredentials
+                          ? 'SMTP Unconfigured'
+                          : 'SMTP Offline'}
+                    </span>
+                  </span>
+                </div>
+
+                {/* Top-Right Status Dot Indicator */}
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 pointer-events-none">
+                  {isSmtpConnected ? (
+                    <>
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500 border-2 border-[#1d2327]"></span>
+                    </>
+                  ) : (
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-rose-500 border-2 border-[#1d2327]"></span>
+                  )}
+                </span>
+              </button>
+
+              {/* Floating Animated Tooltip on Hover */}
+              <div className="absolute top-full left-1/2 -translate-x-1/2 pt-2 z-50 opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto transform group-hover:translate-y-0 translate-y-1 transition-all duration-200">
+                <div className="bg-[#23282d] border border-cyan-500/30 rounded-xl shadow-2xl p-2.5 w-52 text-[11px] text-slate-200 backdrop-blur-md">
+                  <div className="flex items-center justify-between border-b border-slate-700/60 pb-1 mb-1.5">
+                    <span className="text-cyan-400 font-bold flex items-center gap-1.5">
+                      <Mail size={12} />
+                      <span>SMTP Server</span>
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.2 rounded-full text-[9px] font-bold ${isSmtpConnected
+                          ? 'bg-emerald-500/20 text-emerald-400'
+                          : 'bg-rose-500/20 text-rose-400'
+                        }`}
+                    >
+                      {isSmtpConnected
+                        ? 'CONNECTED'
+                        : !hasCredentials
+                          ? 'UNCONFIGURED'
+                          : 'OFFLINE'}
+                    </span>
+                  </div>
+                  <p className="text-white font-semibold">
+                    {isSmtpConnected
+                      ? `Active: ${globalStatus.smtp.user}`
+                      : !hasCredentials
+                        ? 'Email & password not stored'
+                        : 'Transactional mail server offline'}
+                  </p>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    {isSmtpConnected ? 'Click to view SMTP settings' : 'Click to configure credentials'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
+        {/* Divider before Login Time */}
+        <span className="text-slate-600 font-light text-xs hidden sm:inline">|</span>
+
+        {/* Session Time Status Badges Capsule (Login time) */}
         <div className="flex items-center gap-1 sm:gap-1.5 p-0.5 bg-[#2c3338]/60 border border-[#3c434a] rounded-lg shadow-2xs">
           {/* 1. Login "In" Badge with Smooth Hover Animation & Tooltip */}
           <div className="group relative flex items-center">
@@ -501,6 +736,8 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
             </div>
           </div>
         </div>
+
+
 
         {/* User Profile Menu */}
         <div
@@ -650,6 +887,18 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
           )}
         </div>
       </div>
+
+      {/* Slide Animation Drawers for WhatsApp and SMTP */}
+      <WhatsAppHeaderDrawer
+        isOpen={isWhatsAppDrawerOpen}
+        onClose={() => setIsWhatsAppDrawerOpen(false)}
+        onRefreshStatus={fetchGlobalStatus}
+      />
+      <SmtpHeaderDrawer
+        isOpen={isSmtpDrawerOpen}
+        onClose={() => setIsSmtpDrawerOpen(false)}
+        onRefreshStatus={fetchGlobalStatus}
+      />
     </header>
   );
 }

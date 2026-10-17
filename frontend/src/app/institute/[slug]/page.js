@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, use, useRef } from 'react';
+import React, { useState, useEffect, use, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -46,7 +46,10 @@ import {
   ArrowRight,
   Award,
   MessageSquarePlus,
-  Video
+  Video,
+  ChevronLeft,
+  ChevronRight,
+  Images
 } from 'lucide-react';
 import { getImageUrl } from '@/utils/image';
 import { getApiBaseUrl } from '@/utils/api';
@@ -657,13 +660,186 @@ const VideoTourSection = ({ videoUrl, instituteName = "Institute" }) => {
   );
 };
 
+/* ================= INSTITUTE HIGHLIGHTS / GALLERY MOSAIC ================= */
+const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOpenLightbox }) => {
+  if (!images || images.length === 0) return null;
+
+  // Single Image Mode: generous 100% cover display without any text overlay
+  if (images.length === 1) {
+    return (
+      <div
+        onClick={() => onOpenLightbox(0)}
+        className="w-full border border-gray-200 rounded-xl overflow-hidden shadow-xs relative hidden sm:block h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px] bg-slate-900 group cursor-pointer"
+      >
+        <img
+          src={images[0]}
+          className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500"
+          alt={instituteName}
+        />
+      </div>
+    );
+  }
+
+  // 2 Images Split
+  if (images.length === 2) {
+    return (
+      <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+        <div className="grid grid-cols-2 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
+          {images.map((src, idx) => (
+            <div
+              key={idx}
+              onClick={() => onOpenLightbox(idx)}
+              className="relative h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+            >
+              <img
+                src={src}
+                alt={`${instituteName} photo ${idx + 1}`}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // 3 Images Layout
+  if (images.length === 3) {
+    return (
+      <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
+          <div
+            onClick={() => onOpenLightbox(0)}
+            className="relative md:col-span-7 h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+          >
+            <img
+              src={images[0]}
+              alt={`${instituteName} main`}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          </div>
+          <div className="md:col-span-5 grid grid-rows-2 gap-2 md:gap-2.5 h-full">
+            {images.slice(1, 3).map((src, idx) => (
+              <div
+                key={idx}
+                onClick={() => onOpenLightbox(idx + 1)}
+                className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+              >
+                <img
+                  src={src}
+                  alt={`${instituteName} photo ${idx + 2}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 4 Images Layout
+  if (images.length === 4) {
+    return (
+      <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+        <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
+          <div
+            onClick={() => onOpenLightbox(0)}
+            className="relative md:col-span-7 h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+          >
+            <img
+              src={images[0]}
+              alt={`${instituteName} main`}
+              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+            />
+          </div>
+          <div className="md:col-span-5 grid grid-cols-2 grid-rows-2 gap-2 md:gap-2.5 h-full">
+            <div
+              onClick={() => onOpenLightbox(1)}
+              className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+            >
+              <img src={images[1]} alt={`${instituteName} photo 2`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            </div>
+            <div
+              onClick={() => onOpenLightbox(2)}
+              className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+            >
+              <img src={images[2]} alt={`${instituteName} photo 3`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            </div>
+            <div
+              onClick={() => onOpenLightbox(3)}
+              className="relative col-span-2 rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+            >
+              <img src={images[3]} alt={`${instituteName} photo 4`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 5 or More Images (Matches Dev Bhoomi / College Highlights mosaic reference)
+  return (
+    <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
+        {/* Left Column: 1 Large Featured Image (~58% width) */}
+        <div
+          onClick={() => onOpenLightbox(0)}
+          className="relative md:col-span-7 h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+        >
+          <img
+            src={images[0]}
+            alt={`${instituteName} main`}
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          />
+        </div>
+
+        {/* Right Column: 4 images in 2x2 grid (~42% width) */}
+        <div className="md:col-span-5 grid grid-cols-2 grid-rows-2 gap-2 md:gap-2.5 h-full">
+          {images.slice(1, 5).map((imgUrl, idx) => {
+            const actualIdx = idx + 1;
+            const isFourthSlot = idx === 3;
+            const total = images.length;
+            const remaining = total - 5;
+            const showOverlay = isFourthSlot && total > 5;
+
+            return (
+              <div
+                key={actualIdx}
+                onClick={() => onOpenLightbox(actualIdx)}
+                className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+              >
+                <img
+                  src={imgUrl}
+                  alt={`${instituteName} photo ${actualIdx + 1}`}
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                {showOverlay && (
+                  <div className="absolute inset-0 bg-slate-950/65 group-hover:bg-slate-950/75 backdrop-blur-[1px] transition-colors flex flex-col items-center justify-center text-white select-none">
+                    <span className="text-2xl sm:text-3xl lg:text-4xl font-extrabold tracking-tight drop-shadow-md">
+                      +{remaining + 1}
+                    </span>
+                    <span className="text-xs sm:text-sm font-semibold tracking-wide drop-shadow-md mt-0.5">
+                      Images
+                    </span>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 /* ================= CAMPUS PHOTO GALLERY ================= */
-const CampusGallerySection = ({ media = [], instituteName = "Institute" }) => {
+const CampusGallerySection = ({ media = [], instituteName = "Institute", onOpenPhoto }) => {
   const [activePhoto, setActivePhoto] = useState(null);
   if (!media || !media.length) return null;
 
   const photos = media
-    .map((m) => (typeof m === 'object' && m ? (m.file || m.url || m.path) : m))
+    .map((m) => (typeof m === 'object' && m ? (m.file || m.url || m.path || m.img_url) : m))
     .filter(Boolean);
   if (!photos.length) return null;
 
@@ -679,7 +855,13 @@ const CampusGallerySection = ({ media = [], instituteName = "Institute" }) => {
             return (
               <div
                 key={idx}
-                onClick={() => setActivePhoto(src)}
+                onClick={() => {
+                  if (onOpenPhoto) {
+                    onOpenPhoto(src);
+                  } else {
+                    setActivePhoto(src);
+                  }
+                }}
                 className="group relative h-28 sm:h-32 rounded-lg overflow-hidden border border-gray-200 bg-slate-100 cursor-pointer shadow-2xs hover:shadow-md transition-all"
               >
                 <img
@@ -696,8 +878,8 @@ const CampusGallerySection = ({ media = [], instituteName = "Institute" }) => {
           })}
         </div>
 
-        {/* Lightbox Modal */}
-        {activePhoto && (
+        {/* Fallback Lightbox Modal if onOpenPhoto not provided */}
+        {!onOpenPhoto && activePhoto && (
           <div
             className="fixed inset-0 z-[9999] bg-slate-950/80 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-150"
             onClick={() => setActivePhoto(null)}
@@ -724,6 +906,120 @@ const CampusGallerySection = ({ media = [], instituteName = "Institute" }) => {
         )}
       </div>
     </Section>
+  );
+};
+
+/* ================= FULL-SCREEN GALLERY LIGHTBOX MODAL ================= */
+const GalleryLightboxModal = ({
+  isOpen,
+  images = [],
+  currentIndex = 0,
+  instituteName = "Institute",
+  onClose,
+  onNext,
+  onPrev,
+  onSelectIndex
+}) => {
+  if (!isOpen || !images.length) return null;
+  const currentSrc = images[currentIndex] || images[0];
+
+  return (
+    <div
+      className="fixed inset-0 z-[99999] bg-slate-950/95 backdrop-blur-md flex flex-col justify-between p-3 sm:p-5 select-none animate-in fade-in duration-200"
+      onClick={onClose}
+    >
+      {/* Top Header Bar */}
+      <div
+        className="w-full max-w-6xl mx-auto flex items-center justify-between text-white py-2 px-1 z-10"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center gap-3">
+          <span className="text-xs uppercase tracking-wider font-semibold text-blue-400 bg-blue-950/60 px-2.5 py-1 rounded-sm border border-blue-400/30 hidden sm:inline-block">
+            Campus Photos
+          </span>
+          <span className="text-sm md:text-base font-semibold text-white/90 line-clamp-1 max-w-[240px] sm:max-w-md">
+            {instituteName}
+          </span>
+        </div>
+
+        <div className="flex items-center gap-4">
+          <span className="text-xs sm:text-sm font-medium text-slate-300 bg-white/10 px-3 py-1 rounded-full">
+            {currentIndex + 1} / {images.length}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors cursor-pointer"
+            aria-label="Close photo viewer"
+          >
+            <X size={20} />
+          </button>
+        </div>
+      </div>
+
+      {/* Main View Area with Prev / Next */}
+      <div
+        className="relative flex-1 w-full max-w-6xl mx-auto flex items-center justify-center my-2 overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
+      >
+        {images.length > 1 && (
+          <button
+            type="button"
+            onClick={onPrev}
+            className="absolute left-2 sm:left-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center shadow-2xl border border-white/20 transition-all hover:scale-105 cursor-pointer"
+            aria-label="Previous photo"
+          >
+            <ChevronLeft size={26} />
+          </button>
+        )}
+
+        <img
+          src={currentSrc}
+          alt={`${instituteName} photo ${currentIndex + 1}`}
+          className="max-w-full max-h-[70vh] sm:max-h-[76vh] object-contain rounded-xl shadow-2xl transition-all duration-300"
+        />
+
+        {images.length > 1 && (
+          <button
+            type="button"
+            onClick={onNext}
+            className="absolute right-2 sm:right-4 z-20 w-11 h-11 sm:w-12 sm:h-12 rounded-full bg-slate-900/80 hover:bg-slate-900 text-white flex items-center justify-center shadow-2xl border border-white/20 transition-all hover:scale-105 cursor-pointer"
+            aria-label="Next photo"
+          >
+            <ChevronRight size={26} />
+          </button>
+        )}
+      </div>
+
+      {/* Bottom Thumbnail Strip (if multiple images) */}
+      {images.length > 1 && (
+        <div
+          className="w-full max-w-4xl mx-auto pt-2 pb-1 overflow-x-auto no-scrollbar z-10 flex items-center justify-center gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="flex gap-2 px-2 max-w-full overflow-x-auto py-1">
+            {images.map((src, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => onSelectIndex(idx)}
+                className={`relative w-14 h-11 sm:w-16 sm:h-12 rounded-lg overflow-hidden flex-shrink-0 border-2 transition-all cursor-pointer ${
+                  currentIndex === idx
+                    ? "border-blue-500 scale-105 shadow-md shadow-blue-500/30 opacity-100"
+                    : "border-transparent opacity-50 hover:opacity-80"
+                }`}
+              >
+                <img
+                  src={src}
+                  alt={`Thumbnail ${idx + 1}`}
+                  className="w-full h-full object-cover"
+                />
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
   );
 };
 
@@ -938,6 +1234,9 @@ export default function SingleInstitutePage({ params }) {
   const [showThankYou, setShowThankYou] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Lightbox state for multi-image photo gallery
+  const [lightboxIndex, setLightboxIndex] = useState(null);
+
   // Real review state - persists per institute
   const [reviewsList, setReviewsList] = useState([]);
   const [newReview, setNewReview] = useState({ name: "", rating: 5, comment: "" });
@@ -1109,6 +1408,56 @@ export default function SingleInstitutePage({ params }) {
       ))}
     </div>
   );
+
+  // Collect all gallery images: cover first, followed by media items, fallback to logo
+  const allGalleryImages = useMemo(() => {
+    if (!institute) return [];
+    const list = [];
+    if (institute.cover) {
+      const src = getImageUrl(institute.cover);
+      if (src && !list.includes(src)) list.push(src);
+    }
+    if (Array.isArray(institute.media) && institute.media.length > 0) {
+      institute.media.forEach((item) => {
+        const raw = typeof item === 'object' && item ? (item.file || item.url || item.path || item.img_url) : item;
+        if (raw) {
+          const src = getImageUrl(raw);
+          if (src && !list.includes(src)) list.push(src);
+        }
+      });
+    }
+    if (list.length === 0 && institute.logo) {
+      const src = getImageUrl(institute.logo);
+      if (src && !list.includes(src)) list.push(src);
+    }
+    return list;
+  }, [institute]);
+
+  const openLightbox = (index = 0) => setLightboxIndex(index);
+  const closeLightbox = () => setLightboxIndex(null);
+  const nextLightbox = (e) => {
+    e?.stopPropagation?.();
+    setLightboxIndex((prev) => (prev + 1) % (allGalleryImages.length || 1));
+  };
+  const prevLightbox = (e) => {
+    e?.stopPropagation?.();
+    setLightboxIndex((prev) => (prev - 1 + (allGalleryImages.length || 1)) % (allGalleryImages.length || 1));
+  };
+
+  useEffect(() => {
+    if (lightboxIndex === null || !allGalleryImages.length) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') closeLightbox();
+      if (e.key === 'ArrowRight') nextLightbox();
+      if (e.key === 'ArrowLeft') prevLightbox();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [lightboxIndex, allGalleryImages.length]);
 
   if (loading) {
     return (
@@ -1332,13 +1681,24 @@ export default function SingleInstitutePage({ params }) {
           {/* ================= MOBILE HOSTEL-STYLE HEADER ================= */}
           <section className="lg:hidden mb-5 pb-4 border-b border-gray-200">
             <div className="space-y-3">
-              <div className="relative h-[200px] rounded-md overflow-hidden bg-gray-200">
-                {imageSrc ? (
-                  <img
-                    src={imageSrc}
-                    alt={institute.name}
-                    className="w-full h-full object-cover"
-                  />
+              <div
+                onClick={() => (allGalleryImages.length > 0 ? openLightbox(0) : null)}
+                className="relative h-[280px] sm:h-[340px] rounded-xl overflow-hidden bg-slate-900 shadow-xs cursor-pointer group"
+              >
+                {(allGalleryImages.length > 0 || imageSrc) ? (
+                  <>
+                    <img
+                      src={allGalleryImages[0] || imageSrc}
+                      alt={institute.name}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    {allGalleryImages.length > 1 && (
+                      <div className="absolute bottom-3 right-3 bg-slate-950/80 backdrop-blur-md px-3 py-1.5 rounded-full text-xs font-semibold text-white shadow-lg border border-white/20 flex items-center gap-1.5 pointer-events-none">
+                        <Camera size={13} className="text-blue-300" />
+                        <span>1 / {allGalleryImages.length} Photos</span>
+                      </div>
+                    )}
+                  </>
                 ) : (
                   <div className="w-full h-full flex flex-col items-center justify-center bg-slate-800 text-white">
                     <School className="w-12 h-12 text-blue-400 mb-2" />
@@ -1433,29 +1793,34 @@ export default function SingleInstitutePage({ params }) {
             </div>
           </section>
 
+          {/* ================= MULTI-IMAGE FULL-WIDTH MOSAIC (> 1 images) ================= */}
+          {allGalleryImages.length > 1 && (
+            <div className="mb-6 hidden sm:block w-full">
+              <InstituteGalleryMosaic
+                images={allGalleryImages}
+                instituteName={institute.name}
+                onOpenLightbox={openLightbox}
+              />
+            </div>
+          )}
+
           {/* ================= MAIN 2-COLUMN GRID ================= */}
           <div className="grid grid-cols-1 lg:grid-cols-[67%_33%] gap-6 mt-2">
 
             {/* ================= LEFT COLUMN ================= */}
             <div className="space-y-4">
 
-              {/* Photo Banner (Desktop) */}
-              {imageSrc && (
-                <div className="border border-gray-200 rounded-md overflow-hidden shadow-xs relative hidden sm:block h-[240px] md:h-[340px] bg-slate-900">
+              {/* Single Image Banner (Left Column so Quick Information card comes to the top on right) */}
+              {allGalleryImages.length === 1 && (
+                <div
+                  onClick={() => openLightbox(0)}
+                  className="w-full border border-gray-200 rounded-xl overflow-hidden shadow-xs relative hidden sm:block h-[340px] sm:h-[400px] md:h-[440px] lg:h-[460px] bg-slate-900 group cursor-pointer"
+                >
                   <img
-                    src={imageSrc}
-                    className="w-full h-full object-cover opacity-95"
+                    src={allGalleryImages[0]}
+                    className="w-full h-full object-cover group-hover:scale-[1.01] transition-transform duration-500"
                     alt={institute.name}
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-                  <div className="absolute bottom-3 left-4 text-white">
-                    <p className="text-xs uppercase tracking-wider font-semibold text-blue-300">
-                      Verified Campus &amp; Classroom Infrastructure
-                    </p>
-                    <h3 className="text-lg font-bold text-white drop-shadow-xs">
-                      {institute.name}
-                    </h3>
-                  </div>
                 </div>
               )}
 
@@ -1478,11 +1843,6 @@ export default function SingleInstitutePage({ params }) {
                 <FacilitiesList items={institute.facilities} instituteName={institute.name} />
               </Section>
 
-              {/* SERVICES */}
-              <Section title="Services">
-                <ServicesList items={institute.services} instituteName={institute.name} />
-              </Section>
-
               {/* PAYMENT MODES */}
               <Section title="Payment Modes">
                 <PaymentModesList modes={institute.paymentMode} instituteName={institute.name} />
@@ -1495,7 +1855,14 @@ export default function SingleInstitutePage({ params }) {
 
               {/* CAMPUS PHOTO GALLERY */}
               {Boolean(institute.media && institute.media.length > 0) && (
-                <CampusGallerySection media={institute.media} instituteName={institute.name} />
+                <CampusGallerySection
+                  media={institute.media}
+                  instituteName={institute.name}
+                  onOpenPhoto={(photoSrc) => {
+                    const idx = allGalleryImages.indexOf(photoSrc);
+                    openLightbox(idx >= 0 ? idx : 0);
+                  }}
+                />
               )}
 
               {/* LOCATION & DIRECTIONS */}
@@ -1932,6 +2299,18 @@ export default function SingleInstitutePage({ params }) {
           </div>
         </div>
       )}
+
+      {/* Full-Screen Photo Gallery Lightbox Modal */}
+      <GalleryLightboxModal
+        isOpen={lightboxIndex !== null}
+        images={allGalleryImages}
+        currentIndex={lightboxIndex || 0}
+        instituteName={institute.name}
+        onClose={closeLightbox}
+        onNext={nextLightbox}
+        onPrev={prevLightbox}
+        onSelectIndex={(idx) => setLightboxIndex(idx)}
+      />
     </>
   );
 }

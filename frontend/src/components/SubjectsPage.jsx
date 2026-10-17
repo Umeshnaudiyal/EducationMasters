@@ -19,9 +19,23 @@ import {
   Flame,
   CheckCircle2,
   Share2,
-  ExternalLink
+  ExternalLink,
+  Laptop,
+  Atom,
+  Languages,
+  Filter
 } from 'lucide-react';
 import { API_BASE } from '@/utils/api';
+
+// Curated Category Tabs for MCQ Subjects
+const CATEGORY_TABS = [
+  { id: 'all', label: 'All Subjects', shortLabel: 'All', icon: Layers },
+  { id: 'gk', label: 'General Studies', shortLabel: 'General Studies', icon: Sparkles },
+  { id: 'tech', label: 'Computer & IT', shortLabel: 'Computer & IT', icon: Laptop },
+  { id: 'science', label: 'Science & Maths', shortLabel: 'Science & Maths', icon: Atom },
+  { id: 'languages', label: 'Languages', shortLabel: 'Languages', icon: Languages },
+  { id: 'teaching', label: 'Teaching Exams', shortLabel: 'Teaching', icon: GraduationCap },
+];
 
 // Theme colors and icons for subjects without custom images
 const SUBJECT_STYLING = {
@@ -44,6 +58,9 @@ const SUBJECT_STYLING = {
   'invention': { gradient: 'from-violet-600 to-purple-800', badge: 'Science', icon: '🔬', subText: 'Discoveries & MCQs' },
   'javascript': { gradient: 'from-amber-500 to-yellow-600', badge: 'Programming', icon: '⚡', subText: 'MCQ Questions' },
   'mathematics': { gradient: 'from-blue-600 to-indigo-800', badge: 'Aptitude', icon: '🔢', subText: 'Formulae & MCQs' },
+  'ms-excel': { gradient: 'from-emerald-700 to-green-900', badge: 'MS Office', icon: '📊', subText: 'Excel MCQ Questions' },
+  'ms-powerpoint': { gradient: 'from-orange-600 to-red-800', badge: 'MS Office', icon: '📑', subText: 'PowerPoint MCQs' },
+  'ms-word': { gradient: 'from-blue-700 to-blue-900', badge: 'MS Office', icon: '📝', subText: 'Word MCQ Questions' },
   'mysql': { gradient: 'from-blue-700 to-cyan-900', badge: 'Database', icon: '🗄️', subText: 'SQL MCQ Questions' },
   'php': { gradient: 'from-indigo-600 to-purple-800', badge: 'Backend', icon: '🐘', subText: 'MCQ Questions' },
   'polity': { gradient: 'from-blue-800 to-slate-900', badge: 'Constitution', icon: '⚖️', subText: 'Indian Polity MCQs' },
@@ -52,60 +69,17 @@ const SUBJECT_STYLING = {
   'science': { gradient: 'from-emerald-600 to-teal-800', badge: 'General Science', icon: '🧪', subText: 'Physics, Chem & Bio' },
   'sports-gk': { gradient: 'from-emerald-500 to-green-700', badge: 'Sports', icon: '🏆', subText: 'Games & Tournaments' },
   'statewise-first-cm-list': { gradient: 'from-orange-600 to-red-700', badge: 'Indian States', icon: '🏛️', subText: 'State Chief Ministers' },
+  '1st-cm-list': { gradient: 'from-orange-600 to-red-700', badge: 'Indian States', icon: '🏛️', subText: 'State Chief Ministers' },
+  'tanks': { gradient: 'from-amber-700 to-yellow-900', badge: 'Defence', icon: '🛡️', subText: 'Indian Defence MCQs' },
   'utet': { gradient: 'from-emerald-700 to-teal-900', badge: 'Teaching', icon: '🎓', subText: 'UK Teacher Eligibility' },
   'uttarakhand-fair': { gradient: 'from-amber-600 to-orange-800', badge: 'UK Special', icon: '🎪', subText: 'Fairs & Festivals' }
 };
-
-const DEFAULT_EXPIRING_JOBS = [
-  {
-    id: 1,
-    title: 'UDD Uttarakhand Recruitment 2026 - Apply Offline for 12 Posts',
-    slug: 'udd-uttarakhand-recruitment-2026',
-    lastDate: 'Oct 05',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 2,
-    title: 'Mumbai Port Authority Junior Professional Intern Recruitment 2026',
-    slug: 'mumbai-port-authority-junior-professional-intern-recruitment-2026',
-    lastDate: 'Oct 06',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1541829070764-84a7d30dd3f3?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 3,
-    title: 'UKSSSC Inter Level Group C Recruitment 2026 Notification Out',
-    slug: 'uksssc-inter-level-group-c-recruitment-2026',
-    lastDate: 'Oct 07',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 4,
-    title: 'SSC CHSL Recruitment 2026 Notification Out - Apply Online',
-    slug: 'ssc-chsl-recruitment-2026',
-    lastDate: 'Oct 07',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1434030216411-0b793f4b4173?auto=format&fit=crop&w=300&q=80'
-  },
-  {
-    id: 5,
-    title: 'MECL Non Executive Recruitment 2026 - Apply Online for 120 Posts',
-    slug: 'mecl-non-executive-recruitment-2026',
-    lastDate: 'Oct 08',
-    category: 'Jobs',
-    image: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=300&q=80'
-  }
-];
 
 export default function SubjectsPage() {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState('all');
-  const [sidebarTab, setSidebarTab] = useState('expiring');
-  const [expiringJobs, setExpiringJobs] = useState(DEFAULT_EXPIRING_JOBS);
   const [showLeftAd, setShowLeftAd] = useState(true);
 
   // Fetch subjects from backend and merge with static registry
@@ -178,29 +152,39 @@ export default function SubjectsPage() {
       }
     };
 
-    const fetchSidebarJobs = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/jobs/expiring-soon?limit=6`);
-        const json = await res.json();
-        if (json.success && Array.isArray(json.data) && json.data.length > 0) {
-          const mapped = json.data.map((item, idx) => ({
-            id: item._id || idx,
-            title: item.title,
-            slug: item.slug || `job-${idx}`,
-            lastDate: item.app_ends ? new Date(item.app_ends).toLocaleDateString('en-US', { month: 'short', day: '2-digit' }) : 'As Scheduled',
-            category: 'Jobs',
-            image: getImageUrl(item.featured_media, DEFAULT_EXPIRING_JOBS[idx % DEFAULT_EXPIRING_JOBS.length].image)
-          }));
-          setExpiringJobs(mapped);
-        }
-      } catch (e) {
-        console.warn('Sidebar jobs fetch fallback:', e);
-      }
-    };
-
     fetchSubjects();
-    fetchSidebarJobs();
   }, []);
+
+  // Dynamic count for each category filter
+  const getCategoryCount = (catId) => {
+    if (catId === 'all') return subjects.length;
+    if (catId === 'gk') {
+      return subjects.filter((s) =>
+        ['general-knowledge', 'history', 'geography', 'polity', 'economics', 'environment-science', 'sports-gk', 'government-scheme', 'statewise-first-cm-list', '1st-cm-list', 'uttarakhand-fair', 'accounts', 'business', 'tanks'].includes(s.slug)
+      ).length;
+    }
+    if (catId === 'tech') {
+      return subjects.filter((s) =>
+        ['computer', 'c-and-c-plus-plus', 'html-and-css', 'javascript', 'python', 'php', 'mysql', 'bootstrap', 'ms-word', 'ms-excel', 'ms-powerpoint'].includes(s.slug)
+      ).length;
+    }
+    if (catId === 'science') {
+      return subjects.filter((s) =>
+        ['science', 'biology', 'mathematics', 'reasoning', 'invention'].includes(s.slug)
+      ).length;
+    }
+    if (catId === 'languages') {
+      return subjects.filter((s) =>
+        ['english', 'hindi'].includes(s.slug)
+      ).length;
+    }
+    if (catId === 'teaching') {
+      return subjects.filter((s) =>
+        ['ctet', 'utet'].includes(s.slug)
+      ).length;
+    }
+    return 0;
+  };
 
   // Filter subjects based on search query and category
   const filteredSubjects = useMemo(() => {
@@ -218,9 +202,13 @@ export default function SubjectsPage() {
 
     if (activeCategory !== 'all') {
       if (activeCategory === 'gk') {
-        list = list.filter((s) => ['general-knowledge', 'history', 'geography', 'polity', 'economics', 'environment-science', 'sports-gk', 'government-scheme', 'statewise-first-cm-list', 'uttarakhand-fair'].includes(s.slug));
+        list = list.filter((s) =>
+          ['general-knowledge', 'history', 'geography', 'polity', 'economics', 'environment-science', 'sports-gk', 'government-scheme', 'statewise-first-cm-list', '1st-cm-list', 'uttarakhand-fair', 'accounts', 'business', 'tanks'].includes(s.slug)
+        );
       } else if (activeCategory === 'tech') {
-        list = list.filter((s) => ['computer', 'c-and-c-plus-plus', 'html-and-css', 'javascript', 'python', 'php', 'mysql', 'bootstrap'].includes(s.slug));
+        list = list.filter((s) =>
+          ['computer', 'c-and-c-plus-plus', 'html-and-css', 'javascript', 'python', 'php', 'mysql', 'bootstrap', 'ms-word', 'ms-excel', 'ms-powerpoint'].includes(s.slug)
+        );
       } else if (activeCategory === 'languages') {
         list = list.filter((s) => ['english', 'hindi'].includes(s.slug));
       } else if (activeCategory === 'science') {
@@ -241,45 +229,107 @@ export default function SubjectsPage() {
       {/* Main Page Container */}
       <main className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
 
-        {/* 3-Column Layout Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
+        {/* 2-Column Responsive Layout (Compact Left Sidebar + Full-Width Main Content) */}
+        <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 items-start">
 
-          {/* ================= LEFT SKYSCRAPER AD CONTAINER ================= */}
-          {showLeftAd && (
-            <aside className="hidden xl:block xl:col-span-2 sticky top-20 self-start z-10">
-              <div className="w-[160px] mx-auto bg-slate-900 text-white rounded overflow-hidden shadow-sm relative group">
+          {/* ================= COMPACT LEFT SIDEBAR (FILTERS & SPONSORED AD) ================= */}
+          <aside className="w-full lg:w-56 xl:w-60 shrink-0 space-y-4 lg:sticky lg:top-20 self-start">
+            
+            {/* Category Filter Box */}
+            <div className="bg-white border border-slate-200 rounded-xl p-3 shadow-2xs">
+              <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-2">
+                <div className="flex items-center space-x-2">
+                  <div className="w-6 h-6 rounded-md bg-blue-50 text-blue-600 flex items-center justify-center">
+                    <Filter className="w-3.5 h-3.5" />
+                  </div>
+                  <h2 className="text-xs font-bold text-slate-900 uppercase tracking-wider">
+                    Categories
+                  </h2>
+                </div>
+                {(activeCategory !== 'all' || searchQuery) && (
+                  <button
+                    onClick={() => {
+                      setActiveCategory('all');
+                      setSearchQuery('');
+                    }}
+                    className="text-[11px] font-semibold text-blue-600 hover:text-blue-700 hover:underline cursor-pointer"
+                  >
+                    Reset
+                  </button>
+                )}
+              </div>
+
+              {/* Category Buttons List */}
+              <div className="space-y-1">
+                {CATEGORY_TABS.map((cat) => {
+                  const Icon = cat.icon;
+                  const isActive = activeCategory === cat.id;
+                  const count = getCategoryCount(cat.id);
+
+                  return (
+                    <button
+                      key={cat.id}
+                      onClick={() => setActiveCategory(cat.id)}
+                      className={`w-full flex items-center justify-between px-2.5 py-1.5 sm:py-2 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                        isActive
+                          ? 'bg-blue-600 text-white shadow-xs'
+                          : 'text-slate-700 hover:bg-slate-100 hover:text-blue-600'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-2 min-w-0">
+                        <Icon className={`w-3.5 h-3.5 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                        <span className="truncate">{cat.label}</span>
+                      </div>
+                      <span
+                        className={`text-[11px] font-bold px-1.5 py-0.5 rounded-full shrink-0 ${
+                          isActive
+                            ? 'bg-white/20 text-white'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Left Sponsored Ad */}
+            {showLeftAd && (
+              <div className="bg-slate-900 text-white rounded-xl overflow-hidden shadow-sm relative group">
                 <button
                   onClick={() => setShowLeftAd(false)}
-                  className="absolute top-1 right-1 text-slate-400 hover:text-white z-10 bg-black/40 p-0.5 rounded"
+                  className="absolute top-1.5 right-1.5 text-slate-400 hover:text-white z-10 bg-black/40 p-1 rounded"
                   title="Close Ad"
                 >
-                  <X className="w-3 h-3" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
-                <div className="p-3 text-center border-b border-slate-800">
+                <div className="p-2 text-center border-b border-slate-800">
                   <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400">Sponsored Ad</span>
                 </div>
-                <div className="p-4 space-y-3 text-center">
+                <div className="p-3 space-y-2.5 text-center">
                   <p className="text-xs font-semibold leading-snug text-slate-100">
                     Latest Government Exam & Career Updates 2026
                   </p>
-                  <div className="w-full h-44 bg-gradient-to-b from-blue-950 to-slate-900 rounded flex items-center justify-center border border-blue-900/50 p-2">
-                    <span className="text-[11px] text-blue-200 font-medium leading-tight">100% Verified Job Alerts & Preparation</span>
+                  <div className="w-full h-32 bg-gradient-to-b from-blue-950 to-slate-900 rounded-lg flex items-center justify-center border border-blue-900/50 p-2">
+                    <span className="text-[10px] text-blue-200 font-medium leading-tight">100% Verified Job Alerts & Preparation</span>
                   </div>
                   <a
                     href="https://educationmasters.in"
                     target="_blank"
                     rel="noreferrer"
-                    className="block bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-2 px-2 rounded transition"
+                    className="block bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs py-1.5 px-2 rounded-lg transition"
                   >
                     Explore Updates
                   </a>
                 </div>
               </div>
-            </aside>
-          )}
+            )}
+          </aside>
 
-          {/* ================= CENTER MAIN SUBJECTS SECTION ================= */}
-          <section className={`col-span-1 lg:col-span-8 ${showLeftAd ? 'xl:col-span-7' : 'xl:col-span-7'} space-y-4 min-w-0`}>
+          {/* ================= MAIN SUBJECTS SECTION (FULL REMAINING WIDTH) ================= */}
+          <section className="flex-1 min-w-0 space-y-4">
 
             {/* Top Breadcrumbs */}
             <nav className="flex items-center space-x-1.5 text-xs text-slate-500 mb-1 overflow-x-auto whitespace-nowrap">
@@ -320,16 +370,9 @@ export default function SubjectsPage() {
               </div>
             </div>
 
-            {/* Quick Category Filter Pills */}
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-              {[
-                { id: 'all', label: `All (${subjects.length})` },
-                { id: 'gk', label: 'General Studies' },
-                { id: 'tech', label: 'Computer & IT' },
-                { id: 'science', label: 'Science & Maths' },
-                { id: 'languages', label: 'Languages' },
-                { id: 'teaching', label: 'Teaching Exams' },
-              ].map((tab) => (
+            {/* Quick Category Filter Pills (Mobile view only) */}
+            <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+              {CATEGORY_TABS.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveCategory(tab.id)}
@@ -339,17 +382,17 @@ export default function SubjectsPage() {
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
-                  {tab.label}
+                  {tab.shortLabel || tab.label} ({getCategoryCount(tab.id)})
                 </button>
               ))}
             </div>
 
             {/* Loading State Skeleton */}
             {loading ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 sm:gap-4">
-                {Array.from({ length: 12 }).map((_, i) => (
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 sm:gap-4.5 pt-1">
+                {Array.from({ length: 15 }).map((_, i) => (
                   <div key={i} className="bg-slate-50 border border-slate-200 rounded-lg p-3 animate-pulse space-y-2">
-                    <div className="w-full aspect-[16/10] bg-slate-200 rounded"></div>
+                    <div className="w-full aspect-[650/315] bg-slate-200 rounded"></div>
                     <div className="h-4 bg-slate-200 rounded w-3/4"></div>
                   </div>
                 ))}
@@ -364,14 +407,14 @@ export default function SubjectsPage() {
                     setSearchQuery('');
                     setActiveCategory('all');
                   }}
-                  className="text-xs text-blue-600 font-bold hover:underline"
+                  className="text-xs text-blue-600 font-bold hover:underline cursor-pointer"
                 >
                   Reset search & filters
                 </button>
               </div>
             ) : (
-              /* ================= SUBJECTS GRID MATCHING PRODUCTION SITE ================= */
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3.5 sm:gap-4.5 pt-1">
+              /* ================= SUBJECTS GRID ================= */
+              <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3.5 sm:gap-4.5 pt-1">
                 {filteredSubjects.map((sub) => {
                   const styling = SUBJECT_STYLING[sub.slug] || {
                     gradient: 'from-blue-600 to-indigo-800',
@@ -389,12 +432,13 @@ export default function SubjectsPage() {
                       className="group flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden shadow-2xs hover:shadow-md hover:border-blue-400 transition-all duration-300 transform hover:-translate-y-0.5"
                     >
                       {/* Top Thumbnail Image or Branded Card Banner */}
-                      <div className="relative w-full aspect-[16/10] bg-slate-100 overflow-hidden flex items-center justify-center">
+                      <div className="relative w-full aspect-[650/315] bg-white overflow-hidden flex items-center justify-center border-b border-slate-100">
                         {imageUrl ? (
                           <img
                             src={imageUrl}
                             alt={sub.name}
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            loading="lazy"
+                            className="w-full h-full object-contain group-hover:scale-[1.02] transition-transform duration-300"
                             onError={(e) => {
                               // On broken image, switch to fallback banner
                               e.currentTarget.style.display = 'none';
@@ -461,148 +505,6 @@ export default function SubjectsPage() {
             </div>
 
           </section>
-
-          {/* ================= RIGHT SIDEBAR WIDGET MATCHING LIVE PRODUCTION REFERENCE ================= */}
-          <aside className="col-span-1 lg:col-span-4 xl:col-span-3 lg:sticky lg:top-20 self-start z-10 space-y-4 max-h-none lg:max-h-[calc(100vh-5.5rem)] overflow-visible lg:overflow-y-auto mt-6 lg:mt-0">
-
-            <div className="bg-[#f8f9fa] border border-slate-200 rounded-lg p-3.5 shadow-2xs">
-
-              {/* Tab Header - 2 Equal 50% Tabs */}
-              <div className="flex border-b border-slate-200 -mx-3.5 -mt-3.5 mb-3.5 bg-[#e9ecef]/50 rounded-t-lg overflow-hidden">
-                <button
-                  onClick={() => setSidebarTab('expiring')}
-                  className={`flex-1 py-3 px-2 text-center text-xs sm:text-sm transition ${
-                    sidebarTab === 'expiring'
-                      ? 'bg-[#e9ecef] text-slate-900 border-r border-slate-200 font-bold'
-                      : 'bg-white/60 text-[#2563eb] hover:bg-white border-r border-slate-200 font-semibold'
-                  }`}
-                >
-                  Jobs Expiring Soon
-                </button>
-                <button
-                  onClick={() => setSidebarTab('mcq')}
-                  className={`flex-1 py-3 px-2 text-center text-xs sm:text-sm transition ${
-                    sidebarTab === 'mcq'
-                      ? 'bg-[#e9ecef] text-slate-900 font-bold'
-                      : 'bg-white/60 text-[#2563eb] hover:bg-white font-semibold'
-                  }`}
-                >
-                  MCQ Questions
-                </button>
-              </div>
-
-              {sidebarTab === 'expiring' ? (
-                <div>
-                  <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
-                    <span className="font-normal text-slate-600">
-                      {expiringJobs.length > 0
-                        ? `${expiringJobs.length} Jobs are expiring in 30 Days`
-                        : 'Latest Government Jobs'}
-                    </span>
-                    <div className="flex items-center space-x-1.5">
-                      <Link href="/jobs-expiring-in-30-days" className="text-[#2563eb] font-medium hover:underline">View All</Link>
-                      <span className="bg-[#2563eb] text-white text-[11px] font-semibold px-2 py-0.5 rounded flex items-center space-x-1">
-                        <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-5 14H7v-2h7v2zm3-4H7v-2h10v2zm0-4H7V7h10v2z" /></svg>
-                        <span>Jobs</span>
-                      </span>
-                    </div>
-                  </div>
-                  <hr className="border-slate-200 mb-3.5" />
-
-                  {/* Expiring Jobs List Rows */}
-                  <div className="space-y-3">
-                    {expiringJobs.slice(0, 6).map((job, idx) => (
-                      <div key={job.id || idx}>
-                        <Link
-                          href={`/job/${job.slug}`}
-                          className="flex items-start space-x-3 group block transition"
-                        >
-                          <div className="w-[95px] h-[65px] shrink-0 rounded border border-slate-200 overflow-hidden bg-white">
-                            <img
-                              src={job.image}
-                              alt={job.title}
-                              className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                              onError={(e) => {
-                                if (!e.currentTarget.dataset.fallback) {
-                                  e.currentTarget.dataset.fallback = 'true';
-                                  e.currentTarget.src = '/logo.webp';
-                                } else {
-                                  e.currentTarget.style.display = 'none';
-                                }
-                              }}
-                            />
-                          </div>
-                          <div className="flex-1 min-w-0 space-y-1">
-                            <h4 className="text-xs sm:text-sm font-normal text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-                              {job.title}
-                            </h4>
-                            <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
-                              <span className="text-slate-500 font-normal">
-                                Last Date: <span className="text-slate-600">{job.lastDate}</span>
-                              </span>
-                              <span className="text-[#2563eb] font-medium">Jobs</span>
-                            </div>
-                          </div>
-                        </Link>
-                        {idx < 5 && <hr className="border-slate-200/80 my-3" />}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                /* MCQ Tab Content */
-                <div>
-                  <div className="flex items-center justify-between text-xs text-slate-600 mb-2 px-0.5">
-                    <span className="font-normal text-slate-600">Daily Practice Questions</span>
-                    <Link href="/mcq-questions" className="text-[#2563eb] font-medium hover:underline">View All</Link>
-                  </div>
-                  <hr className="border-slate-200 mb-3.5" />
-
-                  <div className="space-y-3 text-xs">
-                    <div className="py-2 border-b border-slate-200 space-y-1">
-                      <span className="text-[10px] font-semibold text-blue-600 uppercase bg-blue-50 px-1.5 py-0.5 rounded">Indian Polity</span>
-                      <p className="font-medium text-slate-800 leading-snug">Who presides over the joint sitting of the Parliament in India?</p>
-                    </div>
-                    <div className="py-2 border-b border-slate-200 space-y-1">
-                      <span className="text-[10px] font-semibold text-amber-600 uppercase bg-amber-50 px-1.5 py-0.5 rounded">Current Affairs</span>
-                      <p className="font-medium text-slate-800 leading-snug">Which state government recently launched the Youth Employment Scheme?</p>
-                    </div>
-                    <div className="py-2 space-y-1">
-                      <span className="text-[10px] font-semibold text-emerald-600 uppercase bg-emerald-50 px-1.5 py-0.5 rounded">General Science</span>
-                      <p className="font-medium text-slate-800 leading-snug">What is the SI unit of electric current intensity?</p>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-            </div>
-
-            {/* Green Channel Join Banner Box matching Live Site */}
-            <div className="bg-[#e6f7ef] border border-[#a3e6c5] rounded-lg p-3 text-center space-y-1.5">
-              <p className="text-xs font-semibold text-emerald-900">
-                सरकारी नौकरियों और GK अपडेट्स के लिए हमारे ग्रुप्स से जुड़ें:
-              </p>
-              <div className="flex items-center justify-center space-x-2 pt-1">
-                <a
-                  href="https://whatsapp.com/channel/0029Vb6sjZz0wajwDXcd5B0U"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="bg-[#25D366] hover:bg-[#20bd5a] text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center space-x-1 shadow-2xs transition"
-                >
-                  <span>WhatsApp</span>
-                </a>
-                <a
-                  href="https://t.me/educationmastersin"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="bg-[#0088cc] hover:bg-[#0077b5] text-white text-xs font-semibold px-3 py-1.5 rounded flex items-center space-x-1 shadow-2xs transition"
-                >
-                  <span>Telegram</span>
-                </a>
-              </div>
-            </div>
-
-          </aside>
 
         </div>
       </main>

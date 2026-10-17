@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -53,6 +53,8 @@ import {
   BookmarkCheck,
   Check,
   Copy,
+  Flag,
+  Loader2,
 } from 'lucide-react';
 import {
   AnimatedClock,
@@ -156,6 +158,15 @@ export default function McqQuestionPage({
   const [questionComments, setQuestionComments] = useState({});
   const [shareUrl, setShareUrl] = useState('');
 
+  // 🚩 Question Report Modal State
+  const [reportingQuestion, setReportingQuestion] = useState(null);
+  const [reportReason, setReportReason] = useState('Wrong Answer Key');
+  const [reportSelectedOption, setReportSelectedOption] = useState(-1);
+  const [isCustomOption, setIsCustomOption] = useState(false);
+  const [customOptionText, setCustomOptionText] = useState('');
+  const [reportRemarks, setReportRemarks] = useState('');
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
+
   // ⏱️ Practice Stopwatch State
   const [stopwatchSeconds, setStopwatchSeconds] = useState(0);
   const [isStopwatchRunning, setIsStopwatchRunning] = useState(false);
@@ -210,6 +221,22 @@ export default function McqQuestionPage({
 
   // 🧠 Edu AI Performance Analysis Modal State
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [initialAiTab, setInitialAiTab] = useState('subjects');
+  const [lastAnalyzedAnswers, setLastAnalyzedAnswers] = useState(null);
+
+  // Fingerprint of current user answers
+  const answersFingerprint = useMemo(() => {
+    return JSON.stringify(userAnswers || {});
+  }, [userAnswers]);
+
+  const isAlreadyAnalyzed =
+    lastAnalyzedAnswers !== null &&
+    lastAnalyzedAnswers === answersFingerprint &&
+    Object.keys(userAnswers || {}).length > 0;
+
+  const handleAnalysisComplete = useCallback((snapshot) => {
+    setLastAnalyzedAnswers(snapshot);
+  }, []);
 
   // Jump to specific question from AI Matrix Grid
   const handleJumpToQuestion = (idx) => {
@@ -236,6 +263,14 @@ export default function McqQuestionPage({
       if (interval) clearInterval(interval);
     };
   }, [isStopwatchRunning]);
+
+  // ⏱️ Automatically stop and pause stopwatch when user starts/opens AI Analysis
+  useEffect(() => {
+    if (isAiModalOpen) {
+      setIsStopwatchRunning(false);
+      setIsStopwatchPaused(true);
+    }
+  }, [isAiModalOpen]);
 
   // Format stopwatch MM:SS or HH:MM:SS
   const formatStopwatchTime = (totalSec) => {
@@ -408,6 +443,63 @@ export default function McqQuestionPage({
     }
   };
 
+  // Record attempted wrong questions in persistent local store for student review
+  const recordAttemptedQuestion = (questionId, q, selectedIndex, correctIndex, isWrong) => {
+    try {
+      const storageKey = 'attempted_wrong_mcqs';
+      const existingRaw = typeof window !== 'undefined' ? localStorage.getItem(storageKey) : null;
+      let wrongStore = existingRaw ? JSON.parse(existingRaw) : {};
+
+      const key = String(questionId);
+      if (isWrong) {
+        wrongStore[key] = {
+          id: key,
+          questionText: q.content || q.question_text || q.question || 'Question content',
+          options: Array.isArray(q.options)
+            ? q.options.map((opt) => ({
+                text: opt.text || '',
+                is_correct: !!opt.is_correct,
+              }))
+            : [],
+          selectedOptionIndex: selectedIndex,
+          selectedOptionText: q.options?.[selectedIndex]?.text || '',
+          correctOptionIndex: correctIndex,
+          correctOptionText: q.options?.[correctIndex]?.text || '',
+          ansInfo: q.ans_info || q.explanation || '',
+          subject: q.subject_name || q.subject?.name || taxonomy?.name || 'General Studies',
+          topic: q.topic_name || q.topic?.name || '',
+          state: q.state?.name || q.state_name || taxonomy?.state_name || '',
+          exam: q.exam?.name || q.exam_name || taxonomy?.exam_name || '',
+          taxonomySlug: currentSlug || '',
+          taxonomyType: taxonomy?.type || '',
+          attemptedAt: new Date().toISOString(),
+          isResolved: false,
+        };
+      } else {
+        // If question was previously recorded as wrong and student now answered correctly
+        if (wrongStore[key]) {
+          wrongStore[key] = {
+            ...wrongStore[key],
+            isResolved: true,
+            resolvedAt: new Date().toISOString(),
+            selectedOptionIndex: selectedIndex,
+            selectedOptionText: q.options?.[selectedIndex]?.text || '',
+          };
+        }
+      }
+
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, JSON.stringify(wrongStore));
+        if (session?.user?.id || session?.user?.email) {
+          const userKey = `attempted_wrong_mcqs_${session.user.id || session.user.email}`;
+          localStorage.setItem(userKey, JSON.stringify(wrongStore));
+        }
+      }
+    } catch (err) {
+      console.error('Error storing attempted wrong question:', err);
+    }
+  };
+
   const handleSelectOption = (questionId, optionIndex) => {
     // Check if user is answering a new question for the first time
     const isNewAnswer = userAnswers[questionId] === undefined;
@@ -436,13 +528,37 @@ export default function McqQuestionPage({
       [questionId]: optionIndex,
     }));
 
-    // ⏱️ Auto-start stopwatch as soon as user answers their first question!
-    if (!isStopwatchRunning && !isStopwatchPaused) {
+    // Check correctness and store if wrong
+    const q = questions.find((item, idx) => (item._id || item.sql_id || idx) === questionId);
+    if (q) {
+      let correctIndex = -1;
+      if (Array.isArray(q.options)) {
+        correctIndex = q.options.findIndex((opt) => opt.is_correct);
+      }
+      if (correctIndex === -1 && q.correct_answer) {
+        const match = String(q.correct_answer).match(/Option\s*([0-9]+)/i);
+        if (match) correctIndex = parseInt(match[1], 10) - 1;
+        else if (['A', 'B', 'C', 'D'].includes(String(q.correct_answer).trim().toUpperCase())) {
+          correctIndex = String(q.correct_answer).trim().toUpperCase().charCodeAt(0) - 65;
+        }
+      }
+
+      if (correctIndex >= 0) {
+        const isWrong = optionIndex !== correctIndex;
+        recordAttemptedQuestion(questionId, q, optionIndex, correctIndex, isWrong);
+      }
+    }
+
+    // ⏱️ Auto-start / resume stopwatch as soon as user answers a question!
+    if (!isStopwatchRunning) {
       setIsStopwatchRunning(true);
+      setIsStopwatchPaused(false);
     }
   };
 
-  const handleOpenAiAnalysis = () => {
+  const handleOpenAiAnalysis = (targetTab = 'subjects') => {
+    setInitialAiTab(targetTab);
+
     // 1. Must answer at least 1 question first
     const answeredCount = Object.keys(userAnswers).length;
     if (answeredCount === 0) {
@@ -473,11 +589,18 @@ export default function McqQuestionPage({
       return;
     }
 
+    // ⏱️ Stop the stopwatch as soon as user starts/opens AI Analysis
+    setIsStopwatchRunning(false);
+    setIsStopwatchPaused(true);
+
     // 3. Open AI Analysis modal
     setIsAiModalOpen(true);
   };
 
   const toggleViewAnswer = (questionId) => {
+    // Only allow toggling if user has answered the question
+    if (userAnswers[questionId] === undefined) return;
+
     setRevealedAnswers((prev) => ({
       ...prev,
       [questionId]: !prev[questionId],
@@ -520,6 +643,99 @@ export default function McqQuestionPage({
       message: 'Your discussion note has been posted.',
       duration: 3000,
     });
+  };
+
+  // 🚩 Open Question Report Modal
+  const handleOpenReportModal = (question, questionNum, qId, correctIndex) => {
+    setReportingQuestion({
+      ...question,
+      questionNum,
+      qId,
+      correctIndex,
+    });
+    setReportReason('Wrong Answer Key');
+    setReportSelectedOption(-1);
+    setIsCustomOption(false);
+    setCustomOptionText('');
+    setReportRemarks('');
+  };
+
+  // 🚩 Submit Question Report to Backend
+  const handleSubmitQuestionReport = async (e) => {
+    e?.preventDefault();
+    if (!reportingQuestion) return;
+
+    if (!isCustomOption && reportSelectedOption < 0 && reportReason === 'Wrong Answer Key') {
+      showToast({
+        type: 'warning',
+        title: 'Choose Right Answer',
+        message: 'Please select what you think is the right answer or choose "Other" to suggest your own.',
+        duration: 4000,
+      });
+      return;
+    }
+
+    if (isCustomOption && !customOptionText.trim()) {
+      showToast({
+        type: 'warning',
+        title: 'Enter Custom Option',
+        message: 'Please enter your suggested correct option or answer text.',
+        duration: 4000,
+      });
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+      const payload = {
+        question_id: reportingQuestion._id || null,
+        question_sql_id: reportingQuestion.id || reportingQuestion.sql_id || null,
+        question_text: reportingQuestion.content || reportingQuestion.question_text || 'Question content',
+        options: reportingQuestion.options || [],
+        reported_reason: reportReason,
+        suggested_option_index: isCustomOption ? -1 : reportSelectedOption,
+        suggested_option_text: isCustomOption
+          ? customOptionText.trim()
+          : (reportSelectedOption >= 0 ? reportingQuestion.options?.[reportSelectedOption]?.text : ''),
+        is_custom_option: isCustomOption,
+        custom_option_text: isCustomOption ? customOptionText.trim() : '',
+        remarks: reportRemarks.trim(),
+        user_name: session?.user?.name || '',
+        user_email: session?.user?.email || '',
+      };
+
+      const res = await fetch(`${BACKEND_URL}/apis/v1/question-reports`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(session?.user?.token ? { Authorization: `Bearer ${session.user.token}` } : {})
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.message || 'Failed to submit report');
+      }
+
+      showToast({
+        type: 'success',
+        title: 'Report Submitted',
+        message: 'Thank you! Your report has been submitted to our academic team for review.',
+        duration: 4500,
+      });
+      setReportingQuestion(null);
+    } catch (err) {
+      console.error('Error submitting report:', err);
+      showToast({
+        type: 'error',
+        title: 'Submission Failed',
+        message: err.message || 'Could not submit report. Please try again.',
+        duration: 4000,
+      });
+    } finally {
+      setIsSubmittingReport(false);
+    }
   };
 
   // Live Performance & Stats Calculation (Correct, Incorrect, Percentage, Result)
@@ -636,6 +852,7 @@ export default function McqQuestionPage({
     setStopwatchSeconds(0);
     setIsStopwatchRunning(false);
     setIsStopwatchPaused(false);
+    setLastAnalyzedAnswers(null);
   };
 
   const handleShareClick = (platform) => {
@@ -1255,12 +1472,17 @@ export default function McqQuestionPage({
                       {/* 2. 🧠 Edu AI Performance Button */}
                       <button
                         type="button"
-                        onClick={handleOpenAiAnalysis}
+                        onClick={() => handleOpenAiAnalysis('subjects')}
                         className="group relative px-2 sm:px-3 py-1 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 active:scale-95 text-white text-[11px] sm:text-xs font-extrabold rounded-lg border border-blue-500/40 transition-all duration-200 flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
                         title="Edu AI Performance, Accuracy Graph & Speed Diagnostics"
                       >
                         <AnimatedAiEye size={13} className="text-white shrink-0" />
-                        <span className="font-bold text-[11px] sm:text-xs whitespace-nowrap">AI Analysis</span>
+                        <span className="font-bold text-[11px] sm:text-xs whitespace-nowrap">
+                          {isAlreadyAnalyzed ? 'AI Result' : 'AI Analysis'}
+                        </span>
+                        {isAlreadyAnalyzed && (
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" title="Analysis ready" />
+                        )}
                       </button>
 
                       {/* 3. ⛶ Fullscreen Focus Mode Button */}
@@ -1306,8 +1528,12 @@ export default function McqQuestionPage({
                       </div>
                     </div>
 
-                    {/* 2. Incorrect Stat Card (Compact, No redundant subtext) */}
-                    <div className="bg-rose-50/60 border border-rose-200/80 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 flex flex-col justify-between shadow-2xs hover:bg-rose-50 transition">
+                    {/* 2. Incorrect Stat Card (Compact, Clickable to review mistakes) */}
+                    <div
+                      onClick={stats.incorrect > 0 ? () => handleOpenAiAnalysis('mistakes') : undefined}
+                      className={`bg-rose-50/60 border border-rose-200/80 rounded-lg px-2.5 py-1.5 sm:px-3 sm:py-2 flex flex-col justify-between shadow-2xs hover:bg-rose-50 transition ${stats.incorrect > 0 ? 'cursor-pointer hover:border-rose-300 hover:shadow-xs' : ''}`}
+                      title={stats.incorrect > 0 ? "Click to review your mistakes in Edu AI Diagnostics" : "0 mistakes"}
+                    >
                       <div className="flex items-center justify-between text-rose-800 text-[10px] sm:text-xs font-semibold">
                         <span>Incorrect</span>
                         <XCircle size={12} className="text-rose-600" />
@@ -1316,7 +1542,9 @@ export default function McqQuestionPage({
                         <span className="text-base sm:text-xl font-black text-rose-700 tracking-tight">
                           {stats.incorrect}
                         </span>
-                        <span className="text-[9px] sm:text-[11px] text-rose-600 font-medium">mistakes</span>
+                        <span className="text-[9px] sm:text-[11px] text-rose-600 font-medium">
+                          {stats.incorrect > 0 ? 'mistakes (review)' : 'mistakes'}
+                        </span>
                       </div>
                     </div>
 
@@ -1461,29 +1689,31 @@ export default function McqQuestionPage({
                             })}
                         </div>
 
-                        {/* View Answer / Action Bar */}
-                        <div className="flex items-center justify-between pt-0.5">
-                          <button
-                            type="button"
-                            onClick={() => toggleViewAnswer(qId)}
-                            className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition cursor-pointer py-1 group"
-                          >
-                            {isRevealed ? (
-                              <>
-                                <EyeOff size={14} className="group-hover:scale-110 transition-transform" />
-                                <span>Hide Answer</span>
-                              </>
-                            ) : (
-                              <>
-                                <Eye size={14} className="group-hover:scale-110 transition-transform" />
-                                <span>View Answer</span>
-                              </>
-                            )}
-                          </button>
-                        </div>
+                        {/* View Answer / Action Bar - ONLY shown when user answers the question */}
+                        {selectedOpt !== undefined && (
+                          <div className="flex items-center justify-between pt-0.5 animate-in fade-in duration-200">
+                            <button
+                              type="button"
+                              onClick={() => toggleViewAnswer(qId)}
+                              className="text-xs sm:text-sm font-semibold text-blue-600 hover:text-blue-800 flex items-center gap-1.5 transition cursor-pointer py-1 group"
+                            >
+                              {isRevealed ? (
+                                <>
+                                  <EyeOff size={14} className="group-hover:scale-110 transition-transform" />
+                                  <span>Hide Answer</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Eye size={14} className="group-hover:scale-110 transition-transform" />
+                                  <span>View Answer</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                        )}
 
-                        {/* Collapsible Answer & Explanation Box (Only shown when user clicks View Answer) */}
-                        {isRevealed && (
+                        {/* Collapsible Answer & Explanation Box (Only shown when user answers and clicks View Answer) */}
+                        {selectedOpt !== undefined && isRevealed && (
                           <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 text-xs sm:text-sm text-emerald-950 space-y-1.5 animate-in fade-in duration-200">
                             <div className="flex items-center gap-2 font-bold text-emerald-900 text-sm">
                               <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
@@ -2009,6 +2239,9 @@ export default function McqQuestionPage({
         stopwatchSeconds={stopwatchSeconds}
         taxonomy={taxonomy}
         onJumpToQuestion={handleJumpToQuestion}
+        initialTab={initialAiTab}
+        lastAnalyzedAnswers={lastAnalyzedAnswers}
+        onAnalysisComplete={handleAnalysisComplete}
       />
 
       {/* ============================================================== */}
@@ -2063,11 +2296,16 @@ export default function McqQuestionPage({
                 {/* AI Analysis */}
                 <button
                   type="button"
-                  onClick={handleOpenAiAnalysis}
+                  onClick={() => handleOpenAiAnalysis('subjects')}
                   className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white text-xs font-extrabold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer active:scale-95"
                 >
                   <AnimatedAiEye size={13} className="text-white shrink-0" />
-                  <span className="hidden sm:inline">AI Analysis</span>
+                  <span className="hidden sm:inline">
+                    {isAlreadyAnalyzed ? 'AI Result' : 'AI Analysis'}
+                  </span>
+                  {isAlreadyAnalyzed && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                  )}
                 </button>
 
                 {/* Exit Fullscreen Button */}
@@ -2129,8 +2367,8 @@ export default function McqQuestionPage({
                       </h2>
                     </div>
 
-                    {/* Options */}
-                    <div className="space-y-2 sm:space-y-2.5 pt-1">
+                    {/* Options (Reduced padding in fullscreen) */}
+                    <div className="space-y-1 sm:space-y-1 pt-0.5">
                       {Array.isArray(q.options) &&
                         q.options.slice(0, 4).map((opt, optIdx) => {
                           const letter = String.fromCharCode(65 + optIdx);
@@ -2144,7 +2382,7 @@ export default function McqQuestionPage({
                             <label
                               key={optIdx}
                               onClick={() => handleSelectOption(qId, optIdx)}
-                              className={`flex items-center justify-between gap-2.5 sm:gap-3.5 px-3 sm:px-4 py-2.5 sm:py-3 rounded-xl border text-xs sm:text-sm cursor-pointer transition-all duration-150 select-none ${showCorrectHighlight
+                              className={`flex items-center justify-between gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm cursor-pointer transition-all duration-150 select-none ${showCorrectHighlight
                                 ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
                                 : showWrongHighlight
                                   ? 'bg-rose-50/90 border-rose-300 text-rose-950 font-semibold shadow-2xs'
@@ -2153,7 +2391,7 @@ export default function McqQuestionPage({
                                     : 'bg-transparent border-transparent hover:bg-slate-100/70 text-slate-800 font-normal'
                                 }`}
                             >
-                              <div className="flex items-center gap-2.5 sm:gap-3.5 min-w-0">
+                              <div className="flex items-center gap-2.5 sm:gap-3 min-w-0">
                                 <span
                                   className={`font-black text-xs sm:text-sm shrink-0 ${showCorrectHighlight
                                     ? 'text-emerald-800'
@@ -2182,7 +2420,7 @@ export default function McqQuestionPage({
                                   )}
                                 </div>
 
-                                <span className="min-w-0 break-words leading-relaxed">
+                                <span className="min-w-0 break-words leading-snug">
                                   {opt.text}
                                 </span>
                               </div>
@@ -2200,29 +2438,32 @@ export default function McqQuestionPage({
 
                     {/* Action Buttons Row */}
                     <div className="flex items-center justify-between pt-2 sm:pt-2.5 border-t border-slate-100 flex-wrap gap-2">
-                      <div className="flex items-center gap-1.5 sm:gap-2">
-                        <button
-                          type="button"
-                          onClick={() => toggleViewAnswer(qId)}
-                          className="px-3 sm:px-4 py-1.5 sm:py-2 bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-bold rounded-xl transition flex items-center gap-1.5 shadow-xs cursor-pointer"
-                        >
-                          <Lightbulb size={13} className="text-white shrink-0" />
-                          <span>{isRevealed ? 'Hide Answer' : 'View Answer'}</span>
-                        </button>
+                      <div className="flex items-center gap-2">
+                        {selectedOpt !== undefined && (
+                          <button
+                            type="button"
+                            onClick={() => toggleViewAnswer(qId)}
+                            className="px-3.5 sm:px-4 py-2 min-h-[34px] bg-blue-600 hover:bg-blue-700 active:scale-95 text-white text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer animate-in fade-in duration-200"
+                          >
+                            <Lightbulb size={13} className="text-white shrink-0" />
+                            <span>{isRevealed ? 'Hide Answer' : 'View Answer'}</span>
+                          </button>
+                        )}
 
                         <button
                           type="button"
-                          onClick={() => setActiveDiscussQuestion({ ...q, questionNum, qId, correctIndex })}
-                          className="px-2.5 sm:px-3.5 py-1.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 hover:text-blue-700 text-xs font-semibold rounded-xl border border-slate-200 transition flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95"
+                          onClick={() => handleOpenReportModal(q, questionNum, qId, correctIndex)}
+                          className="px-3.5 sm:px-4 py-2 min-h-[34px] bg-white hover:bg-rose-50 text-slate-700 hover:text-rose-700 border border-slate-200 hover:border-rose-300 active:scale-95 text-xs font-semibold rounded-lg transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+                          title="Report question mistake or wrong answer"
                         >
-                          <MessageSquare size={13} className="text-slate-500 shrink-0" />
-                          <span>Discuss</span>
+                          <Flag size={13} className="text-rose-500 shrink-0" />
+                          <span>Report</span>
                         </button>
 
                         <button
                           type="button"
                           onClick={() => toggleSaveQuestion(qId)}
-                          className={`px-2.5 sm:px-3.5 py-1.5 sm:py-2 text-xs font-semibold rounded-xl border transition flex items-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 ${savedQuestions[qId]
+                          className={`px-3.5 sm:px-4 py-2 min-h-[34px] text-xs font-semibold rounded-lg border transition flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer active:scale-95 ${savedQuestions[qId]
                             ? 'bg-amber-50 border-amber-300 text-amber-800 font-bold'
                             : 'bg-white hover:bg-slate-50 border-slate-200 text-slate-700'
                             }`}
@@ -2243,7 +2484,7 @@ export default function McqQuestionPage({
                     </div>
 
                     {/* Explanation Box */}
-                    {isRevealed && (
+                    {selectedOpt !== undefined && isRevealed && (
                       <div className="bg-emerald-50/70 border border-emerald-200 rounded-xl p-3.5 sm:p-4 text-xs sm:text-sm text-emerald-950 space-y-1.5 animate-in fade-in duration-200">
                         <div className="flex items-center gap-2 font-bold text-emerald-900 text-xs sm:text-sm">
                           <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
@@ -2371,6 +2612,234 @@ export default function McqQuestionPage({
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+      {/* ============================================================== */}
+      {/* 🚩 REPORT QUESTION POPUP MODAL                                */}
+      {/* ============================================================== */}
+      {reportingQuestion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
+          <div
+            onClick={() => !isSubmittingReport && setReportingQuestion(null)}
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs transition-opacity"
+          />
+          <div className="relative w-full max-w-xl bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200 z-10 flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="px-5 py-3.5 border-b border-slate-200 flex items-center justify-between bg-slate-50/90">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center shadow-2xs shrink-0">
+                  <Flag size={15} />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-bold text-slate-900">
+                      Report Question #{reportingQuestion.questionNum}
+                    </h3>
+                    <span className="px-2 py-0.5 bg-rose-50 text-rose-700 border border-rose-200 text-[10px] font-semibold rounded-full">
+                      Accuracy Feedback
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500">
+                    Spotted an incorrect answer key or question error? Help us fix it.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => !isSubmittingReport && setReportingQuestion(null)}
+                className="w-7 h-7 rounded-full bg-slate-200/80 hover:bg-slate-300 text-slate-700 flex items-center justify-center transition cursor-pointer"
+              >
+                <X size={14} />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleSubmitQuestionReport} className="flex flex-col flex-1 min-h-0">
+              <div className="p-4 sm:p-5 overflow-y-auto space-y-4 custom-scrollbar text-xs">
+                {/* Question Context Preview */}
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200/90 text-slate-800 space-y-1">
+                  <div className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Question Statement
+                  </div>
+                  <p className="font-semibold text-xs sm:text-sm text-slate-900 leading-snug">
+                    {reportingQuestion.content || reportingQuestion.question_text || 'Question content'}
+                  </p>
+                </div>
+
+                {/* Reason Selection */}
+                <div className="space-y-1.5">
+                  <label className="text-xs font-bold text-slate-800 flex items-center justify-between">
+                    <span>What is the issue? <span className="text-rose-500">*</span></span>
+                    <span className="text-[10px] text-slate-400 font-normal">Select the best match</span>
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                    {[
+                      'Wrong Answer Key',
+                      'Typo / Spelling Error',
+                      'Incomplete Question',
+                      'Multiple Correct Answers',
+                      'Other Issue',
+                    ].map((reason) => {
+                      const isSelected = reportReason === reason;
+                      return (
+                        <button
+                          key={reason}
+                          type="button"
+                          onClick={() => setReportReason(reason)}
+                          className={`px-3 py-2 rounded-lg border text-left transition flex items-center gap-2 cursor-pointer text-xs ${
+                            isSelected
+                              ? 'bg-rose-50/90 border-rose-300 text-rose-900 font-semibold ring-1 ring-rose-400/30'
+                              : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                          }`}
+                        >
+                          <div
+                            className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 ${
+                              isSelected ? 'border-rose-600 bg-rose-600' : 'border-slate-300 bg-white'
+                            }`}
+                          >
+                            {isSelected && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                          </div>
+                          <span>{reason}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Suggest Correct Answer */}
+                <div className="space-y-2 pt-1 border-t border-slate-100">
+                  <div className="flex items-center justify-between">
+                    <label className="text-xs font-bold text-slate-800">
+                      What should be the right answer? <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[10px] text-slate-400">Choose option or type custom</span>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    {Array.isArray(reportingQuestion.options) &&
+                      reportingQuestion.options.slice(0, 4).map((opt, optIdx) => {
+                        const letter = String.fromCharCode(65 + optIdx);
+                        const isSystemCorrect = optIdx === reportingQuestion.correctIndex;
+                        const isChecked = !isCustomOption && reportSelectedOption === optIdx;
+
+                        return (
+                          <label
+                            key={optIdx}
+                            onClick={() => {
+                              setIsCustomOption(false);
+                              setReportSelectedOption(optIdx);
+                            }}
+                            className={`flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition select-none ${
+                              isChecked
+                                ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
+                                : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                            }`}
+                          >
+                            <div
+                              className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                                isChecked ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300 bg-white'
+                              }`}
+                            >
+                              {isChecked && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                            </div>
+                            <span className="font-bold shrink-0">{letter})</span>
+                            <span className="flex-1 break-words leading-relaxed">{opt.text}</span>
+                            {isSystemCorrect && (
+                              <span className="text-[10px] px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded font-normal shrink-0">
+                                Current Key
+                              </span>
+                            )}
+                          </label>
+                        );
+                      })}
+
+                    {/* "Other" Option */}
+                    <label
+                      onClick={() => {
+                        setIsCustomOption(true);
+                        setReportSelectedOption(-1);
+                      }}
+                      className={`flex items-start gap-2.5 px-3 py-2 rounded-lg border cursor-pointer transition select-none ${
+                        isCustomOption
+                          ? 'bg-blue-50/90 border-blue-400 text-blue-950 font-semibold shadow-2xs ring-1 ring-blue-400/20'
+                          : 'bg-white border-slate-200 hover:bg-slate-50 text-slate-700'
+                      }`}
+                    >
+                      <div
+                        className={`w-3.5 h-3.5 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                          isCustomOption ? 'border-blue-600 bg-blue-600' : 'border-slate-300 bg-white'
+                        }`}
+                      >
+                        {isCustomOption && <div className="w-1.5 h-1.5 rounded-full bg-white" />}
+                      </div>
+                      <span className="font-bold shrink-0">Other)</span>
+                      <span className="flex-1">Other / Suggest a new correct answer</span>
+                    </label>
+
+                    {/* Custom Option Text Input when Other is selected */}
+                    {isCustomOption && (
+                      <div className="pl-6 pt-1 space-y-1 animate-in fade-in duration-150">
+                        <label className="text-[11px] font-bold text-blue-900 block">
+                          Type your suggested right answer: <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={customOptionText}
+                          onChange={(e) => setCustomOptionText(e.target.value)}
+                          placeholder="e.g., Governor (Under Article 165) or your corrected option text..."
+                          className="w-full px-3 py-2 text-xs bg-white text-slate-900 border border-blue-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 font-medium"
+                          autoFocus
+                        />
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Additional Remarks */}
+                <div className="space-y-1 pt-1 border-t border-slate-100">
+                  <label className="text-xs font-bold text-slate-800 block">
+                    Additional Remarks / Book Reference (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={reportRemarks}
+                    onChange={(e) => setReportRemarks(e.target.value)}
+                    placeholder="Provide official reference, textbook page, or additional details for the academic reviewer..."
+                    className="w-full px-3 py-2 text-xs bg-white text-slate-900 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="px-5 py-3 border-t border-slate-200 bg-slate-50 flex items-center justify-end gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => !isSubmittingReport && setReportingQuestion(null)}
+                  disabled={isSubmittingReport}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 rounded-lg transition active:scale-95 cursor-pointer disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmittingReport}
+                  className="px-4 py-1.5 bg-rose-600 hover:bg-rose-700 active:scale-95 text-white text-xs font-bold rounded-lg shadow-2xs transition flex items-center gap-1.5 cursor-pointer disabled:opacity-50"
+                >
+                  {isSubmittingReport ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin text-white" />
+                      <span>Submitting...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Flag size={13} className="text-white" />
+                      <span>Submit Report</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

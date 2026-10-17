@@ -72,8 +72,8 @@ function InstituteCard({ inst }) {
 
   return (
     <div className="group bg-white rounded-xl border border-slate-200/90 overflow-hidden shadow-xs hover:shadow-md hover:border-blue-400/60 transition-all duration-200 flex flex-col h-full">
-      {/* Thumbnail Banner - Compact reduced height */}
-      <div className="relative w-full h-28 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0">
+      {/* Thumbnail Banner - Increased height for better visibility */}
+      <div className="relative w-full h-40 sm:h-44 bg-gradient-to-br from-slate-100 to-slate-200 overflow-hidden shrink-0">
         {imageSrc ? (
           <img
             src={imageSrc}
@@ -729,7 +729,7 @@ function InstitutesContent() {
                       key={idx}
                       className="bg-white rounded-xl border border-slate-200 p-3 animate-pulse space-y-2"
                     >
-                      <div className="w-full h-28 bg-slate-200 rounded-lg" />
+                      <div className="w-full h-40 sm:h-44 bg-slate-200 rounded-lg" />
                       <div className="h-4 bg-slate-200 rounded w-3/4" />
                       <div className="h-3 bg-slate-200 rounded w-1/2" />
                       <div className="h-7 bg-slate-200 rounded mt-3" />

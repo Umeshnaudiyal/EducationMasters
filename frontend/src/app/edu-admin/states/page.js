@@ -19,6 +19,7 @@ import {
   Image as ImageIcon,
   X,
   ExternalLink,
+  Briefcase,
 } from 'lucide-react';
 import DeleteConfirmModal from '@/components/admin/DeleteConfirmModal';
 import { getImageUrl } from '@/utils/image';
@@ -488,6 +489,17 @@ export default function StatesListPage() {
                       {/* Actions */}
                       <td className="py-3 px-3 text-right pr-4">
                         <div className="flex items-center justify-end gap-1.5">
+                          {/* View Live Jobs Page Button */}
+                          <a
+                            href={`/state/${item.slug}/jobs`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-emerald-600 hover:text-emerald-800 hover:bg-emerald-50 rounded-md transition-colors cursor-pointer"
+                            title={`View ${item.name} Jobs Portal (/state/${item.slug}/jobs)`}
+                          >
+                            <Briefcase size={14} />
+                          </a>
+
                           {/* Edit Button */}
                           <Link
                             href={`/edu-admin/states/edit/${item._id}`}

@@ -8,6 +8,8 @@ import Footer from '@/components/Footer';
 import {
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
+  ChevronUp,
   Globe,
   MapPin,
   Search,
@@ -21,6 +23,7 @@ import {
   Landmark,
   ArrowRight,
   BookOpen,
+  FileText,
 } from 'lucide-react';
 import StateLink from '@/components/StateLink';
 import { INDIAN_STATES_DATA } from '@/utils/indianStatesData';
@@ -55,7 +58,7 @@ const POPULAR_STATES = [
   { name: 'Punjab', slug: 'punjab', shortName: 'Punjab' },
 ];
 
-export default function StateJobsClient({ stateSlug }) {
+export default function StateJobsClient({ stateSlug, initialState = null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -63,12 +66,15 @@ export default function StateJobsClient({ stateSlug }) {
 
   const [jobs, setJobs] = useState([]);
   const [expiringJobs, setExpiringJobs] = useState([]);
-  const [stateProfile, setStateProfile] = useState(null);
+  const [stateProfile, setStateProfile] = useState(
+    initialState ? { state: initialState } : null
+  );
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalJobs, setTotalJobs] = useState(0);
   const [rightTab, setRightTab] = useState('expiring');
+  const [showFullJobDesc, setShowFullJobDesc] = useState(false);
 
   // Filter States
   const [selectedState, setSelectedState] = useState(stateSlug);
@@ -323,8 +329,13 @@ export default function StateJobsClient({ stateSlug }) {
                       </span>
                     </div>
                     <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight mt-0.5">
-                      {stateDisplayName} Government Jobs 2026
+                      {stateProfile?.state?.jobs_title?.trim() || `${stateDisplayName} Government Jobs 2026`}
                     </h1>
+                    {stateProfile?.state?.jobs_subtitle?.trim() && (
+                      <p className="text-xs sm:text-sm text-blue-100/90 font-medium mt-1 leading-relaxed max-w-2xl">
+                        {stateProfile.state.jobs_subtitle.trim()}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -537,6 +548,46 @@ export default function StateJobsClient({ stateSlug }) {
               </div>
 
             </div>
+
+            {/* Dynamic State Job Description / Recruitment Guidelines Card */}
+            {stateProfile?.state?.job_description && (
+              <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-2xs">
+                <div className="px-4 py-3 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                    <FileText size={14} className="text-blue-600" />
+                    <span>{stateDisplayName} Government Recruitment &amp; Vacancy Guidelines</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFullJobDesc(!showFullJobDesc)}
+                    className="text-xs text-blue-600 hover:text-blue-800 font-semibold flex items-center gap-1 cursor-pointer transition-colors"
+                  >
+                    <span>{showFullJobDesc ? 'Show Less' : 'Read Overview'}</span>
+                    {showFullJobDesc ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+                  </button>
+                </div>
+                <div className={`p-4 text-xs sm:text-sm text-slate-700 leading-relaxed transition-all ${
+                  showFullJobDesc ? '' : 'max-h-36 overflow-hidden relative'
+                }`}>
+                  <div
+                    className="prose prose-sm max-w-none prose-headings:text-slate-900 prose-headings:font-bold prose-p:my-2 prose-ul:my-2 prose-li:my-0.5"
+                    dangerouslySetInnerHTML={{ __html: stateProfile.state.job_description }}
+                  />
+                  {!showFullJobDesc && (
+                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white/80 to-transparent flex items-end justify-center pb-1">
+                      <button
+                        type="button"
+                        onClick={() => setShowFullJobDesc(true)}
+                        className="text-xs text-blue-600 hover:text-blue-800 font-bold bg-white/95 px-3.5 py-1 rounded-full border border-blue-200 shadow-2xs hover:shadow-xs transition flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Read Full {stateDisplayName} Guidelines</span>
+                        <ChevronDown size={12} />
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Jobs List */}
             {loading ? (

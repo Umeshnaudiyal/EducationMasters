@@ -139,6 +139,13 @@ export default function ExcelQuestionImportModal({ isOpen, onClose, onSuccess })
     });
   }, [topicsList, batchSubject]);
 
+  // Filtered examinations based on search query
+  const filteredExams = useMemo(() => {
+    if (!examSearch || !examSearch.trim()) return examsList;
+    const q = examSearch.toLowerCase().trim();
+    return examsList.filter((e) => (e.name || '').toLowerCase().includes(q));
+  }, [examsList, examSearch]);
+
   // Dynamic fetch tests when batchMockTestSeries changes
   useEffect(() => {
     if (!batchMockTestSeries) {
