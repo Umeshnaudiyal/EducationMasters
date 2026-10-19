@@ -664,12 +664,12 @@ const VideoTourSection = ({ videoUrl, instituteName = "Institute" }) => {
 const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOpenLightbox }) => {
   if (!images || images.length === 0) return null;
 
-  // Single Image Mode: generous 100% cover display without any text overlay
+  // Single Image Mode: generous 100% cover display without borders
   if (images.length === 1) {
     return (
       <div
         onClick={() => onOpenLightbox(0)}
-        className="w-full border border-gray-200 rounded-xl overflow-hidden shadow-xs relative hidden sm:block h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px] bg-slate-900 group cursor-pointer"
+        className="w-full rounded-sm overflow-hidden relative hidden sm:block h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px] bg-slate-900 group cursor-pointer"
       >
         <img
           src={images[0]}
@@ -683,13 +683,13 @@ const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOp
   // 2 Images Split
   if (images.length === 2) {
     return (
-      <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+      <div className="w-full hidden sm:block">
         <div className="grid grid-cols-2 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
           {images.map((src, idx) => (
             <div
               key={idx}
               onClick={() => onOpenLightbox(idx)}
-              className="relative h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+              className="relative h-full rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
             >
               <img
                 src={src}
@@ -706,11 +706,11 @@ const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOp
   // 3 Images Layout
   if (images.length === 3) {
     return (
-      <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+      <div className="w-full hidden sm:block">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
           <div
             onClick={() => onOpenLightbox(0)}
-            className="relative md:col-span-7 h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+            className="relative md:col-span-7 h-full rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
           >
             <img
               src={images[0]}
@@ -723,7 +723,7 @@ const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOp
               <div
                 key={idx}
                 onClick={() => onOpenLightbox(idx + 1)}
-                className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+                className="relative rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
               >
                 <img
                   src={src}
@@ -741,11 +741,11 @@ const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOp
   // 4 Images Layout
   if (images.length === 4) {
     return (
-      <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+      <div className="w-full hidden sm:block">
         <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
           <div
             onClick={() => onOpenLightbox(0)}
-            className="relative md:col-span-7 h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+            className="relative md:col-span-7 h-full rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
           >
             <img
               src={images[0]}
@@ -756,19 +756,19 @@ const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOp
           <div className="md:col-span-5 grid grid-cols-2 grid-rows-2 gap-2 md:gap-2.5 h-full">
             <div
               onClick={() => onOpenLightbox(1)}
-              className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+              className="relative rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
             >
               <img src={images[1]} alt={`${instituteName} photo 2`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             </div>
             <div
               onClick={() => onOpenLightbox(2)}
-              className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+              className="relative rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
             >
               <img src={images[2]} alt={`${instituteName} photo 3`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             </div>
             <div
               onClick={() => onOpenLightbox(3)}
-              className="relative col-span-2 rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+              className="relative col-span-2 rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
             >
               <img src={images[3]} alt={`${instituteName} photo 4`} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
             </div>
@@ -780,12 +780,12 @@ const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOp
 
   // 5 or More Images (Matches Dev Bhoomi / College Highlights mosaic reference)
   return (
-    <div className="w-full hidden sm:block border border-gray-200 rounded-xl overflow-hidden shadow-xs p-1.5 md:p-2 bg-white">
+    <div className="w-full hidden sm:block">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-2 md:gap-2.5 h-[360px] sm:h-[420px] md:h-[460px] lg:h-[480px]">
         {/* Left Column: 1 Large Featured Image (~58% width) */}
         <div
           onClick={() => onOpenLightbox(0)}
-          className="relative md:col-span-7 h-full rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+          className="relative md:col-span-7 h-full rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
         >
           <img
             src={images[0]}
@@ -807,7 +807,7 @@ const InstituteGalleryMosaic = ({ images = [], instituteName = "Institute", onOp
               <div
                 key={actualIdx}
                 onClick={() => onOpenLightbox(actualIdx)}
-                className="relative rounded-xl overflow-hidden bg-slate-900 cursor-pointer group shadow-2xs"
+                className="relative rounded-sm overflow-hidden bg-slate-900 cursor-pointer group"
               >
                 <img
                   src={imgUrl}
@@ -862,7 +862,7 @@ const CampusGallerySection = ({ media = [], instituteName = "Institute", onOpenP
                     setActivePhoto(src);
                   }
                 }}
-                className="group relative h-28 sm:h-32 rounded-lg overflow-hidden border border-gray-200 bg-slate-100 cursor-pointer shadow-2xs hover:shadow-md transition-all"
+                className="group relative h-28 sm:h-32 rounded-sm overflow-hidden bg-slate-100 cursor-pointer shadow-2xs hover:shadow-md transition-all"
               >
                 <img
                   src={src}
@@ -1542,7 +1542,7 @@ export default function SingleInstitutePage({ params }) {
           {/* ================= DESKTOP HOSTEL-STYLE HEADER ================= */}
           <div className="hidden lg:flex gap-4 items-start pb-4 border-b border-gray-200 mb-5">
             {/* Institute Thumbnail Logo / Cover */}
-            <div className="w-48 h-36 rounded-md border border-gray-200 bg-slate-100 overflow-hidden flex-shrink-0 relative">
+            <div className="w-48 h-36 rounded-sm bg-slate-100 overflow-hidden flex-shrink-0 relative">
               {imageSrc ? (
                 <img
                   src={imageSrc}
@@ -1683,7 +1683,7 @@ export default function SingleInstitutePage({ params }) {
             <div className="space-y-3">
               <div
                 onClick={() => (allGalleryImages.length > 0 ? openLightbox(0) : null)}
-                className="relative h-[280px] sm:h-[340px] rounded-xl overflow-hidden bg-slate-900 shadow-xs cursor-pointer group"
+                className="relative h-[280px] sm:h-[340px] rounded-sm overflow-hidden bg-slate-900 shadow-xs cursor-pointer group"
               >
                 {(allGalleryImages.length > 0 || imageSrc) ? (
                   <>
@@ -1814,7 +1814,7 @@ export default function SingleInstitutePage({ params }) {
               {allGalleryImages.length === 1 && (
                 <div
                   onClick={() => openLightbox(0)}
-                  className="w-full border border-gray-200 rounded-xl overflow-hidden shadow-xs relative hidden sm:block h-[340px] sm:h-[400px] md:h-[440px] lg:h-[460px] bg-slate-900 group cursor-pointer"
+                  className="w-full rounded-sm overflow-hidden relative hidden sm:block h-[340px] sm:h-[400px] md:h-[440px] lg:h-[460px] bg-slate-900 group cursor-pointer"
                 >
                   <img
                     src={allGalleryImages[0]}

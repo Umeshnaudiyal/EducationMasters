@@ -47,6 +47,7 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
   const [saving, setSaving] = useState(false);
   const [serverMessage, setServerMessage] = useState(null);
   const [mediaModalOpen, setMediaModalOpen] = useState(false);
+  const [mediaModalField, setMediaModalField] = useState('image');
   const [isSeoOpen, setIsSeoOpen] = useState(true);
 
   const [exams, setExams] = useState([]);
@@ -61,6 +62,7 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
     title: initialData?.title || '',
     slug: initialData?.slug || '',
     image: initialData?.image || '',
+    emblem: initialData?.emblem || '',
     examination: initialData?.examination?._id || initialData?.examination || '',
     category: initialData?.category?._id || initialData?.category || '',
     badge: initialData?.badge || 'Popular',
@@ -723,7 +725,10 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMediaModalOpen(true)}
+                      onClick={() => {
+                        setMediaModalField('image');
+                        setMediaModalOpen(true);
+                      }}
                       className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <ImageIcon size={13} />
@@ -731,11 +736,11 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
                     </button>
                   </div>
 
-                  <div className="max-w-md rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
+                  <div className="max-w-md rounded-xl border border-slate-200 overflow-hidden bg-slate-50 aspect-[2.2/1]">
                     <img
                       src={getImageUrl(formData.image, null)}
                       alt={formData.title}
-                      className="w-full h-44 object-cover"
+                      className="w-full h-full object-cover"
                     />
                   </div>
                 </div>
@@ -743,11 +748,68 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
                 <div>
                   <button
                     type="button"
-                    onClick={() => setMediaModalOpen(true)}
+                    onClick={() => {
+                      setMediaModalField('image');
+                      setMediaModalOpen(true);
+                    }}
                     className="px-4 py-2.5 bg-white hover:bg-blue-50 text-[#2271b1] border border-blue-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2"
                   >
                     <ImageIcon size={15} />
                     <span>Choose / Upload Series Banner</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Circular Emblem / Logo for Testbook Card */}
+            <div className="space-y-2 pt-3 border-t border-slate-100">
+              <label className="text-xs font-semibold text-slate-800 flex items-center gap-1.5">
+                <span>Circular Emblem / Logo</span>
+                <span className="text-[11px] font-normal text-slate-400">(Used inside Testbook Card)</span>
+              </label>
+
+              {formData.emblem ? (
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full border border-slate-200 bg-white p-1 shadow-2xs overflow-hidden">
+                    <img
+                      src={getImageUrl(formData.emblem, null)}
+                      alt="Emblem"
+                      className="w-full h-full object-contain rounded-full"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleChange('emblem', '')}
+                      className="px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+                    >
+                      Remove Emblem
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaModalField('emblem');
+                        setMediaModalOpen(true);
+                      }}
+                      className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 rounded-lg text-xs font-semibold transition-colors cursor-pointer flex items-center gap-1.5"
+                    >
+                      <ImageIcon size={13} />
+                      <span>Replace Emblem</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setMediaModalField('emblem');
+                      setMediaModalOpen(true);
+                    }}
+                    className="px-4 py-2 bg-white hover:bg-blue-50 text-[#2271b1] border border-blue-200 rounded-xl text-xs font-semibold transition-all cursor-pointer flex items-center gap-2"
+                  >
+                    <ImageIcon size={14} />
+                    <span>Choose Emblem Logo</span>
                   </button>
                 </div>
               )}
@@ -1160,7 +1222,7 @@ export default function MockTestSeriesForm({ initialData = null, isEdit = false 
             (media.path && media.name ? `${media.path}/${media.name}` : '') ||
             media.file ||
             getImageUrl(media, '');
-          handleChange('image', selectedUrl);
+          handleChange(mediaModalField || 'image', selectedUrl);
           setMediaModalOpen(false);
         }}
       />

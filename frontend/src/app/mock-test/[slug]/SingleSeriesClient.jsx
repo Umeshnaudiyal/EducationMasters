@@ -32,6 +32,7 @@ import Footer from '@/components/Footer';
 import LeaderboardView from '@/components/mock-test/LeaderboardView';
 import UnlockPassModal from '@/components/mock-test/UnlockPassModal';
 import { BACKEND_URL } from '@/utils/api';
+import { cleanHtmlContent } from '@/utils/cleanHtml';
 
 // Helper to determine best matching emblem for the series
 function getSeriesEmblem(series) {
@@ -346,6 +347,12 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
                   </span>
                   <span className="text-slate-300">|</span>
 
+                  <span className="flex items-center gap-1 text-amber-750 font-bold bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                    <span className="text-amber-500">⚡</span>
+                    <span>{formatUserCount(series.total_attempts || series.total_users || 0)} Attempts Taken</span>
+                  </span>
+                  <span className="text-slate-300">|</span>
+
                   <span className="flex items-center gap-1 text-slate-600">
                     <Globe size={13} className="text-slate-400" />
                     <span>English, Hindi</span>
@@ -422,6 +429,26 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
 
           </div>
         </section>
+
+        {/* ========================================================================= */}
+        {/* TOP DESCRIPTION (FROM JODIT EDITOR) */}
+        {/* ========================================================================= */}
+        {series.top_description ? (
+          <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pt-6">
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-5 sm:p-6 shadow-2xs">
+              <div className="flex items-center gap-2 pb-3 mb-3 border-b border-slate-100">
+                <Sparkles size={16} className="text-[#00c5d2]" />
+                <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+                  About {series.title} Test Series
+                </h3>
+              </div>
+              <div
+                className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-700 leading-relaxed font-normal"
+                dangerouslySetInnerHTML={{ __html: cleanHtmlContent(series.top_description) }}
+              />
+            </div>
+          </div>
+        ) : null}
 
         {/* ========================================================================= */}
         {/* 2. MAIN 2-COLUMN BODY SECTION */}
@@ -670,8 +697,8 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
                               </div>
                             )}
 
-                            {/* Specs Row: Questions, Marks, Duration */}
-                            <div className="flex flex-wrap items-center gap-4 text-xs text-slate-500">
+                            {/* Specs Row: Questions, Marks, Duration, Dynamic Attempts */}
+                            <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs text-slate-500">
                               <div className="flex items-center gap-1">
                                 <BookOpen size={13} className="text-slate-400" />
                                 <span>{test.total_questions || 100} Questions</span>
@@ -683,6 +710,10 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
                               <div className="flex items-center gap-1">
                                 <Clock size={13} className="text-slate-400" />
                                 <span>{test.duration_minutes || 60} Mins</span>
+                              </div>
+                              <div className="flex items-center gap-1 text-amber-700 font-semibold bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200/70">
+                                <span className="text-amber-500">⚡</span>
+                                <span>{formatUserCount(test.total_attempts || test.total_users || 0)} Attempts Taken</span>
                               </div>
                             </div>
 
@@ -812,6 +843,26 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
 
           </div>
         </div>
+
+        {/* ========================================================================= */}
+        {/* BOTTOM DESCRIPTION, SYLLABUS BREAKDOWN & FAQS (FROM JODIT EDITOR) */}
+        {/* ========================================================================= */}
+        {series.bottom_description ? (
+          <div className="max-w-[1180px] mx-auto px-4 sm:px-6 pt-10">
+            <div className="bg-white rounded-2xl border border-slate-200/90 p-6 sm:p-8 shadow-2xs space-y-4">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
+                <BookOpen size={18} className="text-[#00c5d2]" />
+                <h3 className="text-base font-bold text-slate-900 tracking-tight">
+                  {series.title} - Syllabus Breakdown, Exam Pattern &amp; Guidelines
+                </h3>
+              </div>
+              <div
+                className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-700 leading-relaxed font-normal"
+                dangerouslySetInnerHTML={{ __html: cleanHtmlContent(series.bottom_description) }}
+              />
+            </div>
+          </div>
+        ) : null}
 
         {/* ========================================================================= */}
         {/* 3. SUBSCRIPTION PLANS SECTION (IF ATTACHED) */}

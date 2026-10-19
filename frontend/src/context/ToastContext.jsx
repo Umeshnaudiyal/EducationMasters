@@ -83,32 +83,49 @@ export const toast = {
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
   const counterRef = useRef(0);
+  const lastToastRef = useRef({ message: '', title: '', time: 0 });
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
   }, []);
 
   const showToast = useCallback((toastData) => {
-    const id = `toast_${Date.now()}_${++counterRef.current}`;
     const parsed = typeof toastData === 'string' 
       ? { type: 'success', title: 'Success!', message: toastData }
       : toastData;
 
+    const title = parsed.title || (parsed.type === 'error' ? 'Something went wrong' : 'Success!');
+    const message = parsed.message || '';
+    const now = Date.now();
+
+    // Deduplication check: if exact same toast was emitted within 1.5s, ignore
+    if (
+      lastToastRef.current.message === message &&
+      lastToastRef.current.title === title &&
+      now - lastToastRef.current.time < 1500
+    ) {
+      return;
+    }
+    lastToastRef.current = { message, title, time: now };
+
+    const id = `toast_${now}_${++counterRef.current}`;
+
     const newToast = {
       id,
       type: parsed.type || 'success',
-      title: parsed.title || (parsed.type === 'error' ? 'Something went wrong' : 'Success!'),
-      message: parsed.message || '',
+      title,
+      message,
       duration: parsed.duration ?? 5000,
       icon: parsed.icon,
       emoji: parsed.emoji,
       badge: parsed.badge,
       action: parsed.action,
-      timestamp: Date.now(),
+      timestamp: now,
       ...parsed,
     };
 
-    setToasts((prev) => [...prev.slice(-2), newToast]);
+    // Show ONLY ONE toast at a time
+    setToasts([newToast]);
     return id;
   }, []);
 

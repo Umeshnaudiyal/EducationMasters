@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { X } from 'lucide-react';
+import { useRBAC } from '@/context/RBACContext';
 import {
   AnimatedGauge,
   AnimatedPin,
@@ -41,7 +42,8 @@ export default function AdminSidebar({
   setIsMobileSidebarOpen = () => {},
 }) {
   const pathname = usePathname();
-  const normalizedRole = (userRole || 'admin').toLowerCase();
+  const { hasPermission, userRole: rbacRole } = useRBAC();
+  const normalizedRole = (rbacRole || userRole || 'admin').toLowerCase();
 
   const [openMenus, setOpenMenus] = useState({
     posts: false,
@@ -108,24 +110,24 @@ export default function AdminSidebar({
       label: 'Dashboard',
       icon: AnimatedGauge,
       href: '/edu-admin',
-      roles: ['superadmin', 'admin', 'editor', 'author', 'writer', 'institute', 'institute_admin', 'institute_employee'],
+      permission: 'view_dashboard',
     },
     {
       id: 'posts',
       label: 'Posts',
       icon: AnimatedPin,
       hasSubmenu: true,
-      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+      permission: 'view_posts',
       subItems: [
-        { label: 'All Articles', href: '/edu-admin/blogs' },
-        { label: 'Create Article', href: '/edu-admin/blog/create' },
-        { label: 'All Job Posts', href: '/edu-admin/jobs' },
-        { label: 'Add New Job', href: '/edu-admin/job/create' },
-        { label: 'Admit Cards', href: '/edu-admin/admit-cards' },
-        { label: 'Results', href: '/edu-admin/results' },
-        { label: 'Categories', href: '/edu-admin/categories' },
-        { label: 'Tags', href: '/edu-admin/tags' },
-        { label: 'Departments', href: '/edu-admin/departments' },
+        { label: 'All Articles', href: '/edu-admin/blogs', permission: 'view_posts' },
+        { label: 'Create Article', href: '/edu-admin/blog/create', permission: 'create_posts' },
+        { label: 'All Job Posts', href: '/edu-admin/jobs', permission: 'view_posts' },
+        { label: 'Add New Job', href: '/edu-admin/job/create', permission: 'create_posts' },
+        { label: 'Admit Cards', href: '/edu-admin/admit-cards', permission: 'view_posts' },
+        { label: 'Results', href: '/edu-admin/results', permission: 'view_posts' },
+        { label: 'Categories', href: '/edu-admin/categories', permission: 'manage_categories' },
+        { label: 'Tags', href: '/edu-admin/tags', permission: 'manage_categories' },
+        { label: 'Departments', href: '/edu-admin/departments', permission: 'manage_categories' },
       ],
     },
     {
@@ -133,17 +135,17 @@ export default function AdminSidebar({
       label: 'Sticky Notes',
       icon: AnimatedStickyNote,
       href: '/edu-admin/sticky-notes',
-      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+      permission: 'view_dashboard',
     },
     {
       id: 'media',
       label: 'Media',
       icon: AnimatedImage,
       hasSubmenu: true,
-      roles: ['superadmin', 'admin', 'editor', 'author', 'writer', 'institute_admin'],
+      permission: 'view_media',
       subItems: [
-        { label: 'Library', href: '/edu-admin/media' },
-        { label: 'Add New', href: '/edu-admin/media?action=upload' },
+        { label: 'Library', href: '/edu-admin/media', permission: 'view_media' },
+        { label: 'Add New', href: '/edu-admin/media?action=upload', permission: 'upload_media' },
       ],
     },
     {
@@ -151,12 +153,12 @@ export default function AdminSidebar({
       label: 'Institutes',
       icon: AnimatedLandmark,
       hasSubmenu: true,
-      roles: ['superadmin', 'admin', 'institute', 'institute_admin'],
+      permission: 'view_institutes',
       subItems: [
-        { label: 'All Institutes', href: '/edu-admin/institutes' },
-        { label: 'Add New', href: '/edu-admin/institutes/create' },
-        { label: 'Courses', href: '/edu-admin/institutes/courses' },
-        { label: 'Facilities', href: '/edu-admin/institutes/facilities' },
+        { label: 'All Institutes', href: '/edu-admin/institutes', permission: 'view_institutes' },
+        { label: 'Add New', href: '/edu-admin/institutes/create', permission: 'create_institutes' },
+        { label: 'Courses', href: '/edu-admin/institutes/courses', permission: 'edit_institutes' },
+        { label: 'Facilities', href: '/edu-admin/institutes/facilities', permission: 'edit_institutes' },
       ],
     },
     {
@@ -164,11 +166,11 @@ export default function AdminSidebar({
       label: 'Mock Tests',
       icon: AnimatedMockTest,
       hasSubmenu: true,
-      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+      permission: 'view_mcqs',
       subItems: [
-        { label: 'All Mock Test Series', href: '/edu-admin/mock-tests' },
-        { label: 'Create Series', href: '/edu-admin/mock-tests/create' },
-        { label: 'Pricing & Passes', href: '/edu-admin/mock-tests/plans' },
+        { label: 'All Mock Test Series', href: '/edu-admin/mock-tests', permission: 'view_mcqs' },
+        { label: 'Create Series', href: '/edu-admin/mock-tests/create', permission: 'create_mcqs' },
+        { label: 'Pricing & Passes', href: '/edu-admin/mock-tests/plans', permission: 'view_mcqs' },
       ],
     },
     {
@@ -176,11 +178,11 @@ export default function AdminSidebar({
       label: 'Question Bank',
       icon: AnimatedCheckSquare,
       hasSubmenu: true,
-      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+      permission: 'view_mcqs',
       subItems: [
-        { label: 'All Questions', href: '/edu-admin/questions' },
-        { label: 'Question Reports', href: '/edu-admin/question-reports' },
-        { label: 'Add New Question', href: '/edu-admin/questions/create' },
+        { label: 'All Questions', href: '/edu-admin/questions', permission: 'view_mcqs' },
+        { label: 'Question Reports', href: '/edu-admin/question-reports', permission: 'view_mcqs' },
+        { label: 'Add New Question', href: '/edu-admin/questions/create', permission: 'create_mcqs' },
       ],
     },
     {
@@ -188,14 +190,14 @@ export default function AdminSidebar({
       label: "MCQ's Taxonomy",
       icon: AnimatedCheckSquare,
       hasSubmenu: true,
-      roles: ['superadmin', 'admin', 'editor', 'author', 'writer'],
+      permission: 'manage_categories',
       subItems: [
-        { label: 'Exams', href: '/edu-admin/exams' },
-        { label: 'States', href: '/edu-admin/states' },
-        { label: 'Add New State', href: '/edu-admin/states/create' },
-        { label: 'Subjects', href: '/edu-admin/subjects' },
-        { label: 'Topics', href: '/edu-admin/topics' },
-        { label: 'Topic Groups', href: '/edu-admin/topic-groups' },
+        { label: 'Exams', href: '/edu-admin/exams', permission: 'manage_categories' },
+        { label: 'States', href: '/edu-admin/states', permission: 'manage_categories' },
+        { label: 'Add New State', href: '/edu-admin/states/create', permission: 'manage_categories' },
+        { label: 'Subjects', href: '/edu-admin/subjects', permission: 'manage_categories' },
+        { label: 'Topics', href: '/edu-admin/topics', permission: 'manage_categories' },
+        { label: 'Topic Groups', href: '/edu-admin/topic-groups', permission: 'manage_categories' },
       ],
     },
     {
@@ -203,13 +205,13 @@ export default function AdminSidebar({
       label: 'Users',
       icon: AnimatedUsers,
       hasSubmenu: true,
-      roles: ['superadmin', 'admin'],
+      permission: 'view_users',
       subItems: [
-        { label: 'All Users', href: '/edu-admin/users' },
-        { label: 'Add New', href: '/edu-admin/users/create' },
-        { label: 'Session Logs', href: '/edu-admin/users/logs' },
-        { label: 'Profile', href: '/edu-admin/profile' },
-        { label: 'Roles & RBAC', href: '/edu-admin/users/roles' },
+        { label: 'All Users', href: '/edu-admin/users', permission: 'view_users' },
+        { label: 'Add New', href: '/edu-admin/users/create', permission: 'create_users' },
+        { label: 'Session Logs', href: '/edu-admin/users/logs', permission: 'view_users' },
+        { label: 'Profile', href: '/edu-admin/profile', permission: 'view_users' },
+        { label: 'Roles & RBAC', href: '/edu-admin/users/roles', permission: 'edit_users' },
       ],
     },
     {
@@ -217,52 +219,67 @@ export default function AdminSidebar({
       label: 'Subscribers',
       icon: AnimatedMail,
       href: '/edu-admin/subscribers',
-      roles: ['superadmin', 'admin', 'editor'],
+      permission: 'view_subscribers',
     },
-    // Standalone profile and login logs item for non-admins
     {
       id: 'session-logs',
       label: 'Login Logs',
       icon: AnimatedHistory,
       href: '/edu-admin/users/logs',
-      roles: ['editor', 'author', 'writer', 'institute', 'institute_admin', 'institute_employee'],
+      isStandaloneNonAdmin: true,
     },
     {
       id: 'profile',
       label: 'My Profile',
       icon: AnimatedUser,
       href: '/edu-admin/profile',
-      roles: ['editor', 'author', 'writer', 'institute', 'institute_admin', 'institute_employee'],
+      isStandaloneNonAdmin: true,
     },
     {
       id: 'whatsapp',
       label: 'WhatsApp',
       icon: WhatsAppIcon,
       href: '/edu-admin/whatsapp',
-      roles: ['superadmin', 'admin'],
+      permission: 'manage_settings',
     },
     {
       id: 'settings',
       label: 'Settings',
       icon: AnimatedSettings,
       href: '/edu-admin/settings',
-      roles: ['superadmin', 'admin'],
+      permission: 'manage_settings',
     },
   ];
 
   const renderNavItems = (isMobileView = false) => {
     return menuItems.map((item) => {
-      const isSuperOrAdmin = normalizedRole === 'superadmin' || normalizedRole === 'admin';
-      const hasRoleAccess = item.roles.includes(normalizedRole);
-
-      // Only show item if authorized for user's role
-      if (!hasRoleAccess && !isSuperOrAdmin) {
-        return null;
+      // 1. Standalone profile & login logs items for non-admins
+      if (item.isStandaloneNonAdmin) {
+        // If user already has view_users, they see the full Users menu instead
+        if (hasPermission('view_users')) {
+          return null;
+        }
       }
 
-      // Don't show standalone profile item to admins since it's already inside Users menu
-      if (item.id === 'profile' && isSuperOrAdmin) {
-        return null;
+      // 2. Submenu items: filter subitems based on fine-grained permissions
+      let visibleSubItems = [];
+      if (item.hasSubmenu) {
+        visibleSubItems = (item.subItems || []).filter((sub) => {
+          if (!sub.permission) return true;
+          return hasPermission(sub.permission);
+        });
+
+        // Hide parent menu completely if user lacks access to all of its subitems
+        if (visibleSubItems.length === 0) {
+          return null;
+        }
+      }
+
+      // 3. Direct link items: check permission capability
+      if (!item.hasSubmenu && !item.isStandaloneNonAdmin) {
+        if (item.permission && !hasPermission(item.permission)) {
+          return null;
+        }
       }
 
       const IconComponent = item.icon;
@@ -271,8 +288,8 @@ export default function AdminSidebar({
         item.href === pathname ||
         (item.href && item.href !== '/edu-admin' && pathname.startsWith(item.href));
       const isSubmenuActive =
-        item.subItems &&
-        item.subItems.some((s) => {
+        visibleSubItems.length > 0 &&
+        visibleSubItems.some((s) => {
           const baseHref = s.href.split('?')[0];
           return (
             pathname === baseHref ||
@@ -313,9 +330,9 @@ export default function AdminSidebar({
             </button>
 
             {/* Submenu Links */}
-            {(isMobileView || !isCollapsed) && isMenuOpen && item.subItems && (
+            {(isMobileView || !isCollapsed) && isMenuOpen && visibleSubItems.length > 0 && (
               <div className="bg-[#262c30] py-1 space-y-0.5 animate-in fade-in slide-in-from-top-1 duration-150">
-                {item.subItems.map((sub, subIdx) => {
+                {visibleSubItems.map((sub, subIdx) => {
                   const isSubActive =
                     pathname === sub.href ||
                     (pathname.startsWith(sub.href) && sub.href !== '/edu-admin/institutes');

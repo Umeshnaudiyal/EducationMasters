@@ -3,10 +3,57 @@
 import React, { useState } from 'react';
 import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { ShieldAlert, Home, LogOut, BookOpen } from 'lucide-react';
 import AdminSidebar from '@/components/admin/AdminSidebar';
 import AdminHeader from '@/components/admin/AdminHeader';
 import AdminLoader from '@/components/admin/AdminLoader';
+import { RBACProvider, useRBAC } from '@/context/RBACContext';
+
+function AdminRouteGuard({ children }) {
+  const pathname = usePathname();
+  const { canAccessRoute, userRole } = useRBAC();
+
+  const access = canAccessRoute(pathname);
+
+  if (!access.allowed) {
+    return (
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center animate-fadeIn">
+        <div className="max-w-md w-full bg-white rounded-2xl border border-rose-200 shadow-sm p-8 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600 mb-4 shadow-xs">
+            <ShieldAlert size={32} />
+          </div>
+          <h1 className="text-xl font-bold text-slate-900 mb-2">Access Restricted</h1>
+          <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+            Your role <span className="font-semibold text-rose-600 uppercase">({userRole})</span> does not have the required capability <code className="px-1.5 py-0.5 bg-slate-100 rounded text-slate-800 font-mono text-[11px]">{access.requiredPermission}</code> to access this route.
+          </p>
+          <div className="p-3 bg-slate-50 rounded-lg border border-slate-200 text-left text-xs text-slate-500 w-full mb-6">
+            <p className="font-semibold text-slate-700 mb-0.5">Need Access?</p>
+            <p className="text-[11px]">
+              Contact an administrator to grant this capability to your account via the Roles &amp; Permissions Matrix.
+            </p>
+          </div>
+          <div className="flex items-center gap-3">
+            <Link
+              href="/edu-admin"
+              className="px-4 py-2 bg-[#2271b1] hover:bg-[#135e96] text-white text-xs font-semibold rounded-lg shadow-sm transition-colors"
+            >
+              Return to Dashboard
+            </Link>
+            <Link
+              href="/edu-admin/profile"
+              className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold rounded-lg border border-slate-300 transition-colors"
+            >
+              My Profile
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return children;
+}
 
 export default function AdminLayout({ children }) {
   const { data: session, status } = useSession();
@@ -153,29 +200,33 @@ export default function AdminLayout({ children }) {
   }
 
   return (
-    <div className="min-h-screen bg-[#f0f0f1] text-slate-800 flex flex-col overflow-hidden font-sans antialiased w-full max-w-full">
-      {/* Top Header Bar */}
-      <AdminHeader
-        session={session}
-        onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
-      />
-
-      {/* Body Area with Sidebar + Content */}
-      <div className="flex-1 flex flex-row min-w-0 h-[calc(100vh-44px)] overflow-hidden w-full max-w-full">
-        {/* Compact Collapsible Sidebar (165px on desktop, slide drawer on mobile) */}
-        <AdminSidebar
-          userRole={userRole}
-          isCollapsed={isCollapsed}
-          setIsCollapsed={setIsCollapsed}
-          isMobileSidebarOpen={isMobileSidebarOpen}
-          setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+    <RBACProvider>
+      <div className="min-h-screen bg-[#f0f0f1] text-slate-800 flex flex-col overflow-hidden font-sans antialiased w-full max-w-full">
+        {/* Top Header Bar */}
+        <AdminHeader
+          session={session}
+          onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
 
-        {/* Dynamic Page Container with Stable Scrollbar */}
-        <main className="flex-1 overflow-y-auto p-3 sm:p-5 bg-[#f0f0f1] custom-scrollbar [scrollbar-gutter:stable] min-w-0 max-w-full">
-          {children}
-        </main>
+        {/* Body Area with Sidebar + Content */}
+        <div className="flex-1 flex flex-row min-w-0 h-[calc(100vh-44px)] overflow-hidden w-full max-w-full">
+          {/* Compact Collapsible Sidebar (165px on desktop, slide drawer on mobile) */}
+          <AdminSidebar
+            userRole={userRole}
+            isCollapsed={isCollapsed}
+            setIsCollapsed={setIsCollapsed}
+            isMobileSidebarOpen={isMobileSidebarOpen}
+            setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+          />
+
+          {/* Dynamic Page Container with Stable Scrollbar and Route Access Guard */}
+          <main className="flex-1 overflow-y-auto p-3 sm:p-5 bg-[#f0f0f1] custom-scrollbar [scrollbar-gutter:stable] min-w-0 max-w-full">
+            <AdminRouteGuard>
+              {children}
+            </AdminRouteGuard>
+          </main>
+        </div>
       </div>
-    </div>
+    </RBACProvider>
   );
 }

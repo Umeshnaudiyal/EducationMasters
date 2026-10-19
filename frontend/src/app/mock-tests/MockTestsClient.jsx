@@ -1,347 +1,409 @@
 'use client';
 
-import React, { useState, useRef, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ChevronRight,
-  ChevronLeft,
   Search,
   BookOpen,
   Sparkles,
-  CheckCircle2,
   Layers,
   Award,
   Clock,
-  ExternalLink,
+  Compass,
+  CheckCircle2,
+  Filter,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
+import TestbookSeriesCard from '@/components/mock-tests/TestbookSeriesCard';
+import MockTestFilterSidebar from '@/components/mock-tests/MockTestFilterSidebar';
 
-// Base Categories for Filtering
-const CATEGORY_TABS = [
-  { id: 'all', name: 'All Mock Tests' },
-  { id: 'ssc', name: 'SSC Exams' },
-  { id: 'banking', name: 'Banking Exams' },
-  { id: 'teaching', name: 'Teaching Exams' },
-  { id: 'civil-services', name: 'Civil Services Exam' },
-  { id: 'railways', name: 'Railways Exams' },
-  { id: 'engineering', name: 'Engineering Recruitment Exams' },
-  { id: 'defence', name: 'Defence Exams' },
+// Base Stream Categories for Exams Directory
+const BASE_CATEGORIES = [
+  { id: 'all', name: 'All Exam Streams', keyword: '' },
+  { id: 'banking', name: 'Banking & Insurance', keyword: 'bank' },
+  { id: 'ssc', name: 'SSC Exams', keyword: 'ssc' },
+  { id: 'railways', name: 'Railways RRB', keyword: 'rail' },
+  { id: 'teaching', name: 'Teaching Exams', keyword: 'teach' },
+  { id: 'civil-services', name: 'Civil Services / UPSC', keyword: 'upsc' },
+  { id: 'defence', name: 'Defence & Police', keyword: 'police' },
+  { id: 'engineering', name: 'Engineering Exams', keyword: 'gate' },
+  { id: 'state', name: 'State Govt Exams', keyword: 'state' },
 ];
 
-// Helper to determine best matching emblem for a created series
-function getSeriesEmblem(series) {
-  if (series.image) return series.image;
-
-  const text = `${series.title || ''} ${series.examination_name || ''} ${series.category_name || ''} ${series.slug || ''}`.toLowerCase();
-
-  if (text.includes('ssc')) return '/exam-icons/ssc.svg';
-  if (text.includes('bank') || text.includes('ibps') || text.includes('sbi') || text.includes('rbi') || text.includes('lic') || text.includes('nabard')) {
-    return '/exam-icons/bank.svg';
-  }
-  if (text.includes('rail') || text.includes('rrb') || text.includes('rpf') || text.includes('group d') || text.includes('ntpc')) {
-    return '/exam-icons/railway.svg';
-  }
-  if (text.includes('upsc') || text.includes('ias') || text.includes('ips') || text.includes('civil') || text.includes('pcs') || text.includes('bpsc') || text.includes('mppsc') || text.includes('rpsc')) {
-    return '/exam-icons/upsc.svg';
-  }
-  if (text.includes('teach') || text.includes('tet') || text.includes('net') || text.includes('ctet') || text.includes('dsssb') || text.includes('kvs') || text.includes('nvs') || text.includes('reet')) {
-    return '/exam-icons/teaching.svg';
-  }
-  if (text.includes('gate') || text.includes('eng') || text.includes('drdo') || text.includes('isro') || text.includes('ese') || text.includes('ies') || text.includes('ae') || text.includes('je')) {
-    return '/exam-icons/engineering.svg';
-  }
-  if (text.includes('def') || text.includes('afcat') || text.includes('navy') || text.includes('air force') || text.includes('agniveer') || text.includes('police') || text.includes('cisf') || text.includes('nda') || text.includes('cds')) {
-    return '/exam-icons/defence.svg';
-  }
-  if (text.includes('ib') || text.includes('security assistant') || text.includes('intelligence')) {
-    return '/exam-icons/ib.svg';
-  }
-
-  // Default fallback emblem
-  return '/exam-icons/ssc.svg';
-}
-
-export default function MockTestsClient({ initialSeries = [] }) {
+export default function MockTestsClient({
+  initialExams = [],
+  initialSeries = [],
+  initialSubjects = [],
+}) {
   const router = useRouter();
+  const [examsList, setExamsList] = useState(initialExams);
   const [seriesList, setSeriesList] = useState(initialSeries);
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
-  const tabsScrollRef = useRef(null);
+  const [subjectsList, setSubjectsList] = useState(initialSubjects);
 
-  // Re-fetch series client-side to ensure real-time updates when new series are created
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedSubject, setSelectedSubject] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  // Client-side refresh on mount to ensure fresh data
   useEffect(() => {
     let isMounted = true;
-    async function fetchLatestSeries() {
+    async function refreshDirectories() {
       try {
-        const res = await fetch('/apis/v1/mock-test-series?status=published&limit=100');
-        const data = await res.json();
-        if (data.success && isMounted && Array.isArray(data.data)) {
-          setSeriesList(data.data);
+        const [eRes, sRes, subRes] = await Promise.all([
+          fetch('/apis/v1/exams?all=true&status=published'),
+          fetch('/apis/v1/mock-test-series?status=published&limit=100'),
+          fetch('/apis/v1/subjects?limit=100'),
+        ]);
+
+        const [eData, sData, subData] = await Promise.all([
+          eRes.json(),
+          sRes.json(),
+          subRes.json(),
+        ]);
+
+        if (isMounted) {
+          if (eData.success && Array.isArray(eData.data)) setExamsList(eData.data);
+          if (sData.success && Array.isArray(sData.data)) setSeriesList(sData.data);
+          if (subData.success && Array.isArray(subData.data)) setSubjectsList(subData.data);
         }
       } catch (err) {
-        console.error('Error fetching client mock series:', err);
+        console.error('Error refreshing client directories:', err);
       }
     }
-    fetchLatestSeries();
+
+    refreshDirectories();
     return () => {
       isMounted = false;
     };
   }, []);
 
-  // Scroll category tabs left/right
-  const scrollTabs = (direction) => {
-    if (tabsScrollRef.current) {
-      const scrollAmount = direction === 'left' ? -240 : 240;
-      tabsScrollRef.current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
-    }
-  };
-
-  // Build dynamic category list incorporating any unique categories created in admin
-  const dynamicCategories = useMemo(() => {
-    const categoriesMap = new Map();
-    CATEGORY_TABS.forEach((cat) => categoriesMap.set(cat.id, cat));
-
-    // Add any unique custom category from created series
-    seriesList.forEach((s) => {
-      if (s.category_name && s.category_name.trim()) {
-        const catId = s.category_name.toLowerCase().replace(/\s+/g, '-');
-        if (!categoriesMap.has(catId)) {
-          categoriesMap.set(catId, {
-            id: catId,
-            name: `${s.category_name} Tests`,
-          });
-        }
+  // Compute dynamic category counts based on current exams list
+  const categoriesWithCounts = useMemo(() => {
+    return BASE_CATEGORIES.map((cat) => {
+      if (cat.id === 'all') {
+        return { ...cat, count: examsList.length };
       }
+      const kw = cat.keyword.toLowerCase();
+      const count = examsList.filter((e) => {
+        const text = `${e.name || ''} ${e.slug || ''} ${e.category_name || ''} ${e.description || ''}`.toLowerCase();
+        if (cat.id === 'banking') {
+          return text.includes('bank') || text.includes('sbi') || text.includes('ibps') || text.includes('rbi') || text.includes('lic');
+        }
+        if (cat.id === 'ssc') {
+          return text.includes('ssc') || text.includes('cgl') || text.includes('chsl');
+        }
+        if (cat.id === 'railways') {
+          return text.includes('rail') || text.includes('rrb') || text.includes('ntpc') || text.includes('group d');
+        }
+        if (cat.id === 'teaching') {
+          return text.includes('teach') || text.includes('tet') || text.includes('ctet') || text.includes('utet') || text.includes('net');
+        }
+        if (cat.id === 'civil-services') {
+          return text.includes('upsc') || text.includes('ias') || text.includes('pcs') || text.includes('civil');
+        }
+        if (cat.id === 'defence') {
+          return text.includes('def') || text.includes('police') || text.includes('army') || text.includes('nda') || text.includes('cds');
+        }
+        if (cat.id === 'engineering') {
+          return text.includes('gate') || text.includes('eng') || text.includes('je') || text.includes('ae') || text.includes('isro');
+        }
+        if (cat.id === 'state') {
+          return text.includes('state') || text.includes('pcs') || text.includes('patwari') || text.includes('constable');
+        }
+        return text.includes(kw);
+      }).length;
+
+      return { ...cat, count };
     });
+  }, [examsList]);
 
-    return Array.from(categoriesMap.values());
-  }, [seriesList]);
+  // Compute dynamic subject counts based on current exams
+  const subjectsWithCounts = useMemo(() => {
+    return subjectsList.slice(0, 15).map((sub) => {
+      const subSlug = (sub.slug || '').toLowerCase();
+      const subName = (sub.name || '').toLowerCase();
+      const count = examsList.filter((e) => {
+        if (Array.isArray(e.subjects) && e.subjects.length > 0) {
+          return e.subjects.some((s) => s.slug === sub.slug || s._id === sub._id);
+        }
+        const text = `${e.name || ''} ${e.description || ''}`.toLowerCase();
+        return text.includes(subName) || text.includes(subSlug);
+      }).length;
 
-  // Filter created mock tests/series based on category and search query
-  const filteredSeries = useMemo(() => {
-    return seriesList.filter((s) => {
-      const textToSearch = `${s.title || ''} ${s.slug || ''} ${s.examination_name || ''} ${s.category_name || ''} ${s.badge || ''}`.toLowerCase();
+      return {
+        _id: sub._id,
+        name: sub.name,
+        slug: sub.slug,
+        count,
+      };
+    });
+  }, [subjectsList, examsList]);
 
-      // Search Query Filter
+  // Dynamic attempts taken and tests across all directories
+  const totalDirectoryAttempts = useMemo(() => {
+    return examsList.reduce((acc, e) => acc + (e.total_attempts || e.total_users || 0), 0);
+  }, [examsList]);
+
+  const totalDirectoryTests = useMemo(() => {
+    return examsList.reduce((acc, e) => acc + (e.total_tests || 0), 0);
+  }, [examsList]);
+
+  // Filter exams based on category, subject, and search query
+  const filteredExams = useMemo(() => {
+    return examsList.filter((exam) => {
+      const text = `${exam.name || ''} ${exam.slug || ''} ${exam.category_name || ''} ${exam.description || ''} ${exam.badge || ''}`.toLowerCase();
+
+      // Search Query
       if (searchQuery.trim()) {
         const q = searchQuery.trim().toLowerCase();
-        if (!textToSearch.includes(q)) return false;
+        if (!text.includes(q)) return false;
       }
 
-      // Category Tab Filter
-      if (selectedCategory === 'all') return true;
+      // Category Filter
+      if (selectedCategory !== 'all') {
+        const cat = BASE_CATEGORIES.find((c) => c.id === selectedCategory);
+        if (cat) {
+          if (selectedCategory === 'banking') {
+            const isBanking = text.includes('bank') || text.includes('sbi') || text.includes('ibps') || text.includes('rbi') || text.includes('lic');
+            if (!isBanking) return false;
+          } else if (selectedCategory === 'ssc') {
+            if (!text.includes('ssc') && !text.includes('cgl') && !text.includes('chsl')) return false;
+          } else if (selectedCategory === 'railways') {
+            if (!text.includes('rail') && !text.includes('rrb') && !text.includes('ntpc')) return false;
+          } else if (selectedCategory === 'teaching') {
+            if (!text.includes('teach') && !text.includes('tet') && !text.includes('ctet') && !text.includes('utet')) return false;
+          } else if (selectedCategory === 'civil-services') {
+            if (!text.includes('upsc') && !text.includes('ias') && !text.includes('pcs') && !text.includes('civil')) return false;
+          } else if (selectedCategory === 'defence') {
+            if (!text.includes('def') && !text.includes('police') && !text.includes('army') && !text.includes('nda')) return false;
+          } else if (selectedCategory === 'engineering') {
+            if (!text.includes('gate') && !text.includes('eng') && !text.includes('je') && !text.includes('isro')) return false;
+          } else if (selectedCategory === 'state') {
+            if (!text.includes('state') && !text.includes('pcs') && !text.includes('patwari')) return false;
+          } else {
+            if (!text.includes(cat.keyword.toLowerCase())) return false;
+          }
+        }
+      }
 
-      const catKeyword = selectedCategory.replace(/-/g, ' ').toLowerCase();
-      if (textToSearch.includes(catKeyword)) return true;
+      // Subject Filter
+      if (selectedSubject !== 'all') {
+        if (Array.isArray(exam.subjects) && exam.subjects.length > 0) {
+          const hasSub = exam.subjects.some(
+            (s) => s.slug === selectedSubject || s._id === selectedSubject
+          );
+          if (!hasSub) return false;
+        } else {
+          const subObj = subjectsList.find(
+            (s) => s.slug === selectedSubject || s._id === selectedSubject
+          );
+          if (subObj) {
+            const subWord = subObj.name.toLowerCase();
+            if (!text.includes(subWord)) return false;
+          }
+        }
+      }
 
-      if (selectedCategory === 'ssc' && textToSearch.includes('ssc')) return true;
-      if (selectedCategory === 'banking' && (textToSearch.includes('bank') || textToSearch.includes('ibps') || textToSearch.includes('sbi') || textToSearch.includes('rbi'))) return true;
-      if (selectedCategory === 'railways' && (textToSearch.includes('rail') || textToSearch.includes('rrb') || textToSearch.includes('rpf') || textToSearch.includes('ntpc'))) return true;
-      if (selectedCategory === 'civil-services' && (textToSearch.includes('upsc') || textToSearch.includes('civil') || textToSearch.includes('ias') || textToSearch.includes('pcs'))) return true;
-      if (selectedCategory === 'teaching' && (textToSearch.includes('teach') || textToSearch.includes('tet') || textToSearch.includes('net') || textToSearch.includes('ctet'))) return true;
-      if (selectedCategory === 'engineering' && (textToSearch.includes('gate') || textToSearch.includes('eng') || textToSearch.includes('isro') || textToSearch.includes('drdo'))) return true;
-      if (selectedCategory === 'defence' && (textToSearch.includes('def') || textToSearch.includes('navy') || textToSearch.includes('air force') || textToSearch.includes('police'))) return true;
-
-      return false;
+      return true;
     });
-  }, [seriesList, selectedCategory, searchQuery]);
+  }, [examsList, selectedCategory, selectedSubject, searchQuery, subjectsList]);
+
+  const handleResetFilters = () => {
+    setSelectedCategory('all');
+    setSelectedSubject('all');
+    setSearchQuery('');
+  };
 
   return (
-    <div className="min-h-screen bg-[#ffffff] flex flex-col font-sans">
+    <div className="min-h-screen flex flex-col bg-white text-slate-800 font-sans">
       <Header />
 
-      <main className="flex-1 pb-20">
-        <div className="max-w-[1140px] mx-auto px-4 sm:px-6 pt-6 sm:pt-10">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
+        
+        {/* ========================================================================= */}
+        {/* 1. TOP BREADCRUMBS */}
+        {/* ========================================================================= */}
+        <nav className="flex items-center space-x-1.5 text-xs text-slate-500 mb-2 overflow-x-auto whitespace-nowrap">
+          <Link href="/" className="hover:text-sky-600 font-normal">
+            Home
+          </Link>
+          <ChevronRight className="w-3 h-3 text-slate-400 shrink-0" />
+          <span className="text-slate-800 font-medium">Mock Tests Directory</span>
+        </nav>
 
-          {/* ========================================================================= */}
-          {/* 1. MOCK TESTS HEADER */}
-          {/* ========================================================================= */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-            <div className="space-y-1">
-              <h1 className="text-2xl sm:text-[28px] font-bold text-slate-900 tracking-tight">
-                Mock Tests
+        {/* ========================================================================= */}
+        {/* 2. PAGE HEADER BANNER */}
+        {/* ========================================================================= */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-5">
+          <div>
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+                Mock Tests Directory
               </h1>
-              <p className="text-xs sm:text-[13px] text-slate-500 font-normal">
-                Get exam-ready with full-length mock tests, practice questions and study notes as per the latest pattern
-              </p>
+              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+                {examsList.length} Exam Directories
+              </span>
             </div>
+            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+              Select an examination directory to practice full-length test series, chapter-wise MCQs, and free papers
+            </p>
+          </div>
 
-            {/* Quick Search Bar */}
-            <div className="relative w-full md:w-72">
-              <input
-                type="text"
-                placeholder="Search mock tests..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-9 pr-4 py-2 bg-slate-50 hover:bg-slate-100 focus:bg-white text-xs sm:text-sm border border-slate-200 rounded-full focus:outline-none focus:ring-2 focus:ring-[#00c5d2] transition-all"
-              />
-              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
-              {searchQuery && (
+          {/* Real-time Directory Stats */}
+          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-semibold text-slate-600">
+            {totalDirectoryAttempts > 0 && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800">
+                <span className="text-amber-500">⚡</span>
+                <span>{totalDirectoryAttempts.toLocaleString()} Attempts Taken</span>
+              </div>
+            )}
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500"></span>
+              <span>{totalDirectoryTests > 0 ? `${totalDirectoryTests}+ Mock Tests` : '100% Latest Pattern'}</span>
+            </div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+              <span>All India Ranking</span>
+            </div>
+          </div>
+        </div>
+
+        {/* ========================================================================= */}
+        {/* 3. 2-COLUMN RESPONSIVE LAYOUT (LEFT FILTER SIDEBAR + MAIN DIRECTORY GRID) */}
+        {/* ========================================================================= */}
+        <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 items-start">
+          
+          {/* ================= COMPACT LEFT FILTER SIDEBAR ================= */}
+          <MockTestFilterSidebar
+            categories={categoriesWithCounts}
+            selectedCategory={selectedCategory}
+            onSelectCategory={(id) => setSelectedCategory(id)}
+            subjects={subjectsWithCounts}
+            selectedSubject={selectedSubject}
+            onSelectSubject={(id) => setSelectedSubject(id)}
+            searchQuery={searchQuery}
+            onSearchChange={(q) => setSearchQuery(q)}
+            onResetFilters={handleResetFilters}
+            totalCount={filteredExams.length}
+          />
+
+          {/* ================= EXPANSIVE MAIN DIRECTORY SECTION ================= */}
+          <section className="flex-1 min-w-0 space-y-4">
+
+            {/* Quick Mobile Category Scroll Bar (Mobile view only) */}
+            <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
+              {categoriesWithCounts.map((tab) => (
                 <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 cursor-pointer"
+                  key={tab.id}
+                  onClick={() => setSelectedCategory(tab.id)}
+                  className={`px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all text-xs cursor-pointer ${
+                    selectedCategory === tab.id
+                      ? 'bg-sky-600 text-white shadow-2xs'
+                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                  }`}
                 >
-                  Clear
+                  {tab.name} ({tab.count})
                 </button>
-              )}
-            </div>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* 2. CATEGORY PILL TABS CAROUSEL */}
-          {/* ========================================================================= */}
-          <div className="relative flex items-center mb-8">
-            {/* Scroll Left Button */}
-            <button
-              onClick={() => scrollTabs('left')}
-              className="hidden sm:flex absolute -left-4 z-10 w-7 h-7 rounded-full bg-white shadow-sm border border-slate-200 items-center justify-center text-slate-500 hover:text-slate-800 transition-all cursor-pointer"
-              aria-label="Scroll left"
-            >
-              <ChevronLeft size={16} />
-            </button>
-
-            {/* Horizontal Tabs Container */}
-            <div
-              ref={tabsScrollRef}
-              className="flex items-center gap-2.5 overflow-x-auto scrollbar-none py-1 w-full scroll-smooth"
-              style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-            >
-              {dynamicCategories.map((cat) => {
-                const isActive = selectedCategory === cat.id && !searchQuery;
-                return (
-                  <button
-                    key={cat.id}
-                    onClick={() => {
-                      setSelectedCategory(cat.id);
-                      setSearchQuery('');
-                    }}
-                    className={`px-4 sm:px-5 py-1.5 sm:py-2 rounded-full text-xs sm:text-[13px] whitespace-nowrap transition-all duration-150 cursor-pointer ${
-                      isActive
-                        ? 'bg-[#00c5d2] text-white font-medium shadow-2xs'
-                        : 'bg-white border border-slate-300 text-slate-600 hover:border-slate-400 hover:text-slate-800 font-normal'
-                    }`}
-                  >
-                    {cat.name}
-                  </button>
-                );
-              })}
+              ))}
             </div>
 
-            {/* Scroll Right Button */}
-            <button
-              onClick={() => scrollTabs('right')}
-              className="flex shrink-0 ml-2 w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-slate-100 hover:bg-slate-200 border border-slate-200/80 items-center justify-center text-slate-600 hover:text-slate-900 transition-all cursor-pointer z-10"
-              aria-label="Scroll right"
-            >
-              <ChevronRight size={16} />
-            </button>
-          </div>
-
-          {/* ========================================================================= */}
-          {/* 3. DYNAMIC CREATED MOCK TESTS GRID (3-COLUMN TESTBOOK STYLE) */}
-          {/* ========================================================================= */}
-          {filteredSeries.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 sm:gap-4">
-              {filteredSeries.map((series) => {
-                const emblemSrc = getSeriesEmblem(series);
-                const freeTests = series.free_tests_count || 0;
-                const totalTests = series.total_tests || (series.tests ? series.tests.length : 0);
-
-                return (
-                  <div
-                    key={series._id || series.slug}
-                    onClick={() => router.push(`/mock-test/${series.slug}`)}
-                    className="bg-white rounded-xl border border-slate-200 hover:border-sky-400 hover:shadow-xs transition-all duration-150 px-4 py-3 sm:py-3.5 flex items-center justify-between group cursor-pointer min-h-[62px]"
-                  >
-                    <div className="flex items-center gap-3.5 min-w-0">
-                      {/* Authentic Exam / Category Emblem */}
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-full flex items-center justify-center shrink-0 overflow-hidden shadow-2xs">
-                        <img
-                          src={emblemSrc}
-                          alt={series.title}
-                          className="w-full h-full object-contain"
-                          onError={(e) => {
-                            e.target.src = '/exam-icons/ssc.svg';
-                          }}
-                        />
-                      </div>
-
-                      {/* Mock Test Series Info */}
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-semibold text-slate-800 text-xs sm:text-[13px] tracking-tight group-hover:text-sky-600 transition-colors truncate">
-                            {series.title}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center gap-2 text-[11px] text-slate-500 mt-0.5">
-                          <span>
-                            {totalTests > 0 ? `${totalTests} Tests` : 'Practice Series'}
-                          </span>
-                          {freeTests > 0 && (
-                            <span className="text-emerald-600 font-semibold">
-                              • {freeTests} Free
-                            </span>
-                          )}
-                          {series.category_name && (
-                            <span className="text-slate-400 truncate max-w-[120px]">
-                              • {series.category_name}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Right Arrow Chevron */}
-                    <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-sky-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-2" />
-                  </div>
-                );
-              })}
-
-              {/* "Explore all mock tests" Link Card */}
-              <div
-                onClick={() => {
-                  setSelectedCategory('all');
-                  setSearchQuery('');
-                  window.scrollTo({ top: 0, behavior: 'smooth' });
-                }}
-                className="bg-white rounded-xl border border-slate-200 hover:border-slate-300 hover:shadow-xs transition-all duration-150 px-4 py-3 sm:py-3.5 flex items-center justify-center group cursor-pointer min-h-[62px] text-center"
-              >
-                <span className="font-medium text-[#00a8cc] hover:text-[#0092b3] text-xs sm:text-[13px]">
-                  Explore all mock tests
-                </span>
+            {/* Active Filter Indicator */}
+            {(selectedCategory !== 'all' || selectedSubject !== 'all' || searchQuery) && (
+              <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl flex items-center justify-between text-xs text-sky-900">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-bold">Active Filter:</span>
+                  {selectedCategory !== 'all' && (
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                      Stream: {categoriesWithCounts.find((c) => c.id === selectedCategory)?.name}
+                    </span>
+                  )}
+                  {selectedSubject !== 'all' && (
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                      Subject: {subjectsWithCounts.find((s) => s.slug === selectedSubject || s._id === selectedSubject)?.name}
+                    </span>
+                  )}
+                  {searchQuery && (
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                      Search: &quot;{searchQuery}&quot;
+                    </span>
+                  )}
+                  <span className="text-slate-500 font-medium ml-1">
+                    ({filteredExams.length} directories found)
+                  </span>
+                </div>
+                <button
+                  onClick={handleResetFilters}
+                  className="text-sky-700 font-bold hover:underline shrink-0 ml-2 cursor-pointer"
+                >
+                  Clear All
+                </button>
               </div>
-            </div>
-          ) : (
-            /* Empty State if No Created Series Matches Filter */
-            <div className="bg-white rounded-2xl border border-slate-200 p-8 sm:p-12 text-center max-w-md mx-auto space-y-4">
-              <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center mx-auto text-slate-400">
-                <BookOpen size={24} />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-bold text-slate-800">
-                  No mock tests found in this category
-                </h3>
-                <p className="text-xs text-slate-500">
-                  Try selecting &quot;All Mock Tests&quot; or clearing your search filter.
+            )}
+
+            {/* ================= DIRECTORY CARDS GRID ================= */}
+            {filteredExams.length === 0 ? (
+              <div className="py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3">
+                <BookOpen className="w-10 h-10 text-slate-400 mx-auto" />
+                <p className="text-slate-700 font-bold text-sm">
+                  No exam directories found matching your filter criteria
                 </p>
+                <button
+                  onClick={handleResetFilters}
+                  className="text-xs text-sky-600 font-bold hover:underline cursor-pointer"
+                >
+                  Reset search & filters
+                </button>
               </div>
-              <button
-                onClick={() => {
-                  setSelectedCategory('all');
-                  setSearchQuery('');
-                }}
-                className="px-5 py-2 bg-[#00c5d2] hover:bg-[#00b0bd] text-white text-xs font-semibold rounded-full shadow-xs transition cursor-pointer"
-              >
-                View All Mock Tests ({seriesList.length})
-              </button>
+            ) : (
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4 sm:gap-5 pt-1">
+                {filteredExams.map((exam) => (
+                  <TestbookSeriesCard
+                    key={exam._id || exam.slug}
+                    item={exam}
+                    type="directory"
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* ================= BOTTOM SEO EXPLANATORY SECTION ================= */}
+            <div className="mt-10 p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-xs text-slate-600 leading-relaxed">
+              <h2 className="text-sm font-bold text-slate-900">
+                Online Mock Test Series Directory for All India Government & Competitive Exams
+              </h2>
+              <p>
+                EducationMasters provides premier exam management and mock test directories designed to replicate actual examination patterns for Banking (SBI PO/Clerk, IBPS, RBI), SSC (CGL, CHSL, MTS, CPO), Railway Recruitment Boards (RRB NTPC, Group D, ALP), Teaching (CTET, UTET, State TET), Civil Services (UPSC, State PCS), Defence (Police, NDA, CDS), and Engineering Recruitments.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 pt-2 border-t border-slate-200 text-[11px]">
+                <div className="flex items-start gap-2">
+                  <span className="text-sky-600 font-bold text-base leading-none">✓</span>
+                  <div>
+                    <strong className="text-slate-800">Authentic Interface:</strong> Identical exam screen timer, question palette, and section navigation as actual exam boards.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-emerald-600 font-bold text-base leading-none">✓</span>
+                  <div>
+                    <strong className="text-slate-800">Free Practice Papers:</strong> Every exam directory contains free practice mock tests with bilingual detailed solutions.
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <span className="text-purple-600 font-bold text-base leading-none">✓</span>
+                  <div>
+                    <strong className="text-slate-800">All India Rank:</strong> Compare percentiles, accuracy rates, and time-management analytics with thousands of aspirants nationwide.
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
+
+          </section>
 
         </div>
+
       </main>
 
       <Footer />

@@ -63,6 +63,8 @@ export default function TaxonomyManager({
   initialFormData = {},
   validateForm = null,
   showSeo = true,
+  hasTopBottomDescription = false,
+  hasBannerAndEmblem = false,
   stateDataModalRenderer = null,
 }) {
   const { data: session } = useSession();
@@ -93,7 +95,11 @@ export default function TaxonomyManager({
     name: '',
     slug: '',
     image: '',
+    banner_image: '',
+    emblem: '',
     description: '',
+    top_description: '',
+    bottom_description: '',
     seo: {
       allow_indexing: true,
       meta_title: '',
@@ -109,6 +115,7 @@ export default function TaxonomyManager({
   const [saving, setSaving] = useState(false);
   const [isSeoOpen, setIsSeoOpen] = useState(true);
   const [mediaModalOpen, setMediaModalOpen] = useState(false);
+  const [mediaModalField, setMediaModalField] = useState('image');
 
   // Delete modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -201,7 +208,11 @@ export default function TaxonomyManager({
       name: '',
       slug: '',
       image: '',
+      banner_image: '',
+      emblem: '',
       description: '',
+      top_description: '',
+      bottom_description: '',
       seo: {
         allow_indexing: true,
         meta_title: '',
@@ -227,7 +238,11 @@ export default function TaxonomyManager({
       name: item.name || '',
       slug: item.slug || '',
       image: item.image || item.featured_media || '',
+      banner_image: item.banner_image || '',
+      emblem: item.emblem || '',
       description: cleanDesc,
+      top_description: cleanHtmlContent(item.top_description || ''),
+      bottom_description: cleanHtmlContent(item.bottom_description || ''),
       seo: {
         allow_indexing: item.seo?.allow_indexing ?? item.allow_indexing ?? true,
         meta_title: stripHtmlToPlainText(rawMetaTitle),
@@ -275,6 +290,10 @@ export default function TaxonomyManager({
     const payload = {
       ...formData,
       description: cleanHtmlContent(formData.description || ''),
+      top_description: cleanHtmlContent(formData.top_description || ''),
+      bottom_description: cleanHtmlContent(formData.bottom_description || ''),
+      banner_image: formData.banner_image || '',
+      emblem: formData.emblem || '',
       seo: {
         allow_indexing: formData.seo?.allow_indexing ?? true,
         meta_title: stripHtmlToPlainText(formData.seo?.meta_title || ''),
@@ -467,11 +486,10 @@ export default function TaxonomyManager({
         {/* Toast Alert Notification */}
         {serverMessage && (
           <div
-            className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2.5 border animate-in slide-in-from-top-2 ${
-              serverMessage.type === 'error'
+            className={`fixed top-4 right-4 z-50 px-4 py-3 rounded-xl shadow-xl text-xs font-semibold flex items-center gap-2.5 border animate-in slide-in-from-top-2 ${serverMessage.type === 'error'
                 ? 'bg-rose-50 border-rose-200 text-rose-800'
                 : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-            }`}
+              }`}
           >
             {serverMessage.type === 'error' ? (
               <AlertCircle size={15} className="text-rose-600 shrink-0" />
@@ -556,7 +574,10 @@ export default function TaxonomyManager({
                     </button>
                     <button
                       type="button"
-                      onClick={() => setMediaModalOpen(true)}
+                      onClick={() => {
+                        setMediaModalField('image');
+                        setMediaModalOpen(true);
+                      }}
                       className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#2271b1] border border-slate-300 hover:border-[#2271b1] rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5"
                     >
                       <ImageIcon size={13} />
@@ -566,7 +587,10 @@ export default function TaxonomyManager({
 
                   <div
                     className="w-full max-w-xl rounded-xl border border-slate-200 overflow-hidden shadow-xs bg-slate-50/70 cursor-pointer group relative"
-                    onClick={() => setMediaModalOpen(true)}
+                    onClick={() => {
+                      setMediaModalField('image');
+                      setMediaModalOpen(true);
+                    }}
                     title="Click to change image"
                   >
                     <img
@@ -589,7 +613,10 @@ export default function TaxonomyManager({
                 <div>
                   <button
                     type="button"
-                    onClick={() => setMediaModalOpen(true)}
+                    onClick={() => {
+                      setMediaModalField('image');
+                      setMediaModalOpen(true);
+                    }}
                     className="px-4 py-2 bg-white hover:bg-blue-50 text-[#2271b1] border border-blue-200 hover:border-[#2271b1] rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
                   >
                     <ImageIcon size={15} />
@@ -599,6 +626,119 @@ export default function TaxonomyManager({
               )}
             </div>
           </div>
+
+          {/* Optional Banner Image */}
+          {hasBannerAndEmblem && (
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 pt-1">
+              <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-1 shrink-0">
+                Directory Banner Image
+              </label>
+              <div className="flex-1 min-w-0 max-w-4xl space-y-3">
+                {formData.banner_image ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={() => handleChange('banner_image', '')}
+                        className="px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                      >
+                        Remove Banner
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMediaModalField('banner_image');
+                          setMediaModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#2271b1] border border-slate-300 hover:border-[#2271b1] rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <ImageIcon size={13} />
+                        <span>Replace Banner</span>
+                      </button>
+                    </div>
+
+                    <div className="w-full max-w-xl rounded-xl border border-slate-200 overflow-hidden shadow-xs bg-slate-50 aspect-[2.2/1]">
+                      <img
+                        src={getImageUrl(formData.banner_image, null)}
+                        alt="Directory Banner"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaModalField('banner_image');
+                        setMediaModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-white hover:bg-blue-50 text-[#2271b1] border border-blue-200 hover:border-[#2271b1] rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+                    >
+                      <ImageIcon size={15} />
+                      <span>Choose Directory Banner Image</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Optional Circular Emblem */}
+          {hasBannerAndEmblem && (
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6 pt-1">
+              <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-1 shrink-0">
+                Circular Emblem / Logo
+              </label>
+              <div className="flex-1 min-w-0 max-w-4xl space-y-3">
+                {formData.emblem ? (
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 rounded-full border border-slate-200 overflow-hidden bg-white p-1 shadow-2xs">
+                      <img
+                        src={getImageUrl(formData.emblem, null)}
+                        alt="Emblem"
+                        className="w-full h-full object-contain rounded-full"
+                      />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleChange('emblem', '')}
+                        className="px-3 py-1.5 bg-white hover:bg-rose-50 text-rose-600 border border-rose-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                      >
+                        Remove Emblem
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMediaModalField('emblem');
+                          setMediaModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 bg-white hover:bg-slate-50 text-slate-700 hover:text-[#2271b1] border border-slate-300 rounded-lg text-xs font-semibold shadow-2xs transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <ImageIcon size={13} />
+                        <span>Replace Emblem</span>
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMediaModalField('emblem');
+                        setMediaModalOpen(true);
+                      }}
+                      className="px-4 py-2 bg-white hover:bg-blue-50 text-[#2271b1] border border-blue-200 hover:border-[#2271b1] rounded-xl text-xs sm:text-sm font-semibold transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+                    >
+                      <ImageIcon size={15} />
+                      <span>Choose Emblem Logo</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Row 2: Name */}
           <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
@@ -611,11 +751,10 @@ export default function TaxonomyManager({
                 value={formData.name || ''}
                 onChange={(e) => handleChange('name', e.target.value)}
                 placeholder={`Enter ${singularTitle.toLowerCase()} name`}
-                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-lg text-slate-800 focus:outline-none transition-all ${
-                  formErrors.name
+                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-lg text-slate-800 focus:outline-none transition-all ${formErrors.name
                     ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
                     : 'border-slate-300 focus:border-[#2271b1] focus:ring-2 focus:ring-[#2271b1]/15'
-                }`}
+                  }`}
               />
               {formErrors.name ? (
                 <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
@@ -641,11 +780,10 @@ export default function TaxonomyManager({
                 value={formData.slug || ''}
                 onChange={(e) => handleChange('slug', slugify(e.target.value))}
                 placeholder={`e.g. ${formData.name ? slugify(formData.name) : 'slug-name'}`}
-                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-lg text-slate-800 font-mono focus:outline-none transition-all ${
-                  formErrors.slug
+                className={`w-full px-3.5 py-2.5 text-xs sm:text-sm bg-white border rounded-lg text-slate-800 font-mono focus:outline-none transition-all ${formErrors.slug
                     ? 'border-rose-500 ring-2 ring-rose-500/20 bg-rose-50/20'
                     : 'border-slate-300 focus:border-[#2271b1] focus:ring-2 focus:ring-[#2271b1]/15'
-                }`}
+                  }`}
               />
               {formErrors.slug ? (
                 <p className="text-[11px] font-medium text-rose-600 flex items-center gap-1">
@@ -672,6 +810,26 @@ export default function TaxonomyManager({
             </div>
           )}
 
+          {/* Optional Top Description (Rich Text Editor) */}
+          {hasTopBottomDescription && (
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+              <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
+                Top Overview Description
+              </label>
+              <div className="flex-1 min-w-0 max-w-4xl space-y-1.5">
+                <JoditEditorWrapper
+                  value={formData.top_description || ''}
+                  onChange={(content) => handleChange('top_description', content)}
+                  height={280}
+                  placeholder={`Write top overview description for ${formData.name || singularTitle}...`}
+                />
+                <p className="text-[11px] text-slate-400">
+                  Rendered prominently at the top of the mock test directory and sub-directory page.
+                </p>
+              </div>
+            </div>
+          )}
+
           {/* Row 4: Description (Rich Text Editor) */}
           <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
             <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
@@ -681,14 +839,34 @@ export default function TaxonomyManager({
               <JoditEditorWrapper
                 value={formData.description || ''}
                 onChange={(content) => handleChange('description', content)}
-                height={300}
+                height={260}
                 placeholder={`Enter ${singularTitle.toLowerCase()} description...`}
               />
               <p className="text-[11px] text-slate-400">
-                The description is not prominent by default; however, sometimes we may show it.
+                The general description of this {singularTitle.toLowerCase()}.
               </p>
             </div>
           </div>
+
+          {/* Optional Bottom Description (Rich Text Editor) */}
+          {hasTopBottomDescription && (
+            <div className="flex flex-col sm:flex-row items-start gap-4 sm:gap-6">
+              <label className="w-36 sm:w-44 text-xs sm:text-sm font-semibold text-slate-800 pt-2 shrink-0">
+                Bottom Syllabus &amp; SEO Description
+              </label>
+              <div className="flex-1 min-w-0 max-w-4xl space-y-1.5">
+                <JoditEditorWrapper
+                  value={formData.bottom_description || ''}
+                  onChange={(content) => handleChange('bottom_description', content)}
+                  height={320}
+                  placeholder={`Write comprehensive exam pattern, syllabus breakdown, FAQs and SEO content...`}
+                />
+                <p className="text-[11px] text-slate-400">
+                  Rendered at the bottom of the page beneath test series cards for in-depth Google ranking, pattern tables, and FAQs.
+                </p>
+              </div>
+            </div>
+          )}
 
           {/* Row 5: SEO Data */}
           {showSeo && (
@@ -801,7 +979,7 @@ export default function TaxonomyManager({
               (media.path && media.name ? `${media.path}/${media.name}` : '') ||
               media.file ||
               getImageUrl(media, '');
-            handleChange('image', selectedUrl);
+            handleChange(mediaModalField || 'image', selectedUrl);
             setMediaModalOpen(false);
           }}
         />
@@ -814,11 +992,10 @@ export default function TaxonomyManager({
       {/* Toast Alert Notification */}
       {serverMessage && (
         <div
-          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded shadow-xl text-xs font-semibold flex items-center gap-2 border animate-in slide-in-from-top-2 ${
-            serverMessage.type === 'error'
+          className={`fixed top-4 right-4 z-50 px-4 py-2.5 rounded shadow-xl text-xs font-semibold flex items-center gap-2 border animate-in slide-in-from-top-2 ${serverMessage.type === 'error'
               ? 'bg-rose-50 border-rose-200 text-rose-800'
               : 'bg-emerald-50 border-emerald-200 text-emerald-800'
-          }`}
+            }`}
         >
           {serverMessage.type === 'error' ? (
             <AlertCircle size={14} className="text-rose-600 shrink-0" />
@@ -893,11 +1070,10 @@ export default function TaxonomyManager({
                 value={formData.name || ''}
                 onChange={(e) => handleChange('name', e.target.value)}
                 placeholder={`e.g. ${singularTitle} Title`}
-                className={`w-full px-2.5 py-1.5 text-xs bg-white border rounded text-slate-800 focus:outline-none transition-colors ${
-                  formErrors.name
+                className={`w-full px-2.5 py-1.5 text-xs bg-white border rounded text-slate-800 focus:outline-none transition-colors ${formErrors.name
                     ? 'border-rose-500 ring-1 ring-rose-500/50 bg-rose-50/20'
                     : 'border-slate-300 focus:border-[#2271b1]'
-                }`}
+                  }`}
               />
               {formErrors.name ? (
                 <p className="text-[11px] font-medium text-rose-600 mt-1 flex items-center gap-1">
@@ -921,11 +1097,10 @@ export default function TaxonomyManager({
                 value={formData.slug || ''}
                 onChange={(e) => handleChange('slug', slugify(e.target.value))}
                 placeholder={`e.g. ${singularTitle.toLowerCase()}-slug`}
-                className={`w-full px-2.5 py-1.5 text-xs bg-white border rounded text-slate-800 focus:outline-none transition-colors font-mono ${
-                  formErrors.slug
+                className={`w-full px-2.5 py-1.5 text-xs bg-white border rounded text-slate-800 focus:outline-none transition-colors font-mono ${formErrors.slug
                     ? 'border-rose-500 ring-1 ring-rose-500/50 bg-rose-50/20'
                     : 'border-slate-300 focus:border-[#2271b1]'
-                }`}
+                  }`}
               />
               {formErrors.slug ? (
                 <p className="text-[11px] font-medium text-rose-600 mt-1 flex items-center gap-1">
@@ -1145,9 +1320,8 @@ export default function TaxonomyManager({
                   return (
                     <div
                       key={item._id}
-                      className={`p-3 space-y-2 bg-white text-xs ${
-                        isEditing ? 'bg-blue-50/50' : isSelected ? 'bg-amber-50/40' : ''
-                      }`}
+                      className={`p-3 space-y-2 bg-white text-xs ${isEditing ? 'bg-blue-50/50' : isSelected ? 'bg-amber-50/40' : ''
+                        }`}
                     >
                       <div className="flex items-start gap-2.5">
                         <input
@@ -1270,13 +1444,12 @@ export default function TaxonomyManager({
                       return (
                         <tr
                           key={item._id}
-                          className={`hover:bg-[#f6f7f7] transition-colors ${
-                            isEditing
+                          className={`hover:bg-[#f6f7f7] transition-colors ${isEditing
                               ? 'bg-blue-50/50'
                               : isSelected
-                              ? 'bg-amber-50/40'
-                              : ''
-                          }`}
+                                ? 'bg-amber-50/40'
+                                : ''
+                            }`}
                         >
                           <td className="py-2 px-3 text-center align-middle">
                             <input
@@ -1383,7 +1556,7 @@ export default function TaxonomyManager({
         onClose={() => setMediaModalOpen(false)}
         onSelect={(media) => {
           const selectedUrl = media.url || (media.path && media.name ? `${media.path}/${media.name}` : '') || media.file || getImageUrl(media, '');
-          handleChange('image', selectedUrl);
+          handleChange(mediaModalField || 'image', selectedUrl);
           setMediaModalOpen(false);
         }}
       />

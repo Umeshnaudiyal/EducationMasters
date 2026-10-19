@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useSession } from 'next-auth/react';
 import {
@@ -17,16 +17,30 @@ import {
   Save,
   Info,
   ShieldAlert,
+  Loader2,
+  RefreshCw,
 } from 'lucide-react';
 import AdminLoader from '@/components/admin/AdminLoader';
+import { useRBAC, DEFAULT_ROLE_PERMISSIONS } from '@/context/RBACContext';
 
 export default function RolesAndPermissionsPage() {
   const { data: session, status } = useSession();
+  const { roleMatrix, saveRoleMatrix, refreshRoleMatrix, isLoadingMatrix } = useRBAC();
   const userRole = (session?.user?.role || '').toLowerCase();
   const isAdmin = userRole === 'admin' || userRole === 'superadmin';
 
   const [activeRole, setActiveRole] = useState('superadmin');
+  const [rolePermissions, setRolePermissions] = useState(DEFAULT_ROLE_PERMISSIONS);
+  const [isSaving, setIsSaving] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  // Sync rolePermissions with RBAC context matrix
+  useEffect(() => {
+    if (roleMatrix && Object.keys(roleMatrix).length > 0) {
+      setRolePermissions(roleMatrix);
+    }
+  }, [roleMatrix]);
 
   // Role Definitions
   const roles = [
@@ -34,43 +48,50 @@ export default function RolesAndPermissionsPage() {
       id: 'superadmin',
       name: 'Superadmin',
       badge: 'bg-purple-100 text-purple-800 border-purple-200',
-      description: 'Universal root access. Bypasses all permission checks. Can create institutes, assign CRM plans, and manage all staff.',
+      description:
+        'Universal root access. Inherently bypasses all permission checks. Can manage all staff, create institutes, and configure system matrices.',
     },
     {
       id: 'admin',
       name: 'Admin',
       badge: 'bg-blue-100 text-blue-800 border-blue-200',
-      description: 'System administrator. Can manage users, institutes, content, MCQs, and media library.',
+      description:
+        'System administrator. Can manage users, institutes, content, MCQs, and configure media library and system settings.',
     },
     {
       id: 'editor',
       name: 'Editor',
       badge: 'bg-emerald-100 text-emerald-800 border-emerald-200',
-      description: 'Content reviewer and publisher. Manages blogs, job posts, admit cards, results, categories, and tags.',
+      description:
+        'Content reviewer and publisher. Manages blogs, job posts, admit cards, results, categories, and tags.',
     },
     {
       id: 'author',
       name: 'Author (Writer)',
       badge: 'bg-amber-100 text-amber-800 border-amber-200',
-      description: 'Content creator. Can draft articles, blogs, job notifications, and submit questions to the MCQ bank.',
+      description:
+        'Content creator. Can draft articles, blogs, job notifications, and submit questions to the MCQ bank.',
     },
     {
       id: 'institute_admin',
       name: 'Institute Admin',
       badge: 'bg-indigo-100 text-indigo-800 border-indigo-200',
-      description: 'Educational institute manager. Manages institute profile, courses, leads CRM, and invites institute employees.',
+      description:
+        'Educational institute manager. Manages institute profile, courses, leads CRM, and invites institute employees.',
     },
     {
       id: 'institute_employee',
       name: 'Institute Employee',
       badge: 'bg-cyan-100 text-cyan-800 border-cyan-200',
-      description: 'Institute staff member. Handles student inquiries, leads follow-up, and admissions inside the CRM panel.',
+      description:
+        'Institute staff member. Handles student inquiries, leads follow-up, and admissions inside the CRM panel.',
     },
     {
       id: 'user',
       name: 'User (Student)',
       badge: 'bg-slate-100 text-slate-800 border-slate-200',
-      description: 'Public portal user. Can take online MCQ mock tests, browse institutes, save jobs, and apply.',
+      description:
+        'Public portal user. Can take online MCQ mock tests, browse institutes, save jobs, and apply.',
     },
   ];
 
@@ -112,8 +133,8 @@ export default function RolesAndPermissionsPage() {
       category: "MCQ's & Test Series",
       icon: HelpCircle,
       permissions: [
-        { key: 'view_mcqs', label: 'View MCQ Question Bank' },
-        { key: 'create_mcqs', label: 'Add New MCQ Questions & Options' },
+        { key: 'view_mcqs', label: 'View MCQ Question Bank & Test Series' },
+        { key: 'create_mcqs', label: 'Add New MCQ Questions & Test Series' },
         { key: 'edit_mcqs', label: 'Edit Questions & Explanations' },
         { key: 'delete_mcqs', label: 'Delete Questions' },
       ],
@@ -133,82 +154,20 @@ export default function RolesAndPermissionsPage() {
       permissions: [
         { key: 'view_users', label: 'View Users List & Role Filters' },
         { key: 'create_users', label: 'Create Admin, Editor, Author, & Institute Users' },
-        { key: 'edit_users', label: 'Edit User Roles & Permissions' },
+        { key: 'edit_users', label: 'Edit User Roles & RBAC Matrix' },
         { key: 'toggle_user_status', label: 'Activate / Deactivate Users' },
         { key: 'delete_users', label: 'Delete Users' },
       ],
     },
+    {
+      category: 'System Settings & Integrations',
+      icon: Settings,
+      permissions: [
+        { key: 'manage_settings', label: 'Manage Global Site Settings & WhatsApp API' },
+        { key: 'view_subscribers', label: 'View & Manage Newsletter Subscribers' },
+      ],
+    },
   ];
-
-  // Default permission matrices
-  const [rolePermissions, setRolePermissions] = useState({
-    superadmin: ['all'],
-    admin: [
-      'view_dashboard',
-      'view_analytics',
-      'view_posts',
-      'create_posts',
-      'edit_posts',
-      'publish_posts',
-      'delete_posts',
-      'manage_categories',
-      'view_institutes',
-      'create_institutes',
-      'edit_institutes',
-      'assign_crm_plans',
-      'manage_institute_staff',
-      'view_institute_leads',
-      'view_mcqs',
-      'create_mcqs',
-      'edit_mcqs',
-      'delete_mcqs',
-      'view_media',
-      'upload_media',
-      'delete_media',
-      'view_users',
-      'create_users',
-      'edit_users',
-      'toggle_user_status',
-    ],
-    editor: [
-      'view_dashboard',
-      'view_posts',
-      'create_posts',
-      'edit_posts',
-      'publish_posts',
-      'manage_categories',
-      'view_mcqs',
-      'create_mcqs',
-      'edit_mcqs',
-      'view_media',
-      'upload_media',
-    ],
-    author: [
-      'view_dashboard',
-      'view_posts',
-      'create_posts',
-      'view_mcqs',
-      'create_mcqs',
-      'view_media',
-      'upload_media',
-    ],
-    institute_admin: [
-      'view_dashboard',
-      'view_institutes',
-      'edit_institutes',
-      'manage_institute_staff',
-      'view_institute_leads',
-      'view_media',
-      'upload_media',
-    ],
-    institute_employee: [
-      'view_dashboard',
-      'view_institute_leads',
-    ],
-    user: [
-      'view_mcqs',
-    ],
-  });
 
   const hasPermission = (roleId, permKey) => {
     if (roleId === 'superadmin') return true;
@@ -231,9 +190,18 @@ export default function RolesAndPermissionsPage() {
     });
   };
 
-  const handleSave = () => {
-    setSavedSuccess(true);
-    setTimeout(() => setSavedSuccess(false), 3000);
+  const handleSave = async () => {
+    try {
+      setIsSaving(true);
+      setErrorMsg('');
+      await saveRoleMatrix(rolePermissions);
+      setSavedSuccess(true);
+      setTimeout(() => setSavedSuccess(false), 3000);
+    } catch (err) {
+      setErrorMsg(err.message || 'Failed to save role permissions matrix.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const currentRoleObj = roles.find((r) => r.id === activeRole) || roles[0];
@@ -279,25 +247,64 @@ export default function RolesAndPermissionsPage() {
         <div>
           <div className="flex items-center gap-2.5">
             <h1 className="text-xl sm:text-2xl font-bold text-slate-800 tracking-tight">
-              Roles & Permissions Matrix
+              Roles &amp; Permissions Matrix
             </h1>
             <span className="px-2.5 py-0.5 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full border border-blue-200">
               RBAC Enabled
             </span>
+            {isLoadingMatrix && (
+              <span className="flex items-center gap-1 text-[11px] text-slate-400">
+                <Loader2 size={12} className="animate-spin" /> Syncing...
+              </span>
+            )}
           </div>
           <p className="text-xs text-slate-500 mt-0.5">
             Configure granular access levels for Superadmins, Admins, Content Writers, and Educational Institute CRM accounts.
           </p>
         </div>
 
-        <button
-          onClick={handleSave}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm transition-all"
-        >
-          {savedSuccess ? <Check size={14} /> : <Save size={14} />}
-          {savedSuccess ? 'Changes Saved!' : 'Save Role Matrix'}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => refreshRoleMatrix()}
+            title="Reload from Database"
+            className="p-1.5 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium rounded-lg border border-slate-200 shadow-xs transition-colors flex items-center justify-center cursor-pointer"
+          >
+            <RefreshCw size={14} className={isLoadingMatrix ? 'animate-spin' : ''} />
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 text-white text-xs font-semibold rounded-lg shadow-sm transition-all cursor-pointer ${
+              savedSuccess
+                ? 'bg-emerald-600 hover:bg-emerald-700'
+                : 'bg-[#2271b1] hover:bg-[#135e96]'
+            } ${isSaving ? 'opacity-70 cursor-not-allowed' : ''}`}
+          >
+            {isSaving ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : savedSuccess ? (
+              <Check size={14} />
+            ) : (
+              <Save size={14} />
+            )}
+            {isSaving ? 'Saving...' : savedSuccess ? 'Changes Saved!' : 'Save Role Matrix'}
+          </button>
+        </div>
       </div>
+
+      {errorMsg && (
+        <div className="p-3 bg-rose-50 border border-rose-200 rounded-xl text-rose-700 text-xs flex items-center gap-2">
+          <ShieldAlert size={16} className="shrink-0 text-rose-600" />
+          <span>{errorMsg}</span>
+        </div>
+      )}
+
+      {savedSuccess && (
+        <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-2">
+          <Check size={16} className="shrink-0 text-emerald-600" />
+          <span>Role permissions matrix successfully saved to the database. Sidebar and route permissions are now updated in real time!</span>
+        </div>
+      )}
 
       {/* Role Selection Tabs */}
       <div className="flex items-center gap-2 overflow-x-auto pb-1 custom-scrollbar">
@@ -305,9 +312,9 @@ export default function RolesAndPermissionsPage() {
           <button
             key={r.id}
             onClick={() => setActiveRole(r.id)}
-            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 border ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-2 border cursor-pointer ${
               activeRole === r.id
-                ? 'bg-blue-600 text-white border-blue-600 shadow-sm scale-[1.01]'
+                ? 'bg-[#2271b1] text-white border-[#2271b1] shadow-sm scale-[1.01]'
                 : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
             }`}
           >
@@ -352,7 +359,7 @@ export default function RolesAndPermissionsPage() {
             >
               <div className="p-4 bg-slate-50/80 border-b border-slate-200 flex items-center justify-between">
                 <div className="flex items-center gap-2.5">
-                  <div className="p-1.5 rounded-lg bg-blue-100 text-blue-600">
+                  <div className="p-1.5 rounded-lg bg-blue-100 text-[#2271b1]">
                     <Icon size={16} />
                   </div>
                   <h4 className="text-sm font-bold text-slate-800">{mod.category}</h4>
@@ -394,7 +401,7 @@ export default function RolesAndPermissionsPage() {
                       <div
                         className={`w-6 h-6 rounded-md flex items-center justify-center transition-all ${
                           isChecked
-                            ? 'bg-blue-600 text-white shadow-sm'
+                            ? 'bg-[#2271b1] text-white shadow-sm'
                             : 'bg-slate-200 text-transparent'
                         }`}
                       >

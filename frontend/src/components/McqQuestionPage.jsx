@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
@@ -500,6 +500,8 @@ export default function McqQuestionPage({
     }
   };
 
+  const lastAuthPromptRef = useRef(0);
+
   const handleSelectOption = (questionId, optionIndex) => {
     // Check if user is answering a new question for the first time
     const isNewAnswer = userAnswers[questionId] === undefined;
@@ -507,6 +509,12 @@ export default function McqQuestionPage({
 
     // If user has answered 3 questions and attempts to answer the 4th question while unauthenticated:
     if (isNewAnswer && currentAttemptedCount >= 3 && !session?.user) {
+      const now = Date.now();
+      if (now - lastAuthPromptRef.current < 2000) {
+        return;
+      }
+      lastAuthPromptRef.current = now;
+
       openAuthModal({
         mode: 'register',
         mandatory: true,
@@ -1649,7 +1657,10 @@ export default function McqQuestionPage({
                               return (
                                 <label
                                   key={optIdx}
-                                  onClick={() => handleSelectOption(qId, optIdx)}
+                                  onClick={(e) => {
+                                    e.preventDefault();
+                                    handleSelectOption(qId, optIdx);
+                                  }}
                                   className={`flex items-center justify-between gap-2.5 px-3 py-2 sm:py-2.5 rounded-xl border text-xs sm:text-sm cursor-pointer transition select-none ${showCorrectHighlight
                                     ? 'bg-emerald-50/80 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
                                     : showWrongHighlight
@@ -1664,8 +1675,8 @@ export default function McqQuestionPage({
                                       type="radio"
                                       name={`question-opt-${qId}`}
                                       checked={isChecked}
-                                      onChange={() => handleSelectOption(qId, optIdx)}
-                                      className="accent-blue-600 w-4 h-4 cursor-pointer shrink-0"
+                                      readOnly
+                                      className="accent-blue-600 w-4 h-4 cursor-pointer shrink-0 pointer-events-none"
                                     />
                                     <span className="min-w-0 break-words leading-tight">
                                       <strong className="mr-1 text-slate-900 font-bold">{letter}.</strong>
@@ -2381,7 +2392,10 @@ export default function McqQuestionPage({
                           return (
                             <label
                               key={optIdx}
-                              onClick={() => handleSelectOption(qId, optIdx)}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                handleSelectOption(qId, optIdx);
+                              }}
                               className={`flex items-center justify-between gap-2.5 sm:gap-3 px-3 sm:px-3.5 py-1.5 sm:py-2 rounded-lg border text-xs sm:text-sm cursor-pointer transition-all duration-150 select-none ${showCorrectHighlight
                                 ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950 font-semibold shadow-2xs'
                                 : showWrongHighlight
