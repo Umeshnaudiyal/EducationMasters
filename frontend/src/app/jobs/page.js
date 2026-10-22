@@ -21,6 +21,7 @@ import {
   Check,
 } from 'lucide-react';
 import StateLink from '@/components/StateLink';
+import DepartmentLink from '@/components/DepartmentLink';
 import { INDIAN_STATES_DATA } from '@/utils/indianStatesData';
 import { getImageUrl } from '@/utils/image';
 import { API_BASE } from '@/utils/api';
@@ -682,13 +683,11 @@ function JobsContent() {
                               </Link>
                             </span>
                             <span>|</span>
-                            <span>
-                              In <strong className="text-slate-800 font-medium">Jobs</strong>
-                            </span>
+                            <DepartmentLink job={job} />
                             <span>|</span>
                             <span>{formatDate(job.created_at || job.createdAt)}</span>
                             <span>|</span>
-                            <StateLink state={job.state} dept={job.dept} />
+                            <StateLink state={job.state} dept={job.dept} hideDeptFallback={true} />
                           </div>
 
                           {/* Excerpt Snippet */}
@@ -829,13 +828,15 @@ function JobsContent() {
                         const miniMediaUrl = getImageUrl(item.featured_media);
 
                         return (
-                          <Link
+                          <div
                             key={item._id}
-                            href={`/job/${item.slug || item._id}`}
                             className="py-3.5 first:pt-1 last:pb-1 flex items-start gap-3.5 group transition"
                           >
                             {/* Thumbnail Image */}
-                            <div className="w-28 sm:w-32 h-20 bg-white rounded border border-slate-300 overflow-hidden shrink-0 shadow-2xs">
+                            <Link
+                              href={`/job/${item.slug || item._id}`}
+                              className="w-28 sm:w-32 h-20 bg-white rounded border border-slate-300 overflow-hidden shrink-0 shadow-2xs block"
+                            >
                               <img
                                 src={miniMediaUrl}
                                 alt={item.title}
@@ -849,19 +850,28 @@ function JobsContent() {
                                   }
                                 }}
                               />
-                            </div>
+                            </Link>
 
                             {/* Card Content */}
                             <div className="flex-1 min-w-0 flex flex-col justify-between h-20">
-                              <h4 className="text-xs sm:text-sm font-normal text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
-                                {item.title}
-                              </h4>
-                              <div className="text-xs text-slate-500 font-normal flex items-center justify-between mt-auto">
-                                <span>Last Date: {formatShortDate(item.app_ends)}</span>
-                                <span>Jobs</span>
+                              <Link
+                                href={`/job/${item.slug || item._id}`}
+                                className="block"
+                              >
+                                <h4 className="text-xs sm:text-sm font-normal text-slate-900 group-hover:text-blue-600 transition-colors line-clamp-2 leading-snug">
+                                  {item.title}
+                                </h4>
+                              </Link>
+                              <div className="text-xs text-slate-500 font-normal flex items-center justify-between mt-auto gap-2">
+                                <span className="shrink-0">Last Date: {formatShortDate(item.app_ends)}</span>
+                                <DepartmentLink
+                                  job={item}
+                                  showInPrefix={false}
+                                  className="text-slate-600 hover:text-blue-600 hover:underline truncate text-right font-medium max-w-[120px]"
+                                />
                               </div>
                             </div>
-                          </Link>
+                          </div>
                         );
                       })}
                     </div>

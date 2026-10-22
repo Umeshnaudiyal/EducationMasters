@@ -66,6 +66,22 @@ const stateSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    jobs_title: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    jobs_subtitle: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    jobs_seo: {
+      allow_indexing: { type: Boolean, default: true },
+      meta_title: { type: String, default: '', trim: true },
+      meta_keywords: { type: String, default: '', trim: true },
+      meta_description: { type: String, default: '', trim: true },
+    },
     seo: {
       allow_indexing: { type: Boolean, default: true },
       meta_title: { type: String, default: '' },

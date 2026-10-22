@@ -433,10 +433,9 @@ export default function AdminSidebar({
 
       {/* 2. Standard Fixed Desktop Sidebar (>= 768px) with Center-side Animated Collapse Button */}
       <aside
-        className={`hidden md:flex relative flex-col bg-[#1d2327] text-[#c3c4c7] select-none transition-all duration-300 ease-in-out shrink-0 z-30 ${
+        className={`hidden md:flex flex-col bg-[#1d2327] text-[#c3c4c7] select-none transition-all duration-300 ease-in-out shrink-0 sticky top-11 h-[calc(100vh-44px)] self-start z-40 ${
           isCollapsed ? 'w-14' : 'w-[188px]'
         }`}
-        style={{ minHeight: '100vh' }}
       >
         {/* CENTER-SIDE FLOATING COLLAPSE BUTTON WITH ANIMATION & HOVER EFFECT */}
         <button

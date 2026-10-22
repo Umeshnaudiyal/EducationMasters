@@ -8,6 +8,7 @@ import LiveTicker from '@/components/LiveTicker';
 import Footer from '@/components/Footer';
 import GlobalLoader from '@/components/GlobalLoader';
 import StateLink from '@/components/StateLink';
+import DepartmentLink from '@/components/DepartmentLink';
 import { getImageUrl } from '@/utils/image';
 import {
   MapPin,
@@ -469,11 +470,11 @@ export default function StateProfilePage() {
                               <div className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-slate-500 font-medium mt-1">
                                 <span>By <strong className="text-slate-700 font-medium">Education Masters</strong></span>
                                 <span>|</span>
-                                <span>In <strong className="text-slate-800 font-medium">Jobs</strong></span>
+                                <DepartmentLink job={job} />
                                 <span>|</span>
                                 <span>{formatDate(job.created_at || job.createdAt)}</span>
                                 <span>|</span>
-                                <StateLink state={job.state} dept={job.dept || state.name} defaultStateName={state.name} defaultStateSlug={state.slug} />
+                                <StateLink state={job.state} dept={job.dept || state.name} defaultStateName={state.name} defaultStateSlug={state.slug} hideDeptFallback={true} />
                               </div>
 
                               {/* Excerpt */}

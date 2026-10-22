@@ -2,6 +2,50 @@ import { Job, Blog, Result, AdmitCard, Category, Department, Institute } from '.
 
 const SITE_URL = 'https://educationmasters.in';
 
+export const STATIC_PAGES = [
+  // Exact pages from user reference screenshot
+  { path: 'departments/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'expiring-jobs/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'privacy-policy/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'terms-of-service/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'editorial-policy/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'admit-cards/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'results/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'categories/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'subjects/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'blogs/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'institutes/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'author/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'contact-us/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'disclaimer/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'refer-and-earn/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-10T10:55:00+00:00' },
+  { path: 'about-us/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-17T08:03:00+00:00' },
+  { path: 'jobs/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-08-17T12:18:00+00:00' },
+  { path: 'home/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-09-14T18:30:00+00:00' },
+
+  // Additional active website pages ("and add others too")
+  { path: '', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'jobs-expiring-in-30-days/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'syllabus/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'mock-tests/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'mock-test/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'mcq-questions/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'typing-test/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'leaderboard/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'authors/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'articles/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'article/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'terms-and-conditions/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'dmca/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'education/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'state/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'admit-card/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'result/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'category/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'department/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+  { path: 'search/', priority: '0.5', changefreq: 'monthly', lastmod: '2026-10-13T10:39:00+00:00' },
+];
+
 function formatIso(date) {
   if (!date) return new Date().toISOString();
   try {
@@ -100,8 +144,8 @@ export const getSitemapIndexData = async (req, res, next) => {
     sitemaps.push({
       name: 'pages-sitemap.xml',
       loc: `${SITE_URL}/pages-sitemap.xml/`,
-      count: 18,
-      lastmod: '2022-09-14T13:00:13+00:00',
+      count: STATIC_PAGES.length,
+      lastmod: STATIC_PAGES[0]?.lastmod || '2026-10-13T10:39:00+00:00',
     });
 
     // 4. Categories Sitemap
@@ -109,7 +153,7 @@ export const getSitemapIndexData = async (req, res, next) => {
       name: 'categories-sitemap.xml',
       loc: `${SITE_URL}/categories-sitemap.xml/`,
       count: categoriesCount,
-      lastmod: formatIso(latestCategory?.updatedAt || '2025-12-12T04:43:28+00:00'),
+      lastmod: formatIso(latestCategory?.updatedAt || '2022-10-11T10:14:00+00:00'),
     });
 
     // 5. Institutes Sitemap
@@ -223,29 +267,10 @@ export const getSitemapUrlsData = async (req, res, next) => {
       }
 
       case 'pages': {
-        const staticPages = [
-          { path: 'departments/', priority: '0.8', changefreq: 'weekly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'expiring-jobs/', priority: '0.8', changefreq: 'daily', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'privacy-policy/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'terms-of-service/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'editorial-policy/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'admit-cards/', priority: '0.9', changefreq: 'daily', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'results/', priority: '0.9', changefreq: 'daily', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'categories/', priority: '0.8', changefreq: 'weekly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'subjects/', priority: '0.8', changefreq: 'weekly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'blogs/', priority: '0.8', changefreq: 'daily', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'institutes/', priority: '0.8', changefreq: 'weekly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'author/', priority: '0.7', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'contact-us/', priority: '0.6', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'disclaimer/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'refer-and-earn/', priority: '0.5', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'about-us/', priority: '0.6', changefreq: 'monthly', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: 'jobs/', priority: '1.0', changefreq: 'daily', lastmod: '2022-09-14T13:00:13+00:00' },
-          { path: '', priority: '1.0', changefreq: 'daily', lastmod: '2022-09-14T13:00:13+00:00' },
-        ];
-        total = staticPages.length;
-        urls = staticPages.map((p) => ({
-          loc: `${SITE_URL}/${p.path}`,
+        const paginatedPages = STATIC_PAGES.slice(skip, skip + limit);
+        total = STATIC_PAGES.length;
+        urls = paginatedPages.map((p) => ({
+          loc: p.path ? `${SITE_URL}/${p.path}` : `${SITE_URL}/`,
           lastmod: p.lastmod,
           changefreq: p.changefreq,
           priority: p.priority,
@@ -257,13 +282,13 @@ export const getSitemapUrlsData = async (req, res, next) => {
       case 'categories': {
         const query = { status: { $ne: 'trash' }, slug: { $exists: true, $ne: '' } };
         const [docs, count] = await Promise.all([
-          Category.find(query).select('slug updatedAt').sort({ _id: 1 }).skip(skip).limit(limit).lean(),
+          Category.find(query).select('slug updatedAt createdAt').sort({ _id: 1 }).skip(skip).limit(limit).lean(),
           Category.countDocuments(query),
         ]);
         total = count;
         urls = docs.map((doc) => ({
           loc: `${SITE_URL}/category/${doc.slug}/`,
-          lastmod: formatIso(doc.updatedAt || '2025-12-12T04:43:28+00:00'),
+          lastmod: formatIso(doc.updatedAt || doc.createdAt || '2022-10-11T10:14:00+00:00'),
           changefreq: 'weekly',
           priority: '0.7',
           images: [],

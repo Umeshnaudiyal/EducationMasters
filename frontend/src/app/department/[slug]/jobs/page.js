@@ -4,7 +4,13 @@ import DepartmentJobsPage from '@/components/DepartmentJobsPage';
 export async function generateMetadata({ params }) {
   const { slug } = await params;
   const rawSlug = decodeURIComponent(slug || 'army');
-  const deptName = rawSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  const deptName = rawSlug
+    .replace(/-/g, ' ')
+    .replace(
+      /\b(hssc|upsc|ssc|uksssc|rrb|ibps|aiims|csir|drdo|isro|dsssb|mpsc|bpsc|rpsc|uppsc|ukpsc|jpsc|kpsc|tnpsc|tspsc|appsc|gpsc|hppsc|opsc|ppsc|spsc|tpsc|cgpsc|bel|cisf|crpf|itbp|gail|nlc|sai|sjvn|ccl|mdl|pfrda|wcd|esic|lic|iit|iim|iisc|nhai|fssai|uiic|mpesb)\b/gi,
+      (m) => m.toUpperCase()
+    )
+    .replace(/\b\w/g, (c) => c.toUpperCase());
 
   const title = `${deptName} Jobs 2026 - Latest Recruitment Notifications, Eligibility & Apply Online | Education Masters`;
   const description = `Explore latest ${deptName} jobs, recruitment notifications, application deadlines, eligibility criteria, and pay scale updates. Apply online for active vacancies under ${deptName}.`;

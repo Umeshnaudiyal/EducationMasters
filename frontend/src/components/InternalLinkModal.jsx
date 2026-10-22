@@ -46,34 +46,49 @@ export default function InternalLinkModal({
   whatsappUrl = 'https://whatsapp.com/channel/0029Vb6sjZz0wajwDXcd5B0U',
   telegramUrl = 'https://t.me/educationmastersin',
   initialSeconds = 8,
+  onComplete,
 }) {
   const router = useRouter();
   const [countdown, setCountdown] = useState(initialSeconds);
   const [isCompleted, setIsCompleted] = useState(false);
   const timerRef = useRef(null);
+  const wasOpenRef = useRef(false);
 
-  // Reset countdown whenever modal opens
+  // Keep latest callbacks and params in refs without triggering useEffect
+  const onCompleteRef = useRef(onComplete);
+  onCompleteRef.current = onComplete;
+  const targetUrlRef = useRef(targetUrl);
+  targetUrlRef.current = targetUrl;
+
+  // Reset countdown ONLY when modal transitions from closed to open
   useEffect(() => {
     if (isOpen) {
-      setCountdown(initialSeconds);
-      setIsCompleted(false);
+      if (!wasOpenRef.current) {
+        wasOpenRef.current = true;
+        setCountdown(initialSeconds);
+        setIsCompleted(false);
 
-      if (timerRef.current) clearInterval(timerRef.current);
+        if (timerRef.current) clearInterval(timerRef.current);
 
-      timerRef.current = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current);
-            setIsCompleted(true);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+        timerRef.current = setInterval(() => {
+          setCountdown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timerRef.current);
+              setIsCompleted(true);
+              if (onCompleteRef.current && targetUrlRef.current) {
+                onCompleteRef.current(targetUrlRef.current);
+              }
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      }
 
       // Lock body scroll
       document.body.style.overflow = 'hidden';
     } else {
+      wasOpenRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
       document.body.style.overflow = '';
     }
@@ -93,6 +108,9 @@ export default function InternalLinkModal({
   // Open destination link - ONLY called when user explicitly clicks "Proceed to Link"
   const handleOpenLink = () => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (onCompleteRef.current && targetUrlRef.current) {
+      onCompleteRef.current(targetUrlRef.current);
+    }
     if (onClose) onClose();
 
     if (targetUrl) {
@@ -178,36 +196,41 @@ export default function InternalLinkModal({
           </div>
         </div>
 
-        {/* 4. Circular Countdown Timer OR Proceed Link when Completed */}
+        {/* 4. Circular Countdown Timer with "Link is generating..." on left OR Proceed Link when Completed */}
         <div className="my-2 sm:my-2.5 flex items-center justify-center min-h-[44px] sm:min-h-[52px]">
           {!isCompleted ? (
-            <div className="relative w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center">
-              <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 44 44">
-                {/* Background Ring */}
-                <circle
-                  cx="22"
-                  cy="22"
-                  r={radius}
-                  className="text-slate-200 stroke-current"
-                  strokeWidth="2.5"
-                  fill="transparent"
-                />
-                {/* Animated Progress Ring */}
-                <circle
-                  cx="22"
-                  cy="22"
-                  r={radius}
-                  className="text-slate-900 stroke-current transition-all duration-1000 ease-linear"
-                  strokeWidth="2.5"
-                  strokeDasharray={circumference}
-                  strokeDashoffset={strokeDashoffset}
-                  strokeLinecap="round"
-                  fill="transparent"
-                />
-              </svg>
-              <span className="absolute text-base sm:text-lg font-bold text-slate-900">
-                {countdown}
+            <div className="flex items-center justify-center gap-2.5 sm:gap-3">
+              <span className="text-xs sm:text-sm font-bold text-slate-800 tracking-tight">
+                Link is generating...
               </span>
+              <div className="relative w-9 h-9 sm:w-11 sm:h-11 flex items-center justify-center shrink-0">
+                <svg className="w-full h-full -rotate-90 transform" viewBox="0 0 44 44">
+                  {/* Background Ring */}
+                  <circle
+                    cx="22"
+                    cy="22"
+                    r={radius}
+                    className="text-slate-200 stroke-current"
+                    strokeWidth="2.5"
+                    fill="transparent"
+                  />
+                  {/* Animated Progress Ring */}
+                  <circle
+                    cx="22"
+                    cy="22"
+                    r={radius}
+                    className="text-slate-900 stroke-current transition-all duration-1000 ease-linear"
+                    strokeWidth="2.5"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    fill="transparent"
+                  />
+                </svg>
+                <span className="absolute text-sm sm:text-base font-bold text-slate-900">
+                  {countdown}
+                </span>
+              </div>
             </div>
           ) : (
             <button
@@ -233,7 +256,7 @@ export default function InternalLinkModal({
           <button
             type="button"
             onClick={() => handleChannelClick(whatsappUrl)}
-            className="w-full bg-[#25D366] hover:bg-[#20be5a] active:scale-[0.98] text-white font-bold py-2.5 sm:py-3 px-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm transition-all duration-200 cursor-pointer whitespace-nowrap"
+            className="w-full bg-[#25D366] hover:bg-[#20be5a] active:scale-[0.98] text-white font-bold py-2.5 sm:py-3 px-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm transition-all duration-200 cursor-pointer whitespace-nowrap animate-blink-whatsapp origin-center"
           >
             {/* WhatsApp SVG Icon */}
             <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-current shrink-0" viewBox="0 0 24 24">
@@ -246,7 +269,7 @@ export default function InternalLinkModal({
           <button
             type="button"
             onClick={() => handleChannelClick(telegramUrl)}
-            className="w-full bg-[#24A1DE] hover:bg-[#1f91c9] active:scale-[0.98] text-white font-bold py-2.5 sm:py-3 px-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm transition-all duration-200 cursor-pointer whitespace-nowrap"
+            className="w-full bg-[#24A1DE] hover:bg-[#1f91c9] active:scale-[0.98] text-white font-bold py-2.5 sm:py-3 px-3.5 rounded-xl shadow-md flex items-center justify-center gap-2 text-xs sm:text-sm transition-all duration-200 cursor-pointer whitespace-nowrap animate-blink-telegram origin-center"
           >
             {/* Telegram SVG Icon */}
             <svg className="w-4 h-4 sm:w-5 sm:h-5 fill-current shrink-0" viewBox="0 0 24 24">
@@ -256,11 +279,40 @@ export default function InternalLinkModal({
           </button>
         </div>
 
-        {/* 7. Bottom Urgency Notice */}
-        <p className="mt-2.5 sm:mt-3.5 text-[10px] sm:text-xs font-semibold text-slate-800 text-center leading-snug">
-          ⏰ Link कुछ ही सेकंड के लिए उपलब्ध है,{' '}
-          <strong className="text-[#dc2626] font-bold">अभी जुड़ें</strong> – वरना ज़रूरी अपडेट मिस हो सकते हैं
-        </p>
+        {/* Blinking keyframes for guaranteed cross-browser and mobile support */}
+        <style dangerouslySetInnerHTML={{
+          __html: `
+          @keyframes blink-whatsapp {
+            0%, 100% {
+              transform: scale(1);
+              opacity: 1;
+              box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            }
+            50% {
+              transform: scale(1.025);
+              opacity: 0.82;
+              box-shadow: 0 0 0 8px rgba(37, 211, 102, 0), 0 10px 18px -2px rgba(37, 211, 102, 0.45);
+            }
+          }
+          @keyframes blink-telegram {
+            0%, 100% {
+              transform: scale(1);
+              opacity: 1;
+              box-shadow: 0 0 0 0 rgba(36, 161, 222, 0.7), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            }
+            50% {
+              transform: scale(1.025);
+              opacity: 0.82;
+              box-shadow: 0 0 0 8px rgba(36, 161, 222, 0), 0 10px 18px -2px rgba(36, 161, 222, 0.45);
+            }
+          }
+          .animate-blink-whatsapp {
+            animation: blink-whatsapp 1.3s ease-in-out infinite;
+          }
+          .animate-blink-telegram {
+            animation: blink-telegram 1.3s ease-in-out infinite;
+          }
+        `}} />
       </div>
     </div>
   );

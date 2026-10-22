@@ -10,6 +10,8 @@ import {
   bulkActionUsers,
   getPublicAuthorProfile,
   getPublicAuthorsList,
+  getRolePermissionsMatrix,
+  updateRolePermissionsMatrix,
 } from '../controllers/user.controller.js';
 import { protect, restrictTo } from '../middlewares/auth.middleware.js';
 import { getSessionLogs } from '../controllers/auth.controller.js';
@@ -23,6 +25,12 @@ router.get('/author/all', getPublicAuthorsList);
 // Public Author Profile (No auth required)
 router.get('/author/:slug', getPublicAuthorProfile);
 router.get('/:slug/author', getPublicAuthorProfile);
+
+// Roles and Permissions Matrix
+router
+  .route('/roles/matrix')
+  .get(protect, getRolePermissionsMatrix)
+  .put(protect, restrictTo('admin', 'superadmin'), updateRolePermissionsMatrix);
 
 // User's own profile routes (Any authenticated user can view & update their own profile)
 router.route('/profile').get(protect, getProfile).put(protect, updateProfile);

@@ -3,7 +3,7 @@ import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import { State, District, Country } from '../models/index.js';
 import { validateUniqueSlug, slugify } from '../utils/slug.js';
-import { cleanHtmlContent } from '../utils/cleanHtml.js';
+import { cleanHtmlContent, stripHtmlToPlainText } from '../utils/cleanHtml.js';
 import mongoose from 'mongoose';
 
 const validateStateData = async (data, { isNew = false, currentId = null } = {}) => {
@@ -173,6 +173,9 @@ export const createState = asyncHandler(async (req, res) => {
     description,
     description_hi,
     job_description,
+    jobs_title,
+    jobs_subtitle,
+    jobs_seo,
     seo,
     seo_hi,
   } = req.body;
@@ -205,16 +208,24 @@ export const createState = asyncHandler(async (req, res) => {
     description: description ? cleanHtmlContent(description) : '',
     description_hi: description_hi ? cleanHtmlContent(description_hi) : '',
     job_description: job_description ? cleanHtmlContent(job_description) : '',
+    jobs_title: jobs_title ? stripHtmlToPlainText(jobs_title) : '',
+    jobs_subtitle: jobs_subtitle ? stripHtmlToPlainText(jobs_subtitle) : '',
+    jobs_seo: {
+      allow_indexing: jobs_seo?.allow_indexing ?? true,
+      meta_title: jobs_seo?.meta_title ? stripHtmlToPlainText(jobs_seo.meta_title) : '',
+      meta_keywords: jobs_seo?.meta_keywords ? stripHtmlToPlainText(jobs_seo.meta_keywords) : '',
+      meta_description: jobs_seo?.meta_description ? stripHtmlToPlainText(jobs_seo.meta_description) : '',
+    },
     seo: {
       allow_indexing: seo?.allow_indexing ?? true,
-      meta_title: seo?.meta_title || '',
-      meta_keywords: seo?.meta_keywords || '',
-      meta_description: seo?.meta_description || '',
+      meta_title: seo?.meta_title ? stripHtmlToPlainText(seo.meta_title) : '',
+      meta_keywords: seo?.meta_keywords ? stripHtmlToPlainText(seo.meta_keywords) : '',
+      meta_description: seo?.meta_description ? stripHtmlToPlainText(seo.meta_description) : '',
     },
     seo_hi: {
-      meta_title: seo_hi?.meta_title || '',
-      meta_keywords: seo_hi?.meta_keywords || '',
-      meta_description: seo_hi?.meta_description || '',
+      meta_title: seo_hi?.meta_title ? stripHtmlToPlainText(seo_hi.meta_title) : '',
+      meta_keywords: seo_hi?.meta_keywords ? stripHtmlToPlainText(seo_hi.meta_keywords) : '',
+      meta_description: seo_hi?.meta_description ? stripHtmlToPlainText(seo_hi.meta_description) : '',
     },
   });
 
@@ -251,6 +262,9 @@ export const updateState = asyncHandler(async (req, res) => {
     description,
     description_hi,
     job_description,
+    jobs_title,
+    jobs_subtitle,
+    jobs_seo,
     seo,
     seo_hi,
   } = req.body;
@@ -268,19 +282,29 @@ export const updateState = asyncHandler(async (req, res) => {
   if (description !== undefined) state.description = cleanHtmlContent(description);
   if (description_hi !== undefined) state.description_hi = cleanHtmlContent(description_hi);
   if (job_description !== undefined) state.job_description = cleanHtmlContent(job_description);
+  if (jobs_title !== undefined) state.jobs_title = stripHtmlToPlainText(jobs_title);
+  if (jobs_subtitle !== undefined) state.jobs_subtitle = stripHtmlToPlainText(jobs_subtitle);
+  if (jobs_seo !== undefined) {
+    state.jobs_seo = {
+      allow_indexing: jobs_seo.allow_indexing ?? true,
+      meta_title: stripHtmlToPlainText(jobs_seo.meta_title || ''),
+      meta_keywords: stripHtmlToPlainText(jobs_seo.meta_keywords || ''),
+      meta_description: stripHtmlToPlainText(jobs_seo.meta_description || ''),
+    };
+  }
   if (seo !== undefined) {
     state.seo = {
       allow_indexing: seo.allow_indexing ?? true,
-      meta_title: seo.meta_title || '',
-      meta_keywords: seo.meta_keywords || '',
-      meta_description: seo.meta_description || '',
+      meta_title: stripHtmlToPlainText(seo.meta_title || ''),
+      meta_keywords: stripHtmlToPlainText(seo.meta_keywords || ''),
+      meta_description: stripHtmlToPlainText(seo.meta_description || ''),
     };
   }
   if (seo_hi !== undefined) {
     state.seo_hi = {
-      meta_title: seo_hi.meta_title || '',
-      meta_keywords: seo_hi.meta_keywords || '',
-      meta_description: seo_hi.meta_description || '',
+      meta_title: stripHtmlToPlainText(seo_hi.meta_title || ''),
+      meta_keywords: stripHtmlToPlainText(seo_hi.meta_keywords || ''),
+      meta_description: stripHtmlToPlainText(seo_hi.meta_description || ''),
     };
   }
 

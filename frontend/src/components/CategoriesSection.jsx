@@ -158,7 +158,7 @@ export default function CategoriesSection({ onSelectCategory }) {
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3 text-center sm:text-left">
           <div className="space-y-1.5">
-            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-[#213547] tracking-tight">
+            <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-[#213547] tracking-tight">
               Popular Categories
             </h2>
             <p className="text-slate-500 text-xs sm:text-sm font-medium">

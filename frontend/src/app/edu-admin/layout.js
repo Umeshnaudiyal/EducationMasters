@@ -201,16 +201,16 @@ export default function AdminLayout({ children }) {
 
   return (
     <RBACProvider>
-      <div className="min-h-screen bg-[#f0f0f1] text-slate-800 flex flex-col overflow-hidden font-sans antialiased w-full max-w-full">
-        {/* Top Header Bar */}
+      <div className="min-h-screen bg-[#f0f0f1] text-slate-800 flex flex-col font-sans antialiased w-full max-w-full">
+        {/* Top Header Bar - Always Sticky at top */}
         <AdminHeader
           session={session}
           onToggleMobileSidebar={() => setIsMobileSidebarOpen((prev) => !prev)}
         />
 
-        {/* Body Area with Sidebar + Content */}
-        <div className="flex-1 flex flex-row min-w-0 h-[calc(100vh-44px)] overflow-hidden w-full max-w-full">
-          {/* Compact Collapsible Sidebar (165px on desktop, slide drawer on mobile) */}
+        {/* Body Area with Sticky Sidebar + Content */}
+        <div className="flex-1 flex flex-row min-w-0 w-full max-w-full relative">
+          {/* Compact Collapsible Sidebar - Sticky below the header */}
           <AdminSidebar
             userRole={userRole}
             isCollapsed={isCollapsed}
@@ -219,8 +219,8 @@ export default function AdminLayout({ children }) {
             setIsMobileSidebarOpen={setIsMobileSidebarOpen}
           />
 
-          {/* Dynamic Page Container with Stable Scrollbar and Route Access Guard */}
-          <main className="flex-1 overflow-y-auto p-3 sm:p-5 bg-[#f0f0f1] custom-scrollbar [scrollbar-gutter:stable] min-w-0 max-w-full">
+          {/* Dynamic Page Container with Route Access Guard */}
+          <main className="flex-1 p-3 sm:p-5 bg-[#f0f0f1] custom-scrollbar min-w-0 max-w-full">
             <AdminRouteGuard>
               {children}
             </AdminRouteGuard>

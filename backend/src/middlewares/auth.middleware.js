@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import ApiError from '../utils/apiError.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import User from '../models/user.model.js';
+import RolePermission from '../models/rolePermission.model.js';
 import { getTodayDateString } from '../utils/session.js';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your_super_secret_jwt_key_change_in_production';
@@ -152,21 +153,35 @@ export const optionalAuth = asyncHandler(async (req, res, next) => {
  * Permission-Based Capability Middleware
  */
 export const hasPermission = (permission) => {
-  return (req, res, next) => {
-    if (!req.user) {
-      throw new ApiError(401, 'Authentication required.');
-    }
+  return async (req, res, next) => {
+    try {
+      if (!req.user) {
+        throw new ApiError(401, 'Authentication required.');
+      }
 
-    const userRole = (req.user.role || '').toLowerCase();
-    if (userRole === 'superadmin' || userRole === 'admin') {
-      return next();
-    }
+      const userRole = (req.user.role || '').toLowerCase();
+      if (userRole === 'superadmin') {
+        return next();
+      }
 
-    const userPermissions = req.user.permissions || [];
-    if (userPermissions.includes(permission) || userPermissions.includes('*')) {
-      return next();
-    }
+      // Check direct user permissions
+      const userPermissions = req.user.permissions || [];
+      if (userPermissions.includes(permission) || userPermissions.includes('*')) {
+        return next();
+      }
 
-    throw new ApiError(403, `Permission denied: Missing '${permission}' capability.`);
+      // Check matrix permissions
+      const hasRoleAccess = await RolePermission.hasRolePermission(userRole, permission);
+      if (hasRoleAccess) {
+        return next();
+      }
+
+      throw new ApiError(
+        403,
+        `Permission denied: Your role '${req.user.role}' lacks the required '${permission}' capability.`
+      );
+    } catch (err) {
+      next(err);
+    }
   };
 };

@@ -16,6 +16,7 @@ import {
   Briefcase,
   ExternalLink,
 } from 'lucide-react';
+import DepartmentLink from '@/components/DepartmentLink';
 
 const LIMIT = 12;
 
@@ -81,8 +82,17 @@ export default function DepartmentJobsPage({ deptSlug }) {
   const [sidebarTab, setSidebarTab] = useState('expiring');
   const [showLeftAd, setShowLeftAd] = useState(true);
 
-  // Derive department display name
-  const rawDeptName = department?.name || deptSlug.replace(/-/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
+  // Derive department display name with acronym awareness and job fallback
+  const rawDeptName =
+    department?.name ||
+    (jobs.length > 0 && (jobs[0].department?.name || jobs[0].dept)) ||
+    deptSlug
+      .replace(/-/g, ' ')
+      .replace(
+        /\b(hssc|upsc|ssc|uksssc|rrb|ibps|aiims|csir|drdo|isro|dsssb|mpsc|bpsc|rpsc|uppsc|ukpsc|jpsc|kpsc|tnpsc|tspsc|appsc|gpsc|hppsc|opsc|ppsc|spsc|tpsc|cgpsc|bel|cisf|crpf|itbp|gail|nlc|sai|sjvn|ccl|mdl|pfrda|wcd|esic|lic|iit|iim|iisc|nhai|fssai|uiic|mpesb)\b/gi,
+        (m) => m.toUpperCase()
+      )
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   const deptName = rawDeptName === 'Army' ? 'Army' : rawDeptName;
 
   useEffect(() => {
@@ -108,6 +118,18 @@ export default function DepartmentJobsPage({ deptSlug }) {
           setJobs(jobsJson.data);
           setTotalPages(jobsJson.pages || 1);
           setTotalJobs(jobsJson.total || 0);
+
+          // If department metadata wasn't loaded from /departments/:slug, infer from returned job
+          if (!deptJson.success && jobsJson.data.length > 0) {
+            const firstJob = jobsJson.data[0];
+            const inferredDeptName = firstJob.department?.name || firstJob.dept;
+            if (inferredDeptName) {
+              setDepartment({
+                name: inferredDeptName,
+                slug: deptSlug,
+              });
+            }
+          }
         } else {
           setJobs([]);
         }
@@ -129,9 +151,9 @@ export default function DepartmentJobsPage({ deptSlug }) {
             slug: item.slug || `job-${idx}`,
             lastDate: item.app_ends
               ? new Date(item.app_ends).toLocaleDateString('en-US', {
-                  month: 'short',
-                  day: '2-digit',
-                })
+                month: 'short',
+                day: '2-digit',
+              })
               : 'Oct 14',
             category: item.department?.name || item.categories?.[0]?.name || 'Jobs',
             image: getImageUrl(
@@ -176,7 +198,7 @@ export default function DepartmentJobsPage({ deptSlug }) {
       {/* Main Container */}
       <main className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 lg:gap-6 items-start">
-          
+
           {/* ================= LEFT SKYSCRAPER AD CONTAINER ================= */}
           {showLeftAd && (
             <aside className="hidden xl:block xl:col-span-2 sticky top-20 self-start z-10">
@@ -217,9 +239,8 @@ export default function DepartmentJobsPage({ deptSlug }) {
 
           {/* ================= CENTER MAIN DEPARTMENT JOBS SECTION ================= */}
           <section
-            className={`col-span-1 ${
-              showLeftAd ? 'lg:col-span-8 xl:col-span-7' : 'lg:col-span-8 xl:col-span-9'
-            } space-y-4 min-w-0`}
+            className={`col-span-1 ${showLeftAd ? 'lg:col-span-8 xl:col-span-7' : 'lg:col-span-8 xl:col-span-9'
+              } space-y-4 min-w-0`}
           >
             {/* Top Breadcrumbs */}
             <nav className="flex items-center space-x-1.5 text-xs text-slate-500 mb-1 overflow-x-auto whitespace-nowrap">
@@ -236,7 +257,7 @@ export default function DepartmentJobsPage({ deptSlug }) {
 
             {/* Page Header */}
             <div className="border-b border-slate-200 pb-3">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
                 {deptName} Jobs
               </h1>
             </div>
@@ -288,8 +309,8 @@ export default function DepartmentJobsPage({ deptSlug }) {
                   const lastDateStr = job.app_ends
                     ? formatDate(job.app_ends)
                     : job.last_date
-                    ? formatDate(job.last_date)
-                    : 'Apply Now!!';
+                      ? formatDate(job.last_date)
+                      : 'Apply Now!!';
                   const excerpt =
                     job.description?.replace(/<[^>]*>?/gm, '').slice(0, 190) ||
                     `The ${job.title} notification has been officially released. Check complete eligibility, dates, and online application details.`;
@@ -335,9 +356,7 @@ export default function DepartmentJobsPage({ deptSlug }) {
                               </Link>
                             </span>
                             <span>|</span>
-                            <span>
-                              In <strong className="text-slate-800 font-medium">{job.department?.name || job.dept || deptName}</strong>
-                            </span>
+                            <DepartmentLink job={job} fallbackText={deptName} fallbackHref={`/department/${deptSlug}/jobs`} />
                             <span>|</span>
                             <span>{publishDateStr}</span>
                             <span>|</span>
@@ -395,26 +414,24 @@ export default function DepartmentJobsPage({ deptSlug }) {
           {/* ================= RIGHT SIDEBAR WIDGET ================= */}
           <aside className="col-span-1 lg:col-span-4 xl:col-span-3 lg:sticky lg:top-20 self-start z-10 space-y-4 max-h-none lg:max-h-[calc(100vh-5.5rem)] overflow-visible lg:overflow-y-auto mt-6 lg:mt-0">
             <div className="bg-[#f8f9fa] border border-slate-200 rounded-lg p-3.5 shadow-2xs">
-              
+
               {/* Tab Header - 2 Equal 50% Tabs */}
               <div className="flex border-b border-slate-200 -mx-3.5 -mt-3.5 mb-3.5 bg-[#e9ecef]/50 rounded-t-lg overflow-hidden">
                 <button
                   onClick={() => setSidebarTab('expiring')}
-                  className={`flex-1 py-3 px-2 text-center text-xs sm:text-sm transition cursor-pointer ${
-                    sidebarTab === 'expiring'
-                      ? 'bg-[#e9ecef] text-slate-900 border-r border-slate-200 font-bold'
-                      : 'bg-white/60 text-[#2563eb] hover:bg-white border-r border-slate-200 font-semibold'
-                  }`}
+                  className={`flex-1 py-3 px-2 text-center text-xs sm:text-sm transition cursor-pointer ${sidebarTab === 'expiring'
+                    ? 'bg-[#e9ecef] text-slate-900 border-r border-slate-200 font-bold'
+                    : 'bg-white/60 text-[#2563eb] hover:bg-white border-r border-slate-200 font-semibold'
+                    }`}
                 >
                   Jobs Expiring Soon
                 </button>
                 <button
                   onClick={() => setSidebarTab('mcq')}
-                  className={`flex-1 py-3 px-2 text-center text-xs sm:text-sm transition cursor-pointer ${
-                    sidebarTab === 'mcq'
-                      ? 'bg-[#e9ecef] text-slate-900 font-bold'
-                      : 'bg-white/60 text-[#2563eb] hover:bg-white font-semibold'
-                  }`}
+                  className={`flex-1 py-3 px-2 text-center text-xs sm:text-sm transition cursor-pointer ${sidebarTab === 'mcq'
+                    ? 'bg-[#e9ecef] text-slate-900 font-bold'
+                    : 'bg-white/60 text-[#2563eb] hover:bg-white font-semibold'
+                    }`}
                 >
                   MCQ Questions
                 </button>

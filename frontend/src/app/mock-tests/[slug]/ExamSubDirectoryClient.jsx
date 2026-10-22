@@ -225,10 +225,12 @@ export default function ExamSubDirectoryClient({
                   <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wide">
                     {exam.category_name || 'Exam Directory'}
                   </span>
-                  <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
-                    <span className="text-amber-500">⚡</span>
-                    <span>{formatCount(totalAttempts)} Attempts Taken</span>
-                  </div>
+                  {totalAttempts > 0 && (
+                    <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+                      <span className="text-amber-500">⚡</span>
+                      <span>{formatCount(totalAttempts)} Attempts Taken</span>
+                    </div>
+                  )}
                 </div>
 
                 <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
@@ -350,7 +352,7 @@ export default function ExamSubDirectoryClient({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-3 gap-4 sm:gap-5 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5 sm:gap-4 pt-1">
                 {filteredSeries.map((series) => (
                   <TestbookSeriesCard
                     key={series._id || series.slug}

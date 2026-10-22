@@ -29,6 +29,10 @@ import paymentRoutes from './payment.routes.js';
 import backupRoutes from './backup.routes.js';
 import stickyNoteRoutes from './stickyNote.routes.js';
 import sitemapRoutes from './sitemap.routes.js';
+import settingsRoutes from './settings.routes.js';
+import whatsappRoutes from './whatsapp.routes.js';
+import smtpRoutes from './smtp.routes.js';
+import questionReportRoutes from './questionReport.routes.js';
 
 import { getPublicAuthorsList } from '../controllers/user.controller.js';
 
@@ -78,6 +82,9 @@ router.get('/', (req, res) => {
 });
 
 router.use('/sitemap', sitemapRoutes);
+router.use('/settings', settingsRoutes);
+router.use('/whatsapp', whatsappRoutes);
+router.use('/smtp', smtpRoutes);
 router.use('/backup', backupRoutes);
 router.use('/sticky-notes', stickyNoteRoutes);
 router.use('/sticky-note', stickyNoteRoutes);
@@ -126,5 +133,7 @@ router.use('/topics', topicRoutes);
 router.use('/topic', topicRoutes);
 router.use('/topic-groups', topicGroupRoutes);
 router.use('/topic-group', topicGroupRoutes);
+router.use('/question-reports', questionReportRoutes);
+router.use('/questions/reports', questionReportRoutes);
 
 export default router;

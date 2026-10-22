@@ -11,6 +11,71 @@ import {
   sanitizeObjectId,
 } from '../utils/resolveReferences.js';
 
+// Helper to enrich job documents with populated taxonomy objects
+const enrichJobTaxonomies = async (job) => {
+  if (!job) return job;
+
+  // 1. Resolve State by sql_id if unpopulated
+  if ((!job.state || typeof job.state !== 'object' || !job.state.name) && job.state_id) {
+    const stateDoc = await State.findOne({ sql_id: job.state_id }).select('name slug').lean();
+    if (stateDoc) {
+      job.state = stateDoc;
+    }
+  }
+
+  // 2. Resolve Department by department_id or dept_id if unpopulated
+  if ((!job.department || typeof job.department !== 'object' || !job.department.name) && (job.department_id || job.dept_id)) {
+    const deptDoc = await Department.findOne({ sql_id: job.department_id || job.dept_id }).select('name slug').lean();
+    if (deptDoc) {
+      job.department = deptDoc;
+      job.dept = deptDoc.name;
+    }
+  }
+
+  // 3. Resolve Department from unpopulated ObjectId or string name
+  if (!job.department || typeof job.department !== 'object' || !job.department.name) {
+    const rawDept = job.dept || (typeof job.department === 'string' ? job.department : null);
+    if (rawDept && typeof rawDept === 'string') {
+      const trimmedDept = rawDept.trim();
+      if (/^[0-9a-fA-F]{24}$/.test(trimmedDept)) {
+        const deptDoc = await Department.findById(trimmedDept).select('name slug').lean();
+        if (deptDoc) {
+          job.department = deptDoc;
+          job.dept = deptDoc.name;
+        }
+      } else if (
+        trimmedDept &&
+        !['none', 'null', 'undefined', 'select', '— select —', '— please choose —', '-- please choose --'].includes(
+          trimmedDept.toLowerCase()
+        )
+      ) {
+        const deptWords = trimmedDept.split(/[-_\s]+/).map((w) => w.trim()).filter(Boolean);
+        const flexiblePattern =
+          deptWords.length > 0
+            ? deptWords.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\W]+')
+            : '';
+        const deptDoc = await Department.findOne({
+          $or: [
+            { name: { $regex: `^${trimmedDept.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+            { slug: trimmedDept.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') },
+            ...(flexiblePattern ? [{ name: { $regex: `^${flexiblePattern}$`, $options: 'i' } }] : []),
+          ],
+        })
+          .select('name slug')
+          .lean();
+        if (deptDoc) {
+          job.department = deptDoc;
+          job.dept = deptDoc.name;
+        }
+      }
+    }
+  } else if (job.department && typeof job.department === 'object' && job.department.name) {
+    job.dept = job.department.name;
+  }
+
+  return job;
+};
+
 export const getJobs = async (req, res, next) => {
   try {
     const page = parseInt(req.query.page, 10) || 1;
@@ -117,6 +182,102 @@ export const getJobs = async (req, res, next) => {
       }
     }
 
+    // Department Filter
+    const deptParam = (req.query.department || req.query.dept || req.query.department_id || '').trim();
+    if (deptParam && deptParam !== 'all') {
+      const deptConditions = [];
+      const isObjectId = mongoose.Types.ObjectId.isValid(deptParam) && /^[0-9a-fA-F]{24}$/.test(deptParam);
+      const numId = Number(deptParam);
+      if (isObjectId) {
+        deptConditions.push({ department: deptParam });
+      }
+      if (!isNaN(numId) && numId > 0) {
+        deptConditions.push({ dept_id: numId }, { department_id: numId });
+      }
+
+      const cleanDeptParam = deptParam.toLowerCase();
+      const words = deptParam.split(/[-_\s]+/).map((w) => w.trim()).filter(Boolean);
+      const flexiblePattern =
+        words.length > 0
+          ? words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\W]+')
+          : '';
+
+      const deptFindConditions = [
+        { slug: cleanDeptParam },
+        { name: { $regex: `^${deptParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+      ];
+      if (flexiblePattern) {
+        deptFindConditions.push(
+          { name: { $regex: `^${flexiblePattern}$`, $options: 'i' } },
+          { slug: { $regex: `^${flexiblePattern}$`, $options: 'i' } }
+        );
+      }
+
+      const deptDoc = await Department.findOne({
+        $or: deptFindConditions,
+      }).select('_id sql_id name slug');
+
+      if (deptDoc) {
+        deptConditions.push({ department: deptDoc._id });
+        if (deptDoc.sql_id) {
+          deptConditions.push({ department_id: deptDoc.sql_id }, { dept_id: deptDoc.sql_id });
+        }
+        deptConditions.push({ dept: { $regex: deptDoc.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } });
+
+        const docWords = deptDoc.name.split(/[-_\s]+/).map((w) => w.trim()).filter(Boolean);
+        if (docWords.length > 1) {
+          const docFlexible = docWords.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\W]+');
+          deptConditions.push({ dept: { $regex: docFlexible, $options: 'i' } });
+        }
+      }
+
+      // Also match raw `dept` in Job collection using flexible word separators
+      if (flexiblePattern) {
+        deptConditions.push({ dept: { $regex: flexiblePattern, $options: 'i' } });
+      }
+
+      const cleanSearch = deptParam.replace(/[-_]+/g, ' ');
+      deptConditions.push(
+        { dept: { $regex: deptParam.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } },
+        { dept: { $regex: cleanSearch.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' } }
+      );
+
+      // Match words without trailing acronym (e.g. "Haryana Staff Selection Commission" when slug is "haryana-staff-selection-commission-hssc")
+      if (words.length >= 2) {
+        const lastWord = words[words.length - 1];
+        if (lastWord.length <= 8) {
+          const withoutLast = words.slice(0, -1);
+          if (withoutLast.length >= 2) {
+            const withoutLastPattern = withoutLast
+              .map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+              .join('[\\s\\W]+');
+            deptConditions.push({ dept: { $regex: withoutLastPattern, $options: 'i' } });
+          }
+          if (lastWord.length >= 2 && lastWord.length <= 6) {
+            deptConditions.push({
+              dept: {
+                $regex: `(?:^|[\\s\\W(])${lastWord.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(?:$|[\\s\\W)])`,
+                $options: 'i',
+              },
+            });
+          }
+        }
+
+        const sigWords = words.filter((w) => w.length > 2);
+        if (sigWords.length >= 2) {
+          deptConditions.push({
+            $and: sigWords.map((w) => ({
+              dept: { $regex: w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' },
+            })),
+          });
+        }
+      }
+
+      if (deptConditions.length > 0) {
+        query.$and = query.$and ? [...query.$and, { $or: deptConditions }] : [{ $or: deptConditions }];
+      }
+    }
+
     // Country Filter
     const countryParam = (req.query.country || req.query.country_id || '').trim();
     if (countryParam && countryParam !== 'all') {
@@ -182,26 +343,7 @@ export const getJobs = async (req, res, next) => {
     ]);
 
     const formattedJobs = await Promise.all(
-      jobs.map(async (job) => {
-        if ((!job.state || typeof job.state !== 'object' || !job.state.name) && job.state_id) {
-          const stateDoc = await State.findOne({ sql_id: job.state_id }).select('name slug').lean();
-          if (stateDoc) {
-            job.state = stateDoc;
-          }
-        }
-        if (!job.department && job.dept) {
-          if (/^[0-9a-fA-F]{24}$/.test(String(job.dept).trim())) {
-            const deptDoc = await Department.findById(job.dept.trim()).select('name slug').lean();
-            if (deptDoc) {
-              job.department = deptDoc;
-              job.dept = deptDoc.name;
-            }
-          }
-        } else if (job.department && typeof job.department === 'object' && job.department.name) {
-          job.dept = job.department.name;
-        }
-        return job;
-      })
+      jobs.map((job) => enrichJobTaxonomies(job))
     );
 
     res.status(200).json({
@@ -234,17 +376,20 @@ export const getExpiringJobs = async (req, res, next) => {
     const stateParam = (req.query.state || req.query.state_id || '').trim();
     const countryParam = (req.query.country || req.query.country_id || '').trim();
 
-    const todayStr = new Date().toISOString().slice(0, 10);
+    const now = new Date();
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
     const query = {
-      app_ends: { $gte: todayStr, $nin: [null, '', '0000-00-00'] },
       status: { $nin: ['trash', 'draft'] }
     };
 
+    let futureDateStr = null;
     if (days && days > 0) {
-      const futureDate = new Date();
+      const futureDate = new Date(now);
       futureDate.setDate(futureDate.getDate() + days);
-      const futureDateStr = futureDate.toISOString().slice(0, 10);
+      futureDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(futureDate);
       query.app_ends = { $gte: todayStr, $lte: futureDateStr, $nin: [null, '', '0000-00-00'] };
+    } else {
+      query.app_ends = { $gte: todayStr, $nin: [null, '', '0000-00-00'] };
     }
 
     if (search) {
@@ -350,14 +495,15 @@ export const getExpiringJobs = async (req, res, next) => {
       }
     }
 
-    const [jobs, total] = await Promise.all([
+    let [jobs, total] = await Promise.all([
       Job.find(query)
-        .select('title slug app_ends dates categories featured_media state country created_at short_description description author dept user_id state_id')
+        .select('title slug app_ends dates categories featured_media state country created_at short_description description author dept user_id state_id department department_id')
         .populate('author', 'name nicename image')
         .populate('featured_media', 'path file alt name')
         .populate('categories', 'name slug')
         .populate('state', 'name slug')
         .populate('country', 'name slug code')
+        .populate('department', 'name slug')
         .sort({ app_ends: 1, created_at: -1 })
         .skip(skip)
         .limit(limit)
@@ -367,11 +513,11 @@ export const getExpiringJobs = async (req, res, next) => {
 
     const formattedJobs = await Promise.all(
       jobs.map(async (job) => {
-        if ((!job.state || typeof job.state !== 'object' || !job.state.name) && job.state_id) {
-          const stateDoc = await State.findOne({ sql_id: job.state_id }).select('name slug').lean();
-          if (stateDoc) {
-            job.state = stateDoc;
-          }
+        await enrichJobTaxonomies(job);
+        if (job.app_ends) {
+          const end = new Date(job.app_ends + 'T23:59:59+05:30');
+          const diffTime = end.getTime() - now.getTime();
+          job.daysRemaining = Math.max(0, Math.ceil(diffTime / (1000 * 60 * 60 * 24)));
         }
         return job;
       })
@@ -381,9 +527,64 @@ export const getExpiringJobs = async (req, res, next) => {
       success: true,
       count: formattedJobs.length,
       total,
+      days: days || 30,
+      startDate: todayStr,
+      endDate: futureDateStr,
       page,
       pages: Math.ceil(total / limit) || 1,
       data: formattedJobs,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getExpiringJobsCount = async (req, res, next) => {
+  try {
+    const days = parseInt(req.query.days, 10) || 30;
+    const now = new Date();
+    const todayStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(now);
+    const futureDate = new Date(now);
+    futureDate.setDate(futureDate.getDate() + days);
+    const futureDateStr = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Kolkata' }).format(futureDate);
+
+    const query = {
+      app_ends: { $gte: todayStr, $lte: futureDateStr, $nin: [null, '', '0000-00-00'] },
+      status: { $nin: ['trash', 'draft'] }
+    };
+
+    const stateParam = (req.query.state || req.query.state_id || '').trim();
+    if (stateParam && stateParam !== 'all') {
+      if (stateParam === 'all-india' || stateParam === 'central' || stateParam === 'national') {
+        query.$or = [{ state: null }, { state: { $exists: false } }, { state_id: null }, { state_id: 0 }];
+      } else {
+        const isObjectId = mongoose.Types.ObjectId.isValid(stateParam) && /^[0-9a-fA-F]{24}$/.test(stateParam);
+        const numId = Number(stateParam);
+        const orConds = [];
+        if (isObjectId) orConds.push({ state: stateParam });
+        if (!isNaN(numId) && numId > 0) orConds.push({ state_id: numId });
+        const stateDoc = await State.findOne({
+          $or: [
+            { slug: stateParam },
+            { name: { $regex: `^${stateParam.replace(/-/g, ' ')}$`, $options: 'i' } }
+          ]
+        }).select('_id sql_id');
+        if (stateDoc) {
+          orConds.push({ state: stateDoc._id });
+          if (stateDoc.sql_id) orConds.push({ state_id: stateDoc.sql_id });
+        }
+        if (orConds.length > 0) query.$or = orConds;
+      }
+    }
+
+    const count = await Job.countDocuments(query);
+
+    res.status(200).json({
+      success: true,
+      count,
+      days,
+      startDate: todayStr,
+      endDate: futureDateStr
     });
   } catch (error) {
     next(error);
@@ -406,25 +607,7 @@ export const getJobBySlug = async (req, res, next) => {
     }
 
     const jobObj = job.toObject();
-
-    if ((!jobObj.state || typeof jobObj.state !== 'object' || !jobObj.state.name) && jobObj.state_id) {
-      const stateDoc = await State.findOne({ sql_id: jobObj.state_id }).select('name slug');
-      if (stateDoc) {
-        jobObj.state = stateDoc;
-      }
-    }
-
-    if (!jobObj.department && jobObj.dept) {
-      if (/^[0-9a-fA-F]{24}$/.test(String(jobObj.dept).trim())) {
-        const deptDoc = await Department.findById(jobObj.dept.trim()).select('name slug').lean();
-        if (deptDoc) {
-          jobObj.department = deptDoc;
-          jobObj.dept = deptDoc.name;
-        }
-      }
-    } else if (jobObj.department && typeof jobObj.department === 'object' && jobObj.department.name) {
-      jobObj.dept = jobObj.department.name;
-    }
+    await enrichJobTaxonomies(jobObj);
 
     res.status(200).json({ success: true, data: jobObj });
   } catch (error) {

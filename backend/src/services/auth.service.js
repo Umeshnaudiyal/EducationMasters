@@ -1,5 +1,6 @@
 import User from '../models/user.model.js';
 import UserLog from '../models/userLog.model.js';
+import RolePermission from '../models/rolePermission.model.js';
 import ApiError from '../utils/apiError.js';
 import {
   getSecondsUntilMidnight,
@@ -407,6 +408,8 @@ class AuthService {
       console.error('[AuthService] Error creating/updating UserLog on login:', logErr);
     }
 
+    const effectivePermissions = await RolePermission.getEffectivePermissions(user);
+
     return {
       token,
       user: {
@@ -418,7 +421,7 @@ class AuthService {
         phone: user.phone || '',
         role: user.role,
         image: user.image || '',
-        permissions: user.permissions || [],
+        permissions: effectivePermissions,
         institute_id: user.institute_id || null,
         active: user.active,
         is_phone_verified: user.is_phone_verified || false,

@@ -27,6 +27,8 @@ import MockTestPlan from './mockTestPlan.model.js';
 import MockTestAttempt from './mockTestAttempt.model.js';
 import Payment from './payment.model.js';
 import StickyNote from './stickyNote.model.js';
+import QuestionReport from './questionReport.model.js';
+import RolePermission from './rolePermission.model.js';
 
 export {
   AdmitCard,
@@ -43,6 +45,7 @@ export {
   Job,
   Media,
   Question,
+  QuestionReport,
   Result,
   State,
   Subject,
@@ -58,4 +61,5 @@ export {
   MockTestAttempt,
   Payment,
   StickyNote,
+  RolePermission,
 };

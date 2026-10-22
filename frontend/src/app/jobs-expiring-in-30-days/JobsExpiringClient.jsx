@@ -21,6 +21,7 @@ import {
   Check,
 } from 'lucide-react';
 import StateLink from '@/components/StateLink';
+import DepartmentLink from '@/components/DepartmentLink';
 import { INDIAN_STATES_DATA } from '@/utils/indianStatesData';
 import { getImageUrl } from '@/utils/image';
 import { API_BASE } from '@/utils/api';
@@ -691,13 +692,11 @@ function JobsExpiringContent() {
                               </Link>
                             </span>
                             <span>|</span>
-                            <span>
-                              In <strong className="text-slate-800 font-medium">Jobs</strong>
-                            </span>
+                            <DepartmentLink job={job} />
                             <span>|</span>
                             <span>{formatDate(job.created_at || job.createdAt)}</span>
                             <span>|</span>
-                            <StateLink state={job.state} dept={job.dept} />
+                            <StateLink state={job.state} dept={job.dept} hideDeptFallback={true} />
                           </div>
 
                           {/* Excerpt Snippet */}

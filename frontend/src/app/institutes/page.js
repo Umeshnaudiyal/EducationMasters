@@ -431,68 +431,108 @@ function InstitutesContent() {
         <h1 className="sr-only">List of Top Institutes Available</h1>
 
         {/* ================= MAIN WIDE LAYOUT ================= */}
-        <div className="w-full max-w-[1720px] mx-auto px-3 sm:px-5 lg:px-6 mt-4 sm:mt-6">
+        <div className="w-full max-w-[1720px] mx-auto px-3 sm:px-5 lg:px-6 mt-3 sm:mt-4">
           <div className="flex flex-col lg:flex-row gap-5 items-start">
 
-            {/* ================= LEFT SIDEBAR (Slim width) ================= */}
-            <aside className="w-full lg:w-[200px] xl:w-[210px] shrink-0 space-y-5">
-              {/* Left Vertical AdSense Space (160 x 600 Wide Skyscraper) */}
-              <div className="hidden lg:block sticky top-20 space-y-5">
-                <AdPlaceholder
-                  dimensions="160 x 600"
-                  formatName="Wide Skyscraper"
-                  minHeight="560px"
-                  className="w-[160px] mx-auto"
-                />
+            {/* ================= LEFT SIDEBAR (Professional Filter Sidebar) ================= */}
+            <aside className="w-full lg:w-[230px] xl:w-[245px] shrink-0">
+              {/* Sticky Filter Panel - Prominently at Top */}
+              <div className="hidden lg:block sticky top-20 space-y-3">
+                {/* Professional Filter Header */}
+                <div className="bg-white rounded-xl border border-slate-200/90 p-3 shadow-xs flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 border border-blue-100 flex items-center justify-center shrink-0">
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                    </span>
+                    <div>
+                      <h2 className="text-xs font-bold text-slate-900 leading-none">Filters</h2>
+                      <p className="text-[10px] text-slate-500 mt-0.5">
+                        {activeFiltersCount > 0
+                          ? `${activeFiltersCount} active filter${activeFiltersCount > 1 ? 's' : ''}`
+                          : 'Refine institutes'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {activeFiltersCount > 0 && (
+                    <button
+                      onClick={handleClearFilters}
+                      className="inline-flex items-center gap-1 text-[11px] font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 px-2 py-1 rounded-md transition-colors"
+                      title="Reset all filters"
+                    >
+                      <RotateCcw className="w-3 h-3" />
+                      <span>Reset</span>
+                    </button>
+                  )}
+                </div>
 
                 {/* Left Courses Filter Card */}
-                <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs">
-                  <button
-                    onClick={() => setIsCourseOpen(!isCourseOpen)}
-                    className="w-full flex items-center justify-between font-bold text-slate-900 text-xs pb-2 border-b border-slate-100"
-                  >
-                    <span className="flex items-center gap-1.5">
+                <div className="bg-white rounded-xl border border-slate-200/90 p-3 shadow-xs">
+                  <div className="w-full flex items-center justify-between font-bold text-slate-900 text-xs pb-2 border-b border-slate-100">
+                    <button
+                      onClick={() => setIsCourseOpen(!isCourseOpen)}
+                      className="flex items-center gap-1.5 flex-1 text-left"
+                    >
                       <BookOpen className="w-3.5 h-3.5 text-blue-600" />
-                      Select Courses
+                      <span>Select Courses</span>
                       {selectedCourse && (
                         <span className="w-2 h-2 rounded-full bg-blue-600" />
                       )}
-                    </span>
-                    {isCourseOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
-                  </button>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {selectedCourse && (
+                        <button
+                          onClick={() => handleCourseClick(selectedCourse)}
+                          className="text-[10px] text-rose-500 hover:text-rose-700 font-medium px-1.5 py-0.5 hover:bg-rose-50 rounded"
+                          title="Clear course filter"
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setIsCourseOpen(!isCourseOpen)}
+                        className="p-0.5 text-slate-400 hover:text-slate-600"
+                        aria-label="Toggle courses"
+                      >
+                        {isCourseOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
 
                   {isCourseOpen && (
                     <div className="mt-2.5 space-y-2">
-                      <input
-                        type="text"
-                        placeholder="Search courses..."
-                        value={courseFilterSearch}
-                        onChange={(e) => setCourseFilterSearch(e.target.value)}
-                        className="w-full text-xs px-2 py-1 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                      <div className="relative">
+                        <Search className="w-3 h-3 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Search courses..."
+                          value={courseFilterSearch}
+                          onChange={(e) => setCourseFilterSearch(e.target.value)}
+                          className="w-full text-xs pl-7 pr-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition"
+                        />
+                      </div>
 
-                      <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
+                      <div className="max-h-60 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
                         {displayedCourses.length === 0 ? (
-                          <div className="text-xs text-slate-400 py-2 text-center">No courses found</div>
+                          <div className="text-xs text-slate-400 py-3 text-center">No courses found</div>
                         ) : (
                           displayedCourses.map((c) => {
                             const isChecked = selectedCourse === (c.slug || c._id);
                             return (
                               <label
                                 key={c._id}
-                                className={`flex items-center gap-1.5 px-1.5 py-1 rounded text-xs cursor-pointer transition-colors ${
-                                  isChecked
-                                    ? 'bg-blue-50 text-blue-700 font-semibold'
-                                    : 'text-slate-600 hover:bg-slate-50'
-                                }`}
+                                className={`flex items-center gap-2 px-2 py-1.5 rounded-lg text-xs cursor-pointer transition-all ${isChecked
+                                  ? 'bg-blue-50 text-blue-700 font-semibold border border-blue-200/60 shadow-2xs'
+                                  : 'text-slate-600 hover:bg-slate-50'
+                                  }`}
                               >
                                 <input
                                   type="checkbox"
                                   checked={isChecked}
                                   onChange={() => handleCourseClick(c.slug || c._id)}
-                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3 h-3"
+                                  className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
                                 />
-                                <span className="line-clamp-1">{c.name}</span>
+                                <span className="line-clamp-1 flex-1">{c.name}</span>
                               </label>
                             );
                           })
@@ -503,34 +543,54 @@ function InstitutesContent() {
                 </div>
 
                 {/* Left Statewise Institutes Filter Card */}
-                <div className="bg-white rounded-xl border border-slate-200/90 p-3.5 shadow-xs">
-                  <button
-                    onClick={() => setIsStateOpen(!isStateOpen)}
-                    className="w-full flex items-center justify-between font-bold text-slate-900 text-xs pb-2 border-b border-slate-100"
-                  >
-                    <span className="flex items-center gap-1.5">
+                <div className="bg-white rounded-xl border border-slate-200/90 p-3 shadow-xs">
+                  <div className="w-full flex items-center justify-between font-bold text-slate-900 text-xs pb-2 border-b border-slate-100">
+                    <button
+                      onClick={() => setIsStateOpen(!isStateOpen)}
+                      className="flex items-center gap-1.5 flex-1 text-left"
+                    >
                       <MapPin className="w-3.5 h-3.5 text-emerald-600" />
-                      Statewise Institutes
+                      <span>Statewise Institutes</span>
                       {selectedState && (
                         <span className="w-2 h-2 rounded-full bg-emerald-600" />
                       )}
-                    </span>
-                    {isStateOpen ? <ChevronUp className="w-3.5 h-3.5 text-slate-400" /> : <ChevronDown className="w-3.5 h-3.5 text-slate-400" />}
-                  </button>
+                    </button>
+                    <div className="flex items-center gap-1">
+                      {selectedState && (
+                        <button
+                          onClick={() => handleStateClick(selectedState)}
+                          className="text-[10px] text-rose-500 hover:text-rose-700 font-medium px-1.5 py-0.5 hover:bg-rose-50 rounded"
+                          title="Clear state filter"
+                        >
+                          Clear
+                        </button>
+                      )}
+                      <button
+                        onClick={() => setIsStateOpen(!isStateOpen)}
+                        className="p-0.5 text-slate-400 hover:text-slate-600"
+                        aria-label="Toggle states"
+                      >
+                        {isStateOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+                  </div>
 
                   {isStateOpen && (
                     <div className="mt-2.5 space-y-2">
-                      <input
-                        type="text"
-                        placeholder="Search states..."
-                        value={stateFilterSearch}
-                        onChange={(e) => setStateFilterSearch(e.target.value)}
-                        className="w-full text-xs px-2 py-1 rounded bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                      />
+                      <div className="relative">
+                        <Search className="w-3 h-3 text-slate-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                        <input
+                          type="text"
+                          placeholder="Search states..."
+                          value={stateFilterSearch}
+                          onChange={(e) => setStateFilterSearch(e.target.value)}
+                          className="w-full text-xs pl-7 pr-2 py-1.5 rounded-lg bg-slate-50 border border-slate-200 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:bg-white transition"
+                        />
+                      </div>
 
-                      <div className="max-h-56 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
+                      <div className="max-h-60 overflow-y-auto space-y-0.5 pr-1 custom-scrollbar">
                         {displayedStates.length === 0 ? (
-                          <div className="text-xs text-slate-400 py-2 text-center">No states found</div>
+                          <div className="text-xs text-slate-400 py-3 text-center">No states found</div>
                         ) : (
                           displayedStates.map((s) => {
                             const isSelected = selectedState === (s.slug || s._id);
@@ -538,14 +598,13 @@ function InstitutesContent() {
                               <button
                                 key={s._id}
                                 onClick={() => handleStateClick(s.slug || s._id)}
-                                className={`w-full text-left px-2 py-1 rounded text-xs transition-colors flex items-center justify-between ${
-                                  isSelected
-                                    ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200/60'
-                                    : 'text-slate-600 hover:bg-slate-50'
-                                }`}
+                                className={`w-full text-left px-2 py-1.5 rounded-lg text-xs transition-all flex items-center justify-between ${isSelected
+                                  ? 'bg-emerald-50 text-emerald-800 font-bold border border-emerald-200/70 shadow-2xs'
+                                  : 'text-slate-600 hover:bg-slate-50'
+                                  }`}
                               >
                                 <span className="line-clamp-1">{s.name}</span>
-                                {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
+                                {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />}
                               </button>
                             );
                           })
@@ -574,13 +633,14 @@ function InstitutesContent() {
             </aside>
 
             {/* ================= CENTER CONTENT (Wide Area) ================= */}
-            <section className="flex-1 min-w-0 space-y-5">
-              {/* Top Leaderboard Ad Placeholder (Centered) */}
+            <section className="flex-1 min-w-0 space-y-3.5">
+              {/* Top Leaderboard Ad Placeholder (Compact) */}
               <div className="flex justify-center w-full">
                 <AdPlaceholder
                   dimensions="728 x 90"
                   formatName="Leaderboard / Responsive Banner"
-                  minHeight="90px"
+                  compact
+                  minHeight="124px"
                   className="max-w-[728px] w-full"
                 />
               </div>
@@ -761,12 +821,13 @@ function InstitutesContent() {
 
                         {/* In-feed AdSense slot after row 2 (index 7 = 8th card) */}
                         {index === 7 && institutes.length > 8 && (
-                          <div className="col-span-1 sm:col-span-2 lg:col-span-4 my-2">
+                          <div className="col-span-full my-2">
                             <div className="flex justify-center w-full">
                               <AdPlaceholder
                                 dimensions="728 x 90"
                                 formatName="Sponsored Directory / Leaderboard"
-                                minHeight="90px"
+                                compact
+                                minHeight="54px"
                                 className="max-w-[728px] w-full"
                               />
                             </div>
@@ -807,11 +868,10 @@ function InstitutesContent() {
                             <button
                               key={`page-${p}`}
                               onClick={() => handlePageChange(p)}
-                              className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${
-                                isCurrent
-                                  ? 'bg-blue-600 text-white shadow-xs font-bold'
-                                  : 'text-slate-700 hover:bg-slate-100 border border-slate-200/70'
-                              }`}
+                              className={`w-7 h-7 flex items-center justify-center text-xs font-semibold rounded-lg transition-colors ${isCurrent
+                                ? 'bg-blue-600 text-white shadow-xs font-bold'
+                                : 'text-slate-700 hover:bg-slate-100 border border-slate-200/70'
+                                }`}
                             >
                               {p}
                             </button>
@@ -858,11 +918,10 @@ function InstitutesContent() {
                         <button
                           key={hub.name}
                           onClick={() => handleCityClick(hub.name)}
-                          className={`text-[11px] px-2 py-0.5 rounded border transition-all ${
-                            isSelected
-                              ? 'bg-blue-600 text-white font-semibold border-blue-600 shadow-xs'
-                              : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
-                          }`}
+                          className={`text-[11px] px-2 py-0.5 rounded border transition-all ${isSelected
+                            ? 'bg-blue-600 text-white font-semibold border-blue-600 shadow-xs'
+                            : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-slate-100'
+                            }`}
                         >
                           {hub.name}
                         </button>
@@ -930,11 +989,10 @@ function InstitutesContent() {
                         <button
                           key={s._id}
                           onClick={() => handleStateClick(s.slug || s._id)}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between ${
-                            isSelected
-                              ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200'
-                              : 'text-slate-600 hover:bg-slate-50'
-                          }`}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between ${isSelected
+                            ? 'bg-emerald-50 text-emerald-700 font-bold border border-emerald-200'
+                            : 'text-slate-600 hover:bg-slate-50'
+                            }`}
                         >
                           <span>{s.name}</span>
                           {isSelected && <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />}
@@ -954,11 +1012,10 @@ function InstitutesContent() {
                         <button
                           key={c._id}
                           onClick={() => handleCourseClick(c.slug || c._id)}
-                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between ${
-                            isChecked
-                              ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
-                              : 'text-slate-600 hover:bg-slate-50'
-                          }`}
+                          className={`w-full text-left px-3 py-1.5 rounded-lg text-xs flex items-center justify-between ${isChecked
+                            ? 'bg-blue-50 text-blue-700 font-bold border border-blue-200'
+                            : 'text-slate-600 hover:bg-slate-50'
+                            }`}
                         >
                           <span>{c.name}</span>
                           {isChecked && <CheckCircle2 className="w-3.5 h-3.5 text-blue-600" />}

@@ -348,13 +348,12 @@ export default function WhatsAppIntegrationPage() {
       {/* Toast Alert */}
       {toast && (
         <div
-          className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 z-50 fixed top-4 right-4 max-w-md ${
-            toast.type === 'success'
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-              : toast.type === 'error'
+          className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 shadow-lg animate-in fade-in slide-in-from-top-2 duration-200 z-50 fixed top-4 right-4 max-w-md ${toast.type === 'success'
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+            : toast.type === 'error'
               ? 'bg-rose-50 border-rose-300 text-rose-950'
               : 'bg-blue-50 border-blue-300 text-blue-950'
-          }`}
+            }`}
         >
           <div className="flex items-start gap-2.5">
             {toast.type === 'success' ? (
@@ -514,13 +513,12 @@ export default function WhatsAppIntegrationPage() {
             </p>
             <div className="flex items-center gap-1.5">
               <span
-                className={`w-2 h-2 rounded-full ${
-                  poolStatus?.overallStatus === 'CONNECTED'
-                    ? 'bg-emerald-500 animate-pulse'
-                    : poolStatus?.overallStatus === 'SCAN_QR'
+                className={`w-2 h-2 rounded-full ${poolStatus?.overallStatus === 'CONNECTED'
+                  ? 'bg-emerald-500 animate-pulse'
+                  : poolStatus?.overallStatus === 'SCAN_QR'
                     ? 'bg-amber-500'
                     : 'bg-rose-500'
-                }`}
+                  }`}
               />
               <span className="text-[11px] font-bold text-slate-600">
                 {poolStatus?.overallStatus || 'DISCONNECTED'}
@@ -605,26 +603,24 @@ export default function WhatsAppIntegrationPage() {
 
                       {/* Status Badge */}
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${
-                          isConnected
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                            : isScanQR
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold border ${isConnected
+                          ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          : isScanQR
                             ? 'bg-amber-50 text-amber-700 border-amber-200'
                             : isConnecting
-                            ? 'bg-blue-50 text-blue-700 border-blue-200'
-                            : 'bg-rose-50 text-rose-700 border-rose-200'
-                        }`}
+                              ? 'bg-blue-50 text-blue-700 border-blue-200'
+                              : 'bg-rose-50 text-rose-700 border-rose-200'
+                          }`}
                       >
                         <span
-                          className={`w-1.5 h-1.5 rounded-full ${
-                            isConnected
-                              ? 'bg-emerald-500 animate-pulse'
-                              : isScanQR
+                          className={`w-1.5 h-1.5 rounded-full ${isConnected
+                            ? 'bg-emerald-500 animate-pulse'
+                            : isScanQR
                               ? 'bg-amber-500'
                               : isConnecting
-                              ? 'bg-blue-500 animate-ping'
-                              : 'bg-rose-500'
-                          }`}
+                                ? 'bg-blue-500 animate-ping'
+                                : 'bg-rose-500'
+                            }`}
                         />
                         <span>{worker.status}</span>
                       </span>
@@ -822,11 +818,10 @@ export default function WhatsAppIntegrationPage() {
               {/* Step 1 Feedback Banner */}
               {testOtpResult && (
                 <div
-                  className={`p-3 rounded-xl border text-xs space-y-1.5 animate-in fade-in duration-150 ${
-                    testOtpResult.success
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
-                      : 'bg-rose-50 border-rose-200 text-rose-950'
-                  }`}
+                  className={`p-3 rounded-xl border text-xs space-y-1.5 animate-in fade-in duration-150 ${testOtpResult.success
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-950'
+                    : 'bg-rose-50 border-rose-200 text-rose-950'
+                    }`}
                 >
                   <div className="flex items-center gap-1.5 font-bold">
                     {testOtpResult.success ? (
@@ -890,11 +885,10 @@ export default function WhatsAppIntegrationPage() {
                 {/* Verification Result Feedback */}
                 {verifyResult && (
                   <div
-                    className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${
-                      verifyResult.success
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-bold'
-                        : 'bg-rose-50 border-rose-200 text-rose-900'
-                    }`}
+                    className={`p-2.5 rounded-xl border text-xs flex items-center gap-2 ${verifyResult.success
+                      ? 'bg-emerald-50 border-emerald-200 text-emerald-900 font-bold'
+                      : 'bg-rose-50 border-rose-200 text-rose-900'
+                      }`}
                   >
                     {verifyResult.success ? (
                       <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
@@ -997,30 +991,28 @@ export default function WhatsAppIntegrationPage() {
                       </td>
                       <td className="py-3 px-4">
                         <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold border ${
-                            log.status === 'VERIFIED'
-                              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                              : log.status === 'DELIVERED'
+                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10.5px] font-bold border ${log.status === 'VERIFIED'
+                            ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                            : log.status === 'DELIVERED'
                               ? 'bg-blue-50 text-blue-700 border-blue-200'
                               : log.status === 'EXPIRED'
-                              ? 'bg-amber-50 text-amber-700 border-amber-200'
-                              : log.status === 'FAILED'
-                              ? 'bg-rose-50 text-rose-700 border-rose-200'
-                              : 'bg-slate-100 text-slate-700 border-slate-200'
-                          }`}
+                                ? 'bg-amber-50 text-amber-700 border-amber-200'
+                                : log.status === 'FAILED'
+                                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                                  : 'bg-slate-100 text-slate-700 border-slate-200'
+                            }`}
                         >
                           <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              log.status === 'VERIFIED'
-                                ? 'bg-emerald-500'
-                                : log.status === 'DELIVERED'
+                            className={`w-1.5 h-1.5 rounded-full ${log.status === 'VERIFIED'
+                              ? 'bg-emerald-500'
+                              : log.status === 'DELIVERED'
                                 ? 'bg-blue-500'
                                 : log.status === 'EXPIRED'
-                                ? 'bg-amber-500'
-                                : log.status === 'FAILED'
-                                ? 'bg-rose-500'
-                                : 'bg-slate-400'
-                            }`}
+                                  ? 'bg-amber-500'
+                                  : log.status === 'FAILED'
+                                    ? 'bg-rose-500'
+                                    : 'bg-slate-400'
+                              }`}
                           />
                           <span>{log.status}</span>
                         </span>

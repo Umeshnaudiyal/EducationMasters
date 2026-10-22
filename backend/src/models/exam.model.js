@@ -21,11 +21,72 @@ const examSchema = new mongoose.Schema(
     image: {
       type: String,
       trim: true,
+
+
       default: '',
+    },
+    banner_image: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    emblem: {
+      type: String,
+      trim: true,
+      default: '',
+    },
+    category: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category',
+    },
+    category_name: {
+      type: String,
+      default: '',
+    },
+    subjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subject',
+      },
+    ],
+    highlights: [
+      {
+        type: String,
+      },
+    ],
+    languages: {
+      type: [String],
+      default: ['English', 'Hindi'],
+    },
+    badge: {
+      type: String,
+      default: 'Popular',
     },
     description: {
       type: String,
       default: '',
+    },
+    top_description: {
+      type: String,
+      default: '',
+    },
+    bottom_description: {
+      type: String,
+      default: '',
+    },
+    status: {
+      type: String,
+      enum: ['publish', 'published', 'Published', 'draft', 'Draft', 'pending'],
+      default: 'Published',
+      index: true,
+    },
+    is_featured: {
+      type: Boolean,
+      default: false,
+    },
+    order: {
+      type: Number,
+      default: 0,
     },
     author: {
       type: mongoose.Schema.Types.ObjectId,

@@ -14,6 +14,7 @@ import {
   Share, BookmarkCheck, Mail, Phone
 } from 'lucide-react';
 import StateLink, { isPlaceholderString } from '@/components/StateLink';
+import DepartmentLink from '@/components/DepartmentLink';
 import InternalLinkModal, { isInternalLink } from '@/components/InternalLinkModal';
 import { getImageUrl } from '@/utils/image';
 import authorsData from '@/utils/authorsData.json';
@@ -69,14 +70,91 @@ const formatSocialUrl = (type, val) => {
 
 // Helper for clean, bulletproof date formatting
 const formatDate = (dateStr) => {
-  if (!dateStr || dateStr === '0000-00-00') return 'As per scheduled';
+  if (!dateStr || dateStr === '0000-00-00' || dateStr === '0000-00-00 00:00:00') return '';
+  const cleanStr = String(dateStr).trim();
+  if (
+    !cleanStr ||
+    cleanStr.toLowerCase() === 'n/a' ||
+    cleanStr.toLowerCase() === 'na' ||
+    cleanStr.toLowerCase() === 'null' ||
+    cleanStr.toLowerCase() === 'undefined'
+  ) {
+    return '';
+  }
   try {
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return String(dateStr);
+    const d = new Date(cleanStr);
+    if (isNaN(d.getTime())) {
+      const lower = cleanStr.toLowerCase();
+      if (['as per scheduled', 'check notification', 'n/a', 'na', 'none', 'tbd', 'tba'].includes(lower)) {
+        return '';
+      }
+      return cleanStr;
+    }
     return d.toLocaleDateString('en-US', { month: 'short', day: '2-digit', year: 'numeric' });
   } catch (e) {
-    return String(dateStr);
+    return '';
   }
+};
+
+// Helper to check if a table cell value represents real stored data (not N/A, placeholder, or missing)
+export const isValidTableValue = (val) => {
+  if (val === null || val === undefined) return false;
+  if (typeof val === 'boolean') return val;
+  if (typeof val === 'number') return !isNaN(val) && val > 0;
+
+  if (React.isValidElement(val)) return true;
+
+  if (typeof val === 'object') {
+    if (val.name) return isValidTableValue(val.name);
+    if (val.title) return isValidTableValue(val.title);
+    return false;
+  }
+
+  const str = String(val).replace(/<[^>]*>/g, '').trim();
+  if (!str) return false;
+
+  const lower = str.toLowerCase();
+  const invalidValues = [
+    'n/a',
+    'na',
+    'n / a',
+    'n/ a',
+    'none',
+    'null',
+    'undefined',
+    'nil',
+    '-',
+    '--',
+    '---',
+    '0',
+    '0 years',
+    '0 year',
+    '0 seats',
+    '0 posts',
+    '0000-00-00',
+    '0000-00-00 00:00:00',
+    '#',
+    'javascript:void(0)',
+    'javascript:;',
+    'check notification',
+    'check official notification',
+    'as per notification',
+    'as per scheduled',
+    'as per rules',
+    'not available',
+    'not applicable',
+    'not mentioned',
+    'not announced',
+    'to be notified',
+    'to be announced',
+    'tba',
+    'tbd'
+  ];
+
+  if (invalidValues.includes(lower)) return false;
+  if (isPlaceholderString(str)) return false;
+
+  return true;
 };
 
 // Robust HTML & text sanitizer helper (removes SQL migration artifacts like 'rn', decodes entities)
@@ -179,7 +257,16 @@ const parseInstructionItems = (htmlStr) => {
   return items;
 };
 
-
+const formatExamHeading = (examName, suffix) => {
+  if (!examName) return suffix;
+  const cleanName = examName.trim();
+  const cleanSuffix = suffix.trim();
+  const regex = new RegExp(`\\b${cleanSuffix.replace(/\s+/g, '\\s*')}\\b`, 'i');
+  if (regex.test(cleanName)) {
+    return cleanName;
+  }
+  return `${cleanName} ${cleanSuffix}`;
+};
 
 const formatArticleData = (rawInput, type = '', currentPathname = '') => {
   if (!rawInput) return null;
@@ -189,9 +276,9 @@ const formatArticleData = (rawInput, type = '', currentPathname = '') => {
     : rawInput;
   const inferredType = type || (rawInput && rawInput.type) || (raw && raw.type) || '';
   const path = currentPathname || (typeof window !== 'undefined' ? window.location.pathname : '');
-  const isResult = inferredType === 'result' || path.startsWith('/result') || raw.result_status !== undefined || (raw.inst_down !== undefined && raw.down_url && !raw.vacancies);
-  const isAdmitCard = inferredType === 'admit-card' || path.startsWith('/admit-card');
-  const isJob = inferredType === 'job' || path.startsWith('/job') || (!isResult && !isAdmitCard && (raw.vacancies || raw.qualification || raw.posts || raw.app_ends || raw.total_posts));
+  const isAdmitCard = inferredType === 'admit-card' || path.startsWith('/admit-card') || path.includes('/admit-card/') || raw.admit_card_status !== undefined;
+  const isResult = !isAdmitCard && (inferredType === 'result' || path.startsWith('/result') || path.includes('/result/') || raw.result_status !== undefined || (raw.inst_down !== undefined && raw.down_url && !raw.vacancies));
+  const isJob = !isAdmitCard && !isResult && (inferredType === 'job' || path.startsWith('/job') || path.includes('/job/') || (raw.vacancies || raw.qualification || raw.posts || raw.app_ends || raw.total_posts));
 
   let firstCat = raw.categories?.[0] || raw.category;
   let catName = typeof firstCat === 'object' ? (firstCat?.name || firstCat?.slug || '') : String(firstCat || '');
@@ -354,18 +441,27 @@ const formatArticleData = (rawInput, type = '', currentPathname = '') => {
     phone: authorPhone,
   };
 
-  const pubDate = formatDate(raw.created_at || raw.createdAt || raw.exam_rdate || raw.result_date);
+  const pubDate = formatDate(raw.created_at || raw.createdAt || raw.exam_rdate || raw.result_date) || 'Recent';
 
   // Dynamic Result / Admit Card Details Object
-  const examNameVal = cleanHTML(raw.post || raw.title || 'Government Examination 2026');
+  const rawExamName = cleanHTML(raw.post || raw.title || '');
+  const examNameVal = isAdmitCard
+    ? rawExamName.replace(/\s+(result|scorecard)$/i, '').trim()
+    : (isResult ? rawExamName.replace(/\s+(admit\s*card|hall\s*ticket)$/i, '').trim() : rawExamName);
   const rawDeptCandidate = raw.dept || (typeof raw.department === 'object' ? raw.department?.name : raw.department);
-  const deptNameVal = cleanHTML((rawDeptCandidate && !isPlaceholderString(rawDeptCandidate)) ? rawDeptCandidate : (categoryName || 'Official Authority'));
-  const postNameVal = cleanHTML(raw.desig || raw.post || raw.title || 'Various Posts');
-  const examDateVal = raw.exam_date ? formatDate(raw.exam_date) : (raw.dates?.exam_date ? formatDate(raw.dates.exam_date) : 'As per scheduled');
-  const examTimeVal = cleanHTML(raw.exam_time || 'As per scheduled');
-  const examModeVal = cleanHTML(raw.exam_mode || 'Offline (OMR Based)');
+  const deptNameVal = cleanHTML((rawDeptCandidate && !isPlaceholderString(rawDeptCandidate)) ? rawDeptCandidate : (categoryName || ''));
+  const postNameVal = cleanHTML(raw.desig || raw.post || raw.title || '');
+  const resultExamDateVal = (raw.exam_date && raw.exam_date !== '0000-00-00')
+    ? formatDate(raw.exam_date)
+    : ((raw.dates?.exam_date && raw.dates.exam_date !== '0000-00-00') ? formatDate(raw.dates.exam_date) : '');
+  const examTimeVal = (raw.exam_time && !isPlaceholderString(raw.exam_time)) ? cleanHTML(raw.exam_time) : '';
+  const examModeVal = (raw.exam_mode && !isPlaceholderString(raw.exam_mode)) ? cleanHTML(raw.exam_mode) : '';
   const officialWebVal = formatExternalUrl(raw.site_url || raw.website || raw.official_website || (raw.links?.site_url) || (raw.links?.official_website));
   const downUrlVal = formatExternalUrl(raw.down_url || raw.result_url || raw.links?.down_url || raw.links?.result_url || raw.site_url);
+
+  const defaultStatus = isAdmitCard ? 'Released' : 'Declared / Out';
+  const rawStatusCandidate = raw.admit_card_status || raw.admit_status || raw.result_status || raw.exam_status || (!['publish', 'published', 'draft', 'trash', 'trashed'].includes(String(raw.status || '').toLowerCase()) ? raw.status : '');
+  const statusVal = cleanHTML(rawStatusCandidate || defaultStatus);
 
   const descriptionHtml = cleanHTML(raw.description || raw.content || '');
   const instDownRaw = cleanHTML(raw.inst_down || raw.downloadInstructions || '');
@@ -380,12 +476,12 @@ const formatArticleData = (rawInput, type = '', currentPathname = '') => {
     examName: examNameVal,
     deptName: deptNameVal,
     postName: postNameVal,
-    examDate: examDateVal,
+    examDate: resultExamDateVal,
     examTime: examTimeVal,
     examMode: examModeVal,
     officialWebsite: officialWebVal,
     downUrl: downUrlVal,
-    resultStatus: cleanHTML(raw.result_status || 'Declared / Out'),
+    resultStatus: statusVal,
     description: descriptionHtml,
     instDown: instDownRaw,
     instDownItems: parsedInstDown,
@@ -399,19 +495,48 @@ const formatArticleData = (rawInput, type = '', currentPathname = '') => {
   const rawLocationCandidate = raw.job_location || raw.location || (typeof raw.state === 'object' ? raw.state?.name : raw.state);
   const cleanJobLocation = (rawLocationCandidate && !isPlaceholderString(rawLocationCandidate)) ? cleanHTML(rawLocationCandidate) : 'All India';
 
+  const rawVacancies = raw.posts || raw.total_posts || raw.vacancies;
+  const vacanciesVal = (rawVacancies && String(rawVacancies).toLowerCase() !== 'n/a' && String(rawVacancies).trim() !== '0')
+    ? cleanHTML(rawVacancies)
+    : '';
+
+  const minAgeVal = (raw.min_age && String(raw.min_age).trim() !== '0' && String(raw.min_age).toLowerCase() !== 'n/a')
+    ? `${String(raw.min_age).replace(/years?/gi, '').trim()} Years`
+    : '';
+
+  const maxAgeVal = (raw.max_age && String(raw.max_age).trim() !== '0' && String(raw.max_age).toLowerCase() !== 'n/a')
+    ? `${String(raw.max_age).replace(/years?/gi, '').trim()} Years`
+    : '';
+
+  const jobExamDateVal = (raw.exam_date && raw.exam_date !== '0000-00-00')
+    ? formatDate(raw.exam_date)
+    : ((raw.dates?.exam_date && raw.dates.exam_date !== '0000-00-00') ? formatDate(raw.dates.exam_date) : '');
+
+  const startDateVal = (raw.app_start || raw.dates?.start_date)
+    ? formatDate(raw.app_start || raw.dates?.start_date)
+    : '';
+
+  const endDateVal = (raw.app_ends || raw.dates?.last_date)
+    ? formatDate(raw.app_ends || raw.dates?.last_date)
+    : '';
+
+  const releaseDateVal = (raw.released || raw.created_at || raw.createdAt)
+    ? formatDate(raw.released || raw.created_at || raw.createdAt)
+    : '';
+
   const jobDetailsObj = isJob ? {
     postName: cleanHTML(raw.title),
-    totalVacancies: cleanHTML(raw.posts || raw.total_posts || raw.vacancies || 'N/A'),
+    totalVacancies: vacanciesVal,
     jobLocation: cleanJobLocation,
-    qualification: cleanHTML(raw.qualification || 'As per notification'),
-    releaseDate: formatDate(raw.released || raw.created_at || raw.createdAt),
-    startDate: formatDate(raw.app_start || raw.dates?.start_date || raw.created_at),
-    endDate: formatDate(raw.app_ends || raw.dates?.last_date),
-    examDate: raw.exam_date ? formatDate(raw.exam_date) : 'N/A',
-    minAge: raw.min_age ? `${raw.min_age} Years` : 'N/A',
-    maxAge: raw.max_age ? `${raw.max_age} Years` : 'N/A',
-    salary: cleanHTML(raw.salary || 'As per rules'),
-    applicationFee: cleanHTML(raw.fees?.gen_fee ? `General/OBC: ₹${raw.fees.gen_fee} | SC/ST: Exempted` : (raw.fees || 'As per rules')),
+    qualification: cleanHTML(raw.qualification || ''),
+    releaseDate: releaseDateVal,
+    startDate: startDateVal,
+    endDate: endDateVal,
+    examDate: jobExamDateVal,
+    minAge: minAgeVal,
+    maxAge: maxAgeVal,
+    salary: cleanHTML(raw.salary || ''),
+    applicationFee: cleanHTML(raw.fees?.gen_fee ? `General/OBC: ₹${raw.fees.gen_fee} | SC/ST: Exempted` : (raw.fees || '')),
     officialLink: formatExternalUrl(raw.noti_link || raw.links?.site_url || raw.site_url),
     applyLink: formatExternalUrl(raw.app_link || raw.links?.down_url || raw.down_url),
     admitCardLink: formatExternalUrl(raw.admitCardNotification?.down_url || raw.links?.admit_url),
@@ -438,7 +563,8 @@ const formatArticleData = (rawInput, type = '', currentPathname = '') => {
     image: getImageUrl(raw.featured_media || raw.featured_image || raw.image || raw.banner_image, 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=1200&q=80'),
     content: descriptionHtml,
     state: raw.state,
-    dept: deptNameVal,
+    dept: raw.dept || deptNameVal,
+    department: raw.department,
     isJob,
     isResult,
     isAdmitCard,
@@ -551,6 +677,8 @@ export default function SingleArticlePage({ initialData = null }) {
   const [isBannerLoaded, setIsBannerLoaded] = useState(false);
   const [showLeftAd, setShowLeftAd] = useState(true);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [isAuthorBioExpanded, setIsAuthorBioExpanded] = useState(false);
+  const [unlockedUrls, setUnlockedUrls] = useState({});
   const [internalLinkModal, setInternalLinkModal] = useState({
     isOpen: false,
     targetUrl: '',
@@ -606,7 +734,7 @@ export default function SingleArticlePage({ initialData = null }) {
 
   const isJobPage = pathname.startsWith('/job') || article?.isJob;
   const isAdmitCardPage = pathname.startsWith('/admit-card') || article?.isAdmitCard || article?.category?.toLowerCase().includes('admit');
-  const isResultPage = pathname.startsWith('/result') || article?.isResult || article?.category?.toLowerCase().includes('result');
+  const isResultPage = (!isAdmitCardPage && (pathname.startsWith('/result') || article?.isResult || article?.category?.toLowerCase().includes('result')));
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -662,7 +790,7 @@ export default function SingleArticlePage({ initialData = null }) {
         const resRes = await fetch(`${API_BASE}/results/${articleSlug}`);
         const dataRes = await resRes.json();
         if (dataRes.success && dataRes.data) {
-          setArticle(formatArticleData(dataRes.data, 'result'));
+          setArticle(formatArticleData(dataRes.data, 'result', pathname));
           setLoading(false);
           return;
         }
@@ -673,7 +801,7 @@ export default function SingleArticlePage({ initialData = null }) {
         const resAC = await fetch(`${API_BASE}/admit-cards/${articleSlug}`);
         const dataAC = await resAC.json();
         if (dataAC.success && dataAC.data) {
-          setArticle(formatArticleData(dataAC.data, 'admit-card'));
+          setArticle(formatArticleData(dataAC.data, 'admit-card', pathname));
           setLoading(false);
           return;
         }
@@ -684,7 +812,7 @@ export default function SingleArticlePage({ initialData = null }) {
         const resJob = await fetch(`${API_BASE}/jobs/${articleSlug}`);
         const dataJob = await resJob.json();
         if (dataJob.success && dataJob.data) {
-          setArticle(formatArticleData(dataJob.data, 'job'));
+          setArticle(formatArticleData(dataJob.data, 'job', pathname));
           setLoading(false);
           return;
         }
@@ -695,7 +823,7 @@ export default function SingleArticlePage({ initialData = null }) {
       let data = await res.json();
 
       if (data.success && data.data) {
-        setArticle(formatArticleData(data.data, 'blog'));
+        setArticle(formatArticleData(data.data, 'blog', pathname));
         setLoading(false);
         return;
       }
@@ -705,7 +833,7 @@ export default function SingleArticlePage({ initialData = null }) {
         res = await fetch(`${API_BASE}/results/${articleSlug}`);
         data = await res.json();
         if (data.success && data.data) {
-          setArticle(formatArticleData(data.data, 'result'));
+          setArticle(formatArticleData(data.data, 'result', pathname));
           setLoading(false);
           return;
         }
@@ -716,7 +844,7 @@ export default function SingleArticlePage({ initialData = null }) {
         res = await fetch(`${API_BASE}/admit-cards/${articleSlug}`);
         data = await res.json();
         if (data.success && data.data) {
-          setArticle(formatArticleData(data.data, 'admit-card'));
+          setArticle(formatArticleData(data.data, 'admit-card', pathname));
           setLoading(false);
           return;
         }
@@ -727,7 +855,7 @@ export default function SingleArticlePage({ initialData = null }) {
         res = await fetch(`${API_BASE}/jobs/${articleSlug}`);
         data = await res.json();
         if (data.success && data.data) {
-          setArticle(formatArticleData(data.data, 'job'));
+          setArticle(formatArticleData(data.data, 'job', pathname));
           setLoading(false);
           return;
         }
@@ -837,7 +965,13 @@ export default function SingleArticlePage({ initialData = null }) {
     }
   };
 
-  const currentUrl = typeof window !== 'undefined' ? window.location.href : 'https://educationmasters.in';
+  const [currentUrl, setCurrentUrl] = useState(() => (pathname ? `https://educationmasters.in${pathname}` : 'https://educationmasters.in'));
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentUrl(window.location.href);
+    }
+  }, [pathname]);
 
   return (
     <div className="min-h-screen flex flex-col bg-white text-slate-800 font-sans">
@@ -1076,9 +1210,11 @@ export default function SingleArticlePage({ initialData = null }) {
                   <span className="inline-flex items-center">
                     In&nbsp;
                     {isJobPage ? (
-                      <Link href="/jobs" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
-                        Jobs
-                      </Link>
+                      <DepartmentLink
+                        job={article}
+                        showInPrefix={false}
+                        className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition"
+                      />
                     ) : isAdmitCardPage ? (
                       <Link href="/admit-cards" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
                         Admit Card
@@ -1233,7 +1369,7 @@ export default function SingleArticlePage({ initialData = null }) {
                     {/* SECTION 1: ABOUT [EXAM NAME] RESULT */}
                     <div>
                       <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3 border-b border-slate-100 pb-2">
-                        About {article.resultDetails.examName} {article.isResult ? 'Result' : 'Admit Card'}
+                        About {formatExamHeading(article.resultDetails.examName, article.isResult ? 'Result' : 'Admit Card')}
                       </h2>
                       {article.resultDetails.description ? (
                         <div
@@ -1242,115 +1378,150 @@ export default function SingleArticlePage({ initialData = null }) {
                         />
                       ) : (
                         <p className="text-slate-700 text-base leading-relaxed">
-                          {article.resultDetails.deptName} will release the {article.resultDetails.examName} {article.isResult ? 'Result 2026' : 'Admit Card 2026'} for candidates who appeared in the examination process under {article.resultDetails.postName}.
+                          {article.resultDetails.deptName} will release the {formatExamHeading(article.resultDetails.examName, article.isResult ? 'Result 2026' : 'Admit Card 2026')} for candidates who appeared in the examination process under {article.resultDetails.postName}.
                         </p>
                       )}
                     </div>
 
                     {/* SECTION 2: OVERVIEW TABLE */}
-                    <div className="pt-2">
-                      <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3">
-                        {article.resultDetails.examName} {article.isResult ? 'Result' : 'Admit Card'} – Overview
-                      </h2>
-                      <div className="overflow-x-auto border border-slate-200 rounded-md shadow-2xs">
-                        <table className="w-full text-xs sm:text-sm text-left border-collapse">
-                          <tbody className="divide-y divide-slate-200 bg-white">
-                            <tr className="hover:bg-slate-50 transition">
-                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 w-1/3 sm:w-1/4 border-r border-slate-200">
-                                Name of Exam
-                              </th>
-                              <td className="p-3.5 font-normal text-slate-900">
-                                {article.resultDetails.examName}
-                              </td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 transition">
-                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
-                                Conducting Department
-                              </th>
-                              <td className="p-3.5 font-normal text-slate-900">
-                                {article.resultDetails.deptName}
-                              </td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 transition">
-                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
-                                Post Name
-                              </th>
-                              <td className="p-3.5 font-normal text-slate-900 leading-snug">
-                                {article.resultDetails.postName}
-                              </td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 transition">
-                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
-                                Exam Date
-                              </th>
-                              <td className="p-3.5 font-normal text-slate-900">
-                                {article.resultDetails.examDate}
-                              </td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 transition">
-                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
-                                Exam Time
-                              </th>
-                              <td className="p-3.5 font-normal text-slate-900">
-                                {article.resultDetails.examTime}
-                              </td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 transition">
-                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
-                                Exam Mode
-                              </th>
-                              <td className="p-3.5 font-normal text-slate-900">
-                                {article.resultDetails.examMode}
-                              </td>
-                            </tr>
-                            <tr className="hover:bg-slate-50 transition">
-                              <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
-                                Official Website
-                              </th>
-                              <td className="p-3.5 font-medium text-blue-600">
-                                {article.resultDetails.officialWebsite ? (
-                                  <a
-                                    href={article.resultDetails.officialWebsite}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="hover:underline break-all"
-                                  >
-                                    {article.resultDetails.officialWebsite}
-                                  </a>
-                                ) : (
-                                  <span className="text-slate-500 font-normal">Check Official Notification</span>
+                    {(() => {
+                      const hasOverviewData = (
+                        isValidTableValue(article.resultDetails.examName) ||
+                        isValidTableValue(article.resultDetails.deptName) ||
+                        isValidTableValue(article.resultDetails.postName) ||
+                        isValidTableValue(article.resultDetails.resultStatus) ||
+                        isValidTableValue(article.resultDetails.examDate) ||
+                        isValidTableValue(article.resultDetails.examTime) ||
+                        isValidTableValue(article.resultDetails.examMode) ||
+                        isValidTableValue(article.resultDetails.officialWebsite)
+                      );
+                      if (!hasOverviewData) return null;
+
+                      return (
+                        <div className="pt-2">
+                          <h2 className="text-xl sm:text-2xl font-bold text-slate-900 mb-3">
+                            {formatExamHeading(article.resultDetails.examName, article.isResult ? 'Result' : 'Admit Card')} – Overview
+                          </h2>
+                          <div className="overflow-x-auto border border-slate-200 rounded-md shadow-2xs">
+                            <table className="w-full text-xs sm:text-sm text-left border-collapse">
+                              <tbody className="divide-y divide-slate-200 bg-white">
+                                {isValidTableValue(article.resultDetails.examName) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 w-1/3 sm:w-1/4 border-r border-slate-200">
+                                      Name of Exam
+                                    </th>
+                                    <td className="p-3.5 font-normal text-slate-900">
+                                      {article.resultDetails.examName}
+                                    </td>
+                                  </tr>
                                 )}
-                              </td>
-                            </tr>
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                                {isValidTableValue(article.resultDetails.deptName) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                      Conducting Department
+                                    </th>
+                                    <td className="p-3.5 font-normal text-slate-900">
+                                      {article.resultDetails.deptName}
+                                    </td>
+                                  </tr>
+                                )}
+                                {isValidTableValue(article.resultDetails.postName) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                      Post Name
+                                    </th>
+                                    <td className="p-3.5 font-normal text-slate-900 leading-snug">
+                                      {article.resultDetails.postName}
+                                    </td>
+                                  </tr>
+                                )}
+                                {isValidTableValue(article.resultDetails.resultStatus) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                      {article.isAdmitCard ? 'Admit Card Status' : 'Result Status'}
+                                    </th>
+                                    <td className="p-3.5 font-normal text-slate-900">
+                                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200/80">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                                        {article.resultDetails.resultStatus}
+                                      </span>
+                                    </td>
+                                  </tr>
+                                )}
+                                {isValidTableValue(article.resultDetails.examDate) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                      Exam Date
+                                    </th>
+                                    <td className="p-3.5 font-normal text-slate-900">
+                                      {article.resultDetails.examDate}
+                                    </td>
+                                  </tr>
+                                )}
+                                {isValidTableValue(article.resultDetails.examTime) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                      Exam Time
+                                    </th>
+                                    <td className="p-3.5 font-normal text-slate-900">
+                                      {article.resultDetails.examTime}
+                                    </td>
+                                  </tr>
+                                )}
+                                {isValidTableValue(article.resultDetails.examMode) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                      Exam Mode
+                                    </th>
+                                    <td className="p-3.5 font-normal text-slate-900">
+                                      {article.resultDetails.examMode}
+                                    </td>
+                                  </tr>
+                                )}
+                                {isValidTableValue(article.resultDetails.officialWebsite) && (
+                                  <tr className="hover:bg-slate-50 transition">
+                                    <th className="p-3.5 bg-[#f0f3fa] font-semibold text-slate-800 border-r border-slate-200">
+                                      Official Website
+                                    </th>
+                                    <td className="p-3.5 font-medium text-blue-600">
+                                      {unlockedUrls[article.resultDetails.officialWebsite] ? (
+                                        <a
+                                          href={article.resultDetails.officialWebsite}
+                                          target="_blank"
+                                          rel="noreferrer"
+                                          className="inline-flex items-center gap-1.5 font-medium text-blue-600 hover:text-blue-800 hover:underline break-all"
+                                        >
+                                          <span>{article.resultDetails.officialWebsite}</span>
+                                          <ExternalLink className="w-3.5 h-3.5 shrink-0 text-blue-500" />
+                                        </a>
+                                      ) : (
+                                        <button
+                                          type="button"
+                                          onClick={() => setInternalLinkModal({
+                                            isOpen: true,
+                                            targetUrl: article.resultDetails.officialWebsite,
+                                            targetWindow: '_blank',
+                                          })}
+                                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-900 border border-blue-200/90 rounded-md text-xs sm:text-sm font-semibold transition cursor-pointer shadow-2xs group"
+                                        >
+                                          <span>Visit Official Website</span>
+                                          <ExternalLink className="w-3.5 h-3.5 shrink-0 transition-transform group-hover:translate-x-0.5 text-blue-600" />
+                                        </button>
+                                      )}
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      );
+                    })()}
 
-                    {/* SECTION 3: DIRECT VIEW RESULT LINK CALLOUT BANNER */}
-                    <div className="my-6 p-6 sm:p-8 bg-[#1d68e1] text-white rounded-lg text-center shadow-md space-y-3 direct-link-banner" data-editor-content="true">
-                      <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
-                        {article.isResult ? 'Direct View Result Link' : 'Direct Download Admit Card Link'}
-                      </h3>
-                      <p className="text-xs sm:text-sm text-blue-100 max-w-xl mx-auto font-normal">
-                        Click the button below to visit the official website and {article.isResult ? 'view/download your result' : 'download your admit card'}
-                      </p>
-                      <div className="pt-2">
-                        <a
-                          href={article.resultDetails.downUrl || article.resultDetails.officialWebsite || '#'}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-block bg-[#ffc107] hover:bg-[#ffb300] active:scale-95 text-slate-900 font-extrabold text-sm sm:text-base px-8 py-3 rounded-md shadow hover:shadow-md transition duration-200"
-                        >
-                          {article.isResult ? 'View Result' : 'Download Admit Card'}
-                        </a>
-                      </div>
-                    </div>
-
-                    {/* SECTION 4: HOW TO VIEW/DOWNLOAD RESULT */}
+                    {/* SECTION 3: HOW TO VIEW/DOWNLOAD RESULT / ADMIT CARD */}
                     <div className="pt-2 space-y-3">
                       <h2 className="text-xl sm:text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">
-                        How to {article.isResult ? 'View/Download' : 'Download'} {article.resultDetails.examName} {article.isResult ? 'Result' : 'Admit Card'}
+                        How to {article.isResult ? 'View/Download' : 'Download'} {formatExamHeading(article.resultDetails.examName, article.isResult ? 'Result' : 'Admit Card')}
                       </h2>
 
                       {/* Clean In-Content Ad Frame */}
@@ -1360,7 +1531,7 @@ export default function SingleArticlePage({ initialData = null }) {
                             Official Exam Portal
                           </span>
                           <h4 className="text-sm font-bold text-slate-800">
-                            Download Scorecard & Merit List PDF Online
+                            {article.isResult ? 'Download Scorecard & Merit List PDF Online' : 'Download Hall Ticket / Admit Card Online'}
                           </h4>
                           <p className="text-xs text-slate-600">
                             Keep your registration number and DOB ready for quick access.
@@ -1392,21 +1563,52 @@ export default function SingleArticlePage({ initialData = null }) {
                         />
                       ) : (
                         <ol className="list-decimal pl-5 space-y-2.5 text-sm sm:text-base text-slate-700 font-normal leading-relaxed">
-                          <li className="pl-1">Visit the official {article.resultDetails.deptName} website.</li>
-                          <li className="pl-1">Open the Careers / Recruitment / Result section.</li>
-                          <li className="pl-1">Find &quot;{article.resultDetails.examName} Result 2026&quot;.</li>
-                          <li className="pl-1">Click on the result or shortlisted candidates link when released.</li>
+                          <li className="pl-1">Visit the official {article.resultDetails.deptName || 'recruitment'} website.</li>
+                          <li className="pl-1">Open the Careers / Recruitment / {article.isResult ? 'Result' : 'Admit Card'} section.</li>
+                          <li className="pl-1">Find &quot;{formatExamHeading(article.resultDetails.examName, article.isResult ? 'Result 2026' : 'Admit Card 2026')}&quot;.</li>
+                          <li className="pl-1">Click on the {article.isResult ? 'result or scorecard link when released' : 'admit card download link'}.</li>
                           <li className="pl-1">Enter your Registration Number and Password/Date of Birth, if login is required.</li>
-                          <li className="pl-1">Submit the details and view your result status.</li>
-                          <li className="pl-1">Download and save the result PDF or scorecard for future reference.</li>
+                          <li className="pl-1">Submit the details and view your {article.isResult ? 'result status' : 'admit card'}.</li>
+                          <li className="pl-1">Download and take a printout of the {article.isResult ? 'result PDF or scorecard' : 'admit card'} for {article.isResult ? 'future reference' : 'the examination'}.</li>
                         </ol>
                       )}
+                    </div>
+
+                    {/* SECTION 4: DIRECT VIEW / DOWNLOAD LINK CALLOUT BANNER - BETWEEN HOW TO VIEW AND DETAILS MENTIONED */}
+                    <div className="my-7 p-6 sm:p-8 bg-gradient-to-r from-[#071739] via-[#10346e] to-[#071739] text-white rounded-xl text-center shadow-lg border border-blue-900/50 space-y-3 direct-link-banner" data-editor-content="true">
+                      <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                        {article.isResult ? 'Direct View Result Link' : (article.isAdmitCard ? 'Direct Download Admit Card Link' : 'Direct Link')}
+                      </h3>
+                      <p className="text-xs sm:text-sm text-blue-200/90 max-w-xl mx-auto font-normal">
+                        Click the button below to visit the official website and {article.isResult ? 'view/download your result' : (article.isAdmitCard ? 'download your admit card' : 'access the official portal')}
+                      </p>
+                      <div className="pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const target = article.resultDetails.downUrl || article.resultDetails.officialWebsite || '';
+                            if (!target) return;
+                            if (unlockedUrls[target]) {
+                              window.open(target, '_blank', 'noopener,noreferrer');
+                            } else {
+                              setInternalLinkModal({
+                                isOpen: true,
+                                targetUrl: target,
+                                targetWindow: '_blank',
+                              });
+                            }
+                          }}
+                          className="inline-block bg-[#ffc107] hover:bg-[#ffb300] active:scale-95 text-slate-900 font-bold text-sm sm:text-base px-8 py-3 rounded-lg shadow-md hover:shadow-lg transition duration-200 cursor-pointer"
+                        >
+                          {article.isResult ? 'View Result' : (article.isAdmitCard ? 'Download Admit Card' : 'Click Here')}
+                        </button>
+                      </div>
                     </div>
 
                     {/* SECTION 5: DETAILS MENTIONED */}
                     <div className="pt-2 space-y-3">
                       <h2 className="text-xl sm:text-2xl font-bold text-slate-900 border-b border-slate-100 pb-2">
-                        Details Mentioned in {article.resultDetails.examName}
+                        Details Mentioned in {formatExamHeading(article.resultDetails.examName, article.isResult ? 'Result' : 'Admit Card')}
                       </h2>
 
                       {article.resultDetails.instImplItems && article.resultDetails.instImplItems.length > 0 ? (
@@ -1424,11 +1626,23 @@ export default function SingleArticlePage({ initialData = null }) {
                         />
                       ) : (
                         <ul className="list-disc pl-5 space-y-2.5 text-sm sm:text-base text-slate-700 font-normal leading-relaxed">
-                          <li className="pl-1">Check your name, roll number, and qualifying status carefully.</li>
-                          <li className="pl-1">Download a copy of the result for future reference.</li>
-                          <li className="pl-1">Check the next selection stage mentioned in the result notification.</li>
-                          <li className="pl-1">Keep your original documents ready for Document Verification (DV).</li>
-                          <li className="pl-1">Regularly check the official recruitment page for further selection rounds.</li>
+                          {article.isAdmitCard ? (
+                            <>
+                              <li className="pl-1">Candidate Name, Roll Number, and Registration Number.</li>
+                              <li className="pl-1">Exam Date, Reporting Time, and Shift Timing.</li>
+                              <li className="pl-1">Examination Center Name and Complete Address.</li>
+                              <li className="pl-1">Candidate Photograph and Signature.</li>
+                              <li className="pl-1">Important exam day instructions and ID guidelines.</li>
+                            </>
+                          ) : (
+                            <>
+                              <li className="pl-1">Check your name, roll number, and qualifying status carefully.</li>
+                              <li className="pl-1">Download a copy of the result for future reference.</li>
+                              <li className="pl-1">Check the next selection stage mentioned in the result notification.</li>
+                              <li className="pl-1">Keep your original documents ready for Document Verification (DV).</li>
+                              <li className="pl-1">Regularly check the official recruitment page for further selection rounds.</li>
+                            </>
+                          )}
                         </ul>
                       )}
                     </div>
@@ -1470,71 +1684,108 @@ export default function SingleArticlePage({ initialData = null }) {
 
                     {/* Job Highlights Table for Job Articles */}
                     {article.isJob && article.jobDetails && !article.content?.includes('<table') && (
-                      <div className="my-6 space-y-3">
-                        <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">
-                          {article.title} Job Highlights:
-                        </h2>
-                        <div className="overflow-x-auto border border-slate-200 rounded-md">
-                          <table className="w-full text-xs sm:text-sm text-left border-collapse">
-                            <tbody className="divide-y divide-slate-200 bg-white">
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 w-1/3 border-r border-slate-200">Name of Exam</th>
-                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.postName}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">No. of Seats</th>
-                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.totalVacancies}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Job Location</th>
-                                <td className="p-3 font-normal text-slate-900">
-                                  <StateLink state={article.state || article.jobDetails.jobLocation} dept={article.dept} fallback={article.jobDetails.jobLocation} />
-                                </td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Date</th>
-                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.releaseDate || article.date}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Online Application Start Date</th>
-                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.startDate || article.date}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Last Date to Apply</th>
-                                <td className="p-3 font-normal text-slate-900">{article.jobDetails.endDate || 'Check Notification'}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Prelims Exam Date</th>
-                                <td className="p-3 font-normal text-slate-500">{article.jobDetails.examDate}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Minimum age limit</th>
-                                <td className="p-3 font-normal text-slate-500">{article.jobDetails.minAge}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Maximum age limit</th>
-                                <td className="p-3 font-normal text-slate-500">{article.jobDetails.maxAge}</td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Link</th>
-                                <td className="p-3 font-medium text-blue-600">
-                                  {article.jobDetails.officialLink ? (
-                                    <a href={article.jobDetails.officialLink} target="_blank" rel="noreferrer" className="hover:underline">Click here</a>
-                                  ) : 'N/A'}
-                                </td>
-                              </tr>
-                              <tr className="hover:bg-slate-50">
-                                <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Direct Online Application Link</th>
-                                <td className="p-3 font-medium text-blue-600">
-                                  {article.jobDetails.applyLink ? (
-                                    <a href={article.jobDetails.applyLink} target="_blank" rel="noreferrer" className="hover:underline">Apply now</a>
-                                  ) : 'N/A'}
-                                </td>
-                              </tr>
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
+                      (() => {
+                        const hasHighlights = (
+                          isValidTableValue(article.jobDetails.postName) ||
+                          isValidTableValue(article.jobDetails.totalVacancies) ||
+                          isValidTableValue(article.state || article.jobDetails.jobLocation) ||
+                          isValidTableValue(article.jobDetails.releaseDate || article.date) ||
+                          isValidTableValue(article.jobDetails.startDate) ||
+                          isValidTableValue(article.jobDetails.endDate) ||
+                          isValidTableValue(article.jobDetails.examDate) ||
+                          isValidTableValue(article.jobDetails.minAge) ||
+                          isValidTableValue(article.jobDetails.maxAge) ||
+                          isValidTableValue(article.jobDetails.officialLink) ||
+                          isValidTableValue(article.jobDetails.applyLink)
+                        );
+                        if (!hasHighlights) return null;
+
+                        return (
+                          <div className="my-6 space-y-3">
+                            <h2 className="text-xl font-bold text-slate-900 border-b border-slate-200 pb-2">
+                              {article.title} Job Highlights:
+                            </h2>
+                            <div className="overflow-x-auto border border-slate-200 rounded-md">
+                              <table className="w-full text-xs sm:text-sm text-left border-collapse">
+                                <tbody className="divide-y divide-slate-200 bg-white">
+                                  {isValidTableValue(article.jobDetails.postName) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 w-1/3 border-r border-slate-200">Name of Exam</th>
+                                      <td className="p-3 font-normal text-slate-900">{article.jobDetails.postName}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.totalVacancies) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">No. of Seats</th>
+                                      <td className="p-3 font-normal text-slate-900">{article.jobDetails.totalVacancies}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.state || article.jobDetails.jobLocation) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Job Location</th>
+                                      <td className="p-3 font-normal text-slate-900">
+                                        <StateLink state={article.state || article.jobDetails.jobLocation} dept={article.dept} fallback={article.jobDetails.jobLocation} />
+                                      </td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.releaseDate || article.date) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Date</th>
+                                      <td className="p-3 font-normal text-slate-900">{article.jobDetails.releaseDate || article.date}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.startDate) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Online Application Start Date</th>
+                                      <td className="p-3 font-normal text-slate-900">{article.jobDetails.startDate}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.endDate) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Last Date to Apply</th>
+                                      <td className="p-3 font-normal text-slate-900">{article.jobDetails.endDate}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.examDate) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Prelims Exam Date</th>
+                                      <td className="p-3 font-normal text-slate-500">{article.jobDetails.examDate}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.minAge) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Minimum age limit</th>
+                                      <td className="p-3 font-normal text-slate-500">{article.jobDetails.minAge}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.maxAge) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Maximum age limit</th>
+                                      <td className="p-3 font-normal text-slate-500">{article.jobDetails.maxAge}</td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.officialLink) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Link</th>
+                                      <td className="p-3 font-medium text-blue-600">
+                                        <a href={article.jobDetails.officialLink} target="_blank" rel="noreferrer" className="hover:underline">Click here</a>
+                                      </td>
+                                    </tr>
+                                  )}
+                                  {isValidTableValue(article.jobDetails.applyLink) && (
+                                    <tr className="hover:bg-slate-50">
+                                      <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Direct Online Application Link</th>
+                                      <td className="p-3 font-medium text-blue-600">
+                                        <a href={article.jobDetails.applyLink} target="_blank" rel="noreferrer" className="hover:underline">Apply now</a>
+                                      </td>
+                                    </tr>
+                                  )}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        );
+                      })()
                     )}
                   </div>
                 )}
@@ -1587,7 +1838,7 @@ export default function SingleArticlePage({ initialData = null }) {
                 <div className="my-6 w-full bg-gradient-to-r from-slate-900 via-purple-950 to-slate-900 text-white rounded-md p-4 sm:p-5 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm border border-purple-900/40">
                   <div className="space-y-1 text-center sm:text-left">
                     <div className="flex items-center justify-center sm:justify-start space-x-2">
-                      <span className="bg-amber-400 text-slate-950 font-extrabold text-[10px] px-2 py-0.5 rounded">FREE</span>
+                      <span className="bg-amber-400 text-slate-950 font-bold text-[10px] px-2 py-0.5 rounded">FREE</span>
                       <span className="font-bold text-sm sm:text-base tracking-wide text-white">www.addressguru.in</span>
                     </div>
                     <p className="text-xs text-purple-200">
@@ -1700,50 +1951,7 @@ export default function SingleArticlePage({ initialData = null }) {
 
                 </div>
 
-                {/* 11. Others Category Jobs Grid */}
-                <div className="my-8 pt-4 border-t border-slate-200">
-                  <h3 className="text-xl font-bold text-slate-900 mb-4">
-                    Others Category Jobs
-                  </h3>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
-                    {relatedJobs.map((job, idx) => (
-                      <Link
-                        key={job.id || idx}
-                        href={`/job/${job.slug}`}
-                        className="group bg-white border border-slate-200 rounded-md overflow-hidden hover:shadow-md transition duration-200 flex flex-col"
-                      >
-                        <div className="w-full h-28 sm:h-32 bg-slate-100 overflow-hidden relative">
-                          <img
-                            src={job.image}
-                            alt={job.title}
-                            loading="lazy"
-                            decoding="async"
-                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
-                            onError={(e) => {
-                              if (!e.currentTarget.dataset.fallback) {
-                                e.currentTarget.dataset.fallback = 'true';
-                                e.currentTarget.src = '/logo.webp';
-                              } else {
-                                e.currentTarget.style.display = 'none';
-                              }
-                            }}
-                          />
-                        </div>
-                        <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1">
-                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
-                            {job.title}
-                          </h4>
-                          <span className="text-[11px] text-blue-600 font-semibold pt-1">
-                            Apply Now →
-                          </span>
-                        </div>
-                      </Link>
-                    ))}
-                  </div>
-                </div>
-
-                {/* 12. Professional Author Box Matching Live Reference Image & Linked Social Profiles */}
+                {/* 11. Professional Author Box Matching Live Reference Image & Linked Social Profiles */}
                 {article.author && !article.content?.includes('class="author') && (
                   <div className="my-8 p-4 sm:p-5 bg-gradient-to-br from-slate-50/95 to-[#f8f9fa] border border-slate-200/90 rounded-xl flex flex-col sm:flex-row items-center sm:items-start text-center sm:text-left gap-4 sm:gap-5 shadow-2xs">
                     {/* Left Square Avatar Frame */}
@@ -1782,7 +1990,7 @@ export default function SingleArticlePage({ initialData = null }) {
                               ? article.author.slug || article.author.nicename || article.author.name
                               : article.author) || 'DigitalDeepak'
                           )}`}
-                          className="text-lg font-extrabold text-slate-900 hover:text-blue-600 hover:underline leading-tight transition inline-block"
+                          className="text-lg font-bold text-slate-900 hover:text-blue-600 hover:underline leading-tight transition inline-block"
                         >
                           {typeof article.author === 'object' ? article.author.name : article.author}
                         </Link>
@@ -1791,16 +1999,40 @@ export default function SingleArticlePage({ initialData = null }) {
                             {article.author.role}
                           </span>
                         )}
-                        {typeof article.author === 'object' && article.author.nicename && (
-                          <span className="text-xs text-slate-400 font-medium">
-                            @{article.author.nicename}
-                          </span>
-                        )}
+                        {/* {typeof article.author === 'object' && article.author.nicename && (
+                        <span className="text-xs text-slate-400 font-medium">
+                          @{article.author.nicename}
+                        </span>
+                      )} */}
                       </div>
 
-                      <p className="text-xs sm:text-sm text-slate-600 font-normal leading-relaxed">
-                        {typeof article.author === 'object' && article.author.bio ? article.author.bio : 'Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content covering government jobs, entrance exams, admissions, results, and career guidance.'}
-                      </p>
+                      {(() => {
+                        const authorBioText = typeof article.author === 'object' && article.author.bio
+                          ? article.author.bio
+                          : 'Content Writer at Education Masters, passionate about creating informative, SEO-friendly, and student-focused educational content covering government jobs, entrance exams, admissions, results, and career guidance.';
+                        const isLongBio = authorBioText.length > 140;
+
+                        return (
+                          <div>
+                            <p
+                              className={`text-xs sm:text-sm text-slate-600 font-normal leading-relaxed transition-all duration-200 ${!isAuthorBioExpanded ? 'line-clamp-3' : ''
+                                }`}
+                              title={authorBioText}
+                            >
+                              {authorBioText}
+                            </p>
+                            {isLongBio && (
+                              <button
+                                type="button"
+                                onClick={() => setIsAuthorBioExpanded(!isAuthorBioExpanded)}
+                                className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline mt-1 inline-flex items-center gap-0.5 cursor-pointer focus:outline-none transition-colors"
+                              >
+                                {isAuthorBioExpanded ? 'Read Less' : 'Read More...'}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })()}
 
                       {/* Social Media & Contact Links Row */}
                       {typeof article.author === 'object' && (article.author.website || article.author.twitter || article.author.facebook || article.author.instagram || article.author.linkedin || article.author.youtube) && (
@@ -1886,6 +2118,49 @@ export default function SingleArticlePage({ initialData = null }) {
                     </div>
                   </div>
                 )}
+
+                {/* 12. Others Category Jobs Grid */}
+                <div className="my-8 pt-4 border-t border-slate-200">
+                  <h3 className="text-xl font-bold text-slate-900 mb-4">
+                    Others Category Jobs
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3.5">
+                    {relatedJobs.map((job, idx) => (
+                      <Link
+                        key={job.id || idx}
+                        href={`/job/${job.slug}`}
+                        className="group bg-white border border-slate-200 rounded-md overflow-hidden hover:shadow-md transition duration-200 flex flex-col"
+                      >
+                        <div className="w-full h-28 sm:h-32 bg-slate-100 overflow-hidden relative">
+                          <img
+                            src={job.image}
+                            alt={job.title}
+                            loading="lazy"
+                            decoding="async"
+                            className="w-full h-full object-cover group-hover:scale-105 transition duration-300"
+                            onError={(e) => {
+                              if (!e.currentTarget.dataset.fallback) {
+                                e.currentTarget.dataset.fallback = 'true';
+                                e.currentTarget.src = '/logo.webp';
+                              } else {
+                                e.currentTarget.style.display = 'none';
+                              }
+                            }}
+                          />
+                        </div>
+                        <div className="p-2.5 flex-1 flex flex-col justify-between space-y-1">
+                          <h4 className="text-xs sm:text-sm font-bold text-slate-900 group-hover:text-blue-600 line-clamp-2 leading-snug">
+                            {job.title}
+                          </h4>
+                          <span className="text-[11px] text-blue-600 font-semibold pt-1">
+                            Apply Now →
+                          </span>
+                        </div>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
 
               </article>
             ) : (
@@ -2067,6 +2342,11 @@ export default function SingleArticlePage({ initialData = null }) {
         onClose={() => setInternalLinkModal((prev) => ({ ...prev, isOpen: false }))}
         targetUrl={internalLinkModal.targetUrl}
         targetWindow={internalLinkModal.targetWindow}
+        onComplete={(url) => {
+          if (url) {
+            setUnlockedUrls((prev) => ({ ...prev, [url]: true }));
+          }
+        }}
       />
 
       <Footer />

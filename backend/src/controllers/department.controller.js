@@ -1,5 +1,6 @@
 import Department from '../models/department.model.js';
 import Media from '../models/media.model.js';
+import Job from '../models/job.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/apiError.js';
 import ApiResponse from '../utils/apiResponse.js';
@@ -22,6 +23,32 @@ export const getDepartments = asyncHandler(async (req, res) => {
     ];
   }
 
+  // Helper to resolve media thumbnail images
+  const enrichWithMedia = async (deptList) => {
+    const mediaIds = deptList
+      .map((d) => d.media_id)
+      .filter((id) => id && id > 0);
+
+    let mediaMap = {};
+    if (mediaIds.length > 0) {
+      const mediaDocs = await Media.find({ sql_id: { $in: mediaIds } }).lean();
+      mediaDocs.forEach((m) => {
+        mediaMap[m.sql_id] = m.file || m.url || (m.path && m.name ? `${m.path}/${m.name}` : '');
+      });
+    }
+
+    return deptList.map((d) => {
+      let resolvedImage = d.image || null;
+      if (!resolvedImage && d.media_id && mediaMap[d.media_id]) {
+        resolvedImage = mediaMap[d.media_id];
+      }
+      return {
+        ...d,
+        image: resolvedImage,
+      };
+    });
+  };
+
   const fetchAll = req.query.all === 'true' || req.query.all === '1';
   if (fetchAll) {
     const departments = await Department.find(query)
@@ -29,11 +56,13 @@ export const getDepartments = asyncHandler(async (req, res) => {
       .sort({ name: 1 })
       .lean();
 
+    const enriched = await enrichWithMedia(departments);
+
     return res.status(200).json({
       success: true,
-      count: departments.length,
-      total: departments.length,
-      data: departments,
+      count: enriched.length,
+      total: enriched.length,
+      data: enriched,
     });
   }
 
@@ -46,29 +75,7 @@ export const getDepartments = asyncHandler(async (req, res) => {
     Department.countDocuments(query),
   ]);
 
-  // Resolve media thumbnail for each department
-  const mediaIds = departments
-    .map((d) => d.media_id)
-    .filter((id) => id && id > 0);
-
-  let mediaMap = {};
-  if (mediaIds.length > 0) {
-    const mediaDocs = await Media.find({ sql_id: { $in: mediaIds } }).lean();
-    mediaDocs.forEach((m) => {
-      mediaMap[m.sql_id] = m.file || m.url || (m.path && m.name ? `${m.path}/${m.name}` : '');
-    });
-  }
-
-  const enrichedDepartments = departments.map((d) => {
-    let resolvedImage = d.image || null;
-    if (!resolvedImage && d.media_id && mediaMap[d.media_id]) {
-      resolvedImage = mediaMap[d.media_id];
-    }
-    return {
-      ...d,
-      image: resolvedImage,
-    };
-  });
+  const enrichedDepartments = await enrichWithMedia(departments);
 
   res.status(200).json({
     success: true,
@@ -83,11 +90,80 @@ export const getDepartments = asyncHandler(async (req, res) => {
 // Get Department by ID or Slug
 export const getDepartmentById = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const isObjectId = /^[0-9a-fA-F]{24}$/.test(String(id).trim());
+  const cleanId = String(id).trim();
+  const isObjectId = /^[0-9a-fA-F]{24}$/.test(cleanId);
 
-  const dept = isObjectId
-    ? await Department.findById(id).lean()
-    : await Department.findOne({ $or: [{ slug: id }, { name: id }] }).lean();
+  let dept = isObjectId
+    ? await Department.findById(cleanId).lean()
+    : await Department.findOne({
+        $or: [
+          { slug: cleanId.toLowerCase() },
+          { name: { $regex: `^${cleanId.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+          { name: { $regex: `^${cleanId.replace(/[-_]+/g, ' ').replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}$`, $options: 'i' } },
+        ],
+      }).lean();
+
+  if (!dept && !isObjectId) {
+    // 1. Try flexible regex matching on Department collection
+    const words = cleanId.split(/[-_\s]+/).map((w) => w.trim()).filter(Boolean);
+    if (words.length > 0) {
+      const flexiblePattern = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\W]+');
+      dept = await Department.findOne({
+        $or: [
+          { name: { $regex: `^${flexiblePattern}$`, $options: 'i' } },
+          { slug: { $regex: `^${flexiblePattern}$`, $options: 'i' } },
+        ],
+      }).lean();
+    }
+
+    // 2. If not found in Department collection, resolve dynamically from Job collection
+    if (!dept && words.length > 0) {
+      const flexiblePattern = words.map((w) => w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('[\\s\\W]+');
+      const sigWords = words.filter((w) => w.length > 2);
+
+      const jobMatch = await Job.findOne({
+        $or: [
+          { dept: { $regex: flexiblePattern, $options: 'i' } },
+          ...(sigWords.length >= 2
+            ? [
+                {
+                  $and: sigWords.map((w) => ({
+                    dept: { $regex: w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), $options: 'i' },
+                  })),
+                },
+              ]
+            : []),
+        ],
+      })
+        .select('dept department')
+        .lean();
+
+      if (jobMatch && jobMatch.dept) {
+        const canonicalName = jobMatch.dept.trim();
+        const canonicalSlug = cleanId.toLowerCase();
+
+        try {
+          dept = await Department.findOneAndUpdate(
+            { slug: canonicalSlug },
+            {
+              $setOnInsert: {
+                name: canonicalName,
+                slug: canonicalSlug,
+                description: `Explore the latest ${canonicalName} job recruitments, notifications, exams, and vacancies.`,
+              },
+            },
+            { upsert: true, new: true, setDefaultsOnInsert: true }
+          ).lean();
+        } catch (e) {
+          dept = {
+            name: canonicalName,
+            slug: canonicalSlug,
+            description: `Explore the latest ${canonicalName} job recruitments, notifications, exams, and vacancies.`,
+          };
+        }
+      }
+    }
+  }
 
   if (!dept) {
     throw new ApiError(404, 'Department not found');

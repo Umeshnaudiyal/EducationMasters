@@ -115,7 +115,7 @@ export default function HeroSection({ onCardSelect }) {
         <div className="space-y-1.5 sm:space-y-3 pt-1">
           <h1
             ref={headlineRef}
-            className="text-2xl sm:text-3xl lg:text-6xl font-black text-white tracking-tight drop-shadow-md"
+            className="text-2xl sm:text-3xl lg:text-6xl font-semibold font-black text-white tracking-tight drop-shadow-md"
           >
             15 MILLION Student Trust
           </h1>

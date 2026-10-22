@@ -317,7 +317,7 @@ export default function AdminHeader({ session, onToggleMobileSidebar }) {
   };
 
   return (
-    <header className="h-11 bg-[#1d2327] text-white flex items-center justify-between px-2.5 sm:px-4 select-none shrink-0 z-40 border-b border-[#2c3338] shadow-2xs">
+    <header className="sticky top-0 z-50 h-11 bg-[#1d2327] text-white flex items-center justify-between px-2.5 sm:px-4 select-none shrink-0 border-b border-[#2c3338] shadow-2xs">
       {/* Left: Hamburger (Mobile) + Brand + Quick + New */}
       <div className="flex items-center gap-1.5 sm:gap-3">
         {/* Mobile Hamburger Drawer Trigger */}

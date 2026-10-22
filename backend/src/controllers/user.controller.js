@@ -2,6 +2,7 @@ import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/apiResponse.js';
 import ApiError from '../utils/apiError.js';
 import User from '../models/user.model.js';
+import RolePermission from '../models/rolePermission.model.js';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
@@ -1006,6 +1007,23 @@ export const getPublicAuthorsList = asyncHandler(async (req, res) => {
       'Authors directory retrieved successfully'
     )
   );
+});
+
+// Get Role Permissions Matrix
+export const getRolePermissionsMatrix = asyncHandler(async (req, res) => {
+  const matrix = await RolePermission.getMatrix();
+  res.status(200).json(new ApiResponse(200, matrix, 'Role permissions matrix retrieved successfully'));
+});
+
+// Update Role Permissions Matrix (Admin / Superadmin only)
+export const updateRolePermissionsMatrix = asyncHandler(async (req, res) => {
+  const matrixData = req.body?.permissions || req.body?.rolePermissions || req.body;
+  if (!matrixData || typeof matrixData !== 'object') {
+    throw new ApiError(400, 'Invalid role permissions matrix data provided.');
+  }
+
+  const updatedMatrix = await RolePermission.updateMatrix(matrixData);
+  res.status(200).json(new ApiResponse(200, updatedMatrix, 'Role permissions matrix updated successfully'));
 });
 
 

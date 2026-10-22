@@ -14,6 +14,7 @@ export const getMockTestSeriesList = asyncHandler(async (req, res) => {
   const search = (req.query.search || req.query.q || '').trim();
   const examFilter = req.query.exam || req.query.examination || '';
   const categoryFilter = req.query.category || '';
+  const subjectFilter = req.query.subject || '';
   const statusFilter = (req.query.status || 'published').toLowerCase();
   const isFeatured = req.query.featured;
 
@@ -55,6 +56,12 @@ export const getMockTestSeriesList = asyncHandler(async (req, res) => {
     }
   }
 
+  if (subjectFilter && subjectFilter !== 'all') {
+    if (/^[0-9a-fA-F]{24}$/.test(subjectFilter)) {
+      query.subjects = subjectFilter;
+    }
+  }
+
   if (isFeatured !== undefined) {
     query.is_featured = isFeatured === 'true' || isFeatured === true;
   }
@@ -74,6 +81,7 @@ export const getMockTestSeriesList = asyncHandler(async (req, res) => {
     MockTestSeries.countDocuments({ status: { $in: ['pending', 'Pending'] } }),
     MockTestSeries.countDocuments({ status: { $in: ['trash', 'trashed', 'Trashed'] } }),
     MockTestSeries.find(query)
+      .populate('subjects', 'name slug')
       .sort({ order: 1, createdAt: -1 })
       .skip(skip)
       .limit(limit)
@@ -284,6 +292,8 @@ export const getMockTestSeriesBySlugOrId = asyncHandler(async (req, res) => {
     };
   });
 
+  const totalSeriesAttempts = enrichedChildTests.reduce((acc, t) => acc + (t.total_attempts || 0), 0);
+
   res.status(200).json(
     new ApiResponse(
       200,
@@ -294,6 +304,7 @@ export const getMockTestSeriesBySlugOrId = asyncHandler(async (req, res) => {
         free_tests_count: freeTests,
         total_questions: totalQuestions,
         total_users: totalExaminationUsers,
+        total_attempts: totalSeriesAttempts,
       },
       'Mock test series retrieved successfully'
     )
@@ -306,6 +317,9 @@ export const createMockTestSeries = asyncHandler(async (req, res) => {
     title,
     slug,
     image,
+    emblem,
+    languages,
+    subjects,
     examination,
     category,
     badge,
@@ -379,6 +393,9 @@ export const createMockTestSeries = asyncHandler(async (req, res) => {
     title: title.trim(),
     slug: cleanSlug,
     image: image || '',
+    emblem: emblem || '',
+    languages: Array.isArray(languages) && languages.length > 0 ? languages : ['English', 'Hindi'],
+    subjects: Array.isArray(subjects) ? subjects : [],
     examination: examination || null,
     examination_name: examName,
     category: category || null,
@@ -416,6 +433,9 @@ export const updateMockTestSeries = asyncHandler(async (req, res) => {
     title,
     slug,
     image,
+    emblem,
+    languages,
+    subjects,
     examination,
     category,
     badge,
@@ -453,6 +473,9 @@ export const updateMockTestSeries = asyncHandler(async (req, res) => {
   if (title !== undefined) series.title = title.trim();
   if (slug !== undefined && slug.trim()) series.slug = slugify(slug);
   if (image !== undefined) series.image = image;
+  if (emblem !== undefined) series.emblem = emblem;
+  if (languages !== undefined) series.languages = Array.isArray(languages) ? languages : ['English', 'Hindi'];
+  if (subjects !== undefined) series.subjects = Array.isArray(subjects) ? subjects : [];
   if (badge !== undefined) series.badge = badge;
   if (top_description !== undefined) series.top_description = cleanHtmlContent(top_description || '');
   if (bottom_description !== undefined) series.bottom_description = cleanHtmlContent(bottom_description || '');

@@ -1,6 +1,7 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/apiResponse.js';
 import authService from '../services/auth.service.js';
+import RolePermission from '../models/rolePermission.model.js';
 
 export const register = asyncHandler(async (req, res) => {
   const result = await authService.registerUser(req.body);
@@ -92,6 +93,7 @@ export const verifyPhoneOtp = asyncHandler(async (req, res) => {
 });
 
 export const getMe = asyncHandler(async (req, res) => {
+  const effectivePermissions = await RolePermission.getEffectivePermissions(req.user);
   res.status(200).json(
     new ApiResponse(
       200,
@@ -102,6 +104,7 @@ export const getMe = asyncHandler(async (req, res) => {
           nicename: req.user.nicename,
           email: req.user.email,
           role: req.user.role,
+          permissions: effectivePermissions,
           phone: req.user.phone,
           image: req.user.image,
           active: req.user.active,

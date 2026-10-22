@@ -19,6 +19,20 @@ const mockTestSeriesSchema = new mongoose.Schema(
       type: String,
       default: '',
     },
+    emblem: {
+      type: String,
+      default: '',
+    },
+    languages: {
+      type: [String],
+      default: ['English', 'Hindi'],
+    },
+    subjects: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Subject',
+      },
+    ],
     examination: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'Exam',

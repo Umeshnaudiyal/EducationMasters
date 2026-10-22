@@ -136,6 +136,7 @@ export default function StateLink({
   defaultStateSlug,
   fallback = 'All India',
   className = 'text-slate-700 font-medium hover:text-blue-600 hover:underline transition-colors',
+  hideDeptFallback = false,
 }) {
   // If explicitly given default state context (e.g. from state/[slug]/page.js)
   if (defaultStateName && defaultStateSlug && !state && !dept) {
@@ -169,6 +170,13 @@ export default function StateLink({
   }
 
   if (info.text) {
+    if (hideDeptFallback) {
+      return (
+        <Link href="/state" className={className}>
+          {fallback}
+        </Link>
+      );
+    }
     return <span className="text-slate-700 font-medium">{info.text}</span>;
   }
 
