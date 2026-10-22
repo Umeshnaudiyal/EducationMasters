@@ -41,3 +41,8 @@ uploads/
 
 # Scratch / temporary scripts
 backend/scripts/scratch/
+
+# WhatsApp Auth Session Data & Archives
+.whatsapp_auth/
+backend/.whatsapp_auth/
+*.zip
