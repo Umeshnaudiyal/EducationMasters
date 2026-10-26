@@ -1,12 +1,13 @@
 @import "tailwindcss";
 
 @theme inline {
-  --font-sans: var(--font-poppins), 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-sans: var(--font-outfit), 'Outfit', var(--font-poppins), 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 
 :root {
-  --font-poppins: 'Poppins', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-outfit: 'Outfit', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-poppins: var(--font-outfit);
   --background: #ffffff;
   --foreground: #1e293b;
 }
@@ -20,7 +21,7 @@ html {
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-poppins), 'Poppins', system-ui, sans-serif;
+  font-family: var(--font-outfit), 'Outfit', system-ui, sans-serif;
   overflow-x: clip;
   max-width: 100vw;
   width: 100%;
@@ -57,37 +58,49 @@ body {
 
 /* 404 & UI Micro-Animations */
 @keyframes float {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
+
   50% {
     transform: translateY(-14px) rotate(2deg);
   }
 }
 
 @keyframes float-slow {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
+
   50% {
     transform: translateY(-20px) rotate(-3deg);
   }
 }
 
 @keyframes float-reverse {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: translateY(0px) rotate(0deg);
   }
+
   50% {
     transform: translateY(14px) rotate(-2deg);
   }
 }
 
 @keyframes pulse-glow {
-  0%, 100% {
+
+  0%,
+  100% {
     opacity: 0.4;
     transform: scale(1);
   }
+
   50% {
     opacity: 0.8;
     transform: scale(1.08);
@@ -98,6 +111,7 @@ body {
   0% {
     transform: rotate(0deg);
   }
+
   100% {
     transform: rotate(360deg);
   }
@@ -107,6 +121,7 @@ body {
   from {
     transform: rotate(0deg) translateX(70px) rotate(0deg);
   }
+
   to {
     transform: rotate(360deg) translateX(70px) rotate(-360deg);
   }
@@ -116,6 +131,7 @@ body {
   from {
     transform: rotate(360deg) translateX(110px) rotate(-360deg);
   }
+
   to {
     transform: rotate(0deg) translateX(110px) rotate(0deg);
   }
@@ -125,18 +141,23 @@ body {
   0% {
     transform: translateX(-100%);
   }
+
   100% {
     transform: translateX(200%);
   }
 }
 
 @keyframes tassel-swing {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: rotate(0deg);
   }
+
   25% {
     transform: rotate(18deg);
   }
+
   75% {
     transform: rotate(-18deg);
   }
@@ -240,11 +261,14 @@ body {
 
 /* Blinking / Pulsing CTA Buttons for WhatsApp & Telegram */
 @keyframes blink-whatsapp {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
     box-shadow: 0 0 0 0 rgba(37, 211, 102, 0.7), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
+
   50% {
     transform: scale(1.025);
     opacity: 0.82;
@@ -253,11 +277,14 @@ body {
 }
 
 @keyframes blink-telegram {
-  0%, 100% {
+
+  0%,
+  100% {
     transform: scale(1);
     opacity: 1;
     box-shadow: 0 0 0 0 rgba(36, 161, 222, 0.7), 0 4px 6px -1px rgba(0, 0, 0, 0.1);
   }
+
   50% {
     transform: scale(1.025);
     opacity: 0.82;

@@ -1,17 +1,146 @@
 import User from '../models/user.model.js';
 import UserLog from '../models/userLog.model.js';
 import RolePermission from '../models/rolePermission.model.js';
+import Setting from '../models/setting.model.js';
+import whatsappPool from './whatsappPool.service.js';
+import smtpService from './smtp.service.js';
 import ApiError from '../utils/apiError.js';
 import {
   getSecondsUntilMidnight,
   getMidnightDate,
+  getMidnightDateForDateString,
   getTodayDateString,
   formatDuration,
   parseUserAgentDevice,
 } from '../utils/session.js';
 
 class AuthService {
+  /**
+   * Return public authentication & registration configuration for front-end modals
+   */
+  async getPublicAuthSettings() {
+    const settings = await Setting.getGlobal();
+    const authConfig = settings.authSettings || {};
+
+    return {
+      allowNewRegistrations: authConfig.allowNewRegistrations !== false,
+      registrationClosedMessage:
+        authConfig.registrationClosedMessage ||
+        'New user registration is currently closed. If you already have an account, please sign in.',
+      googleNewUserPhoneVerification: authConfig.googleNewUserPhoneVerification !== false,
+      existingUserPhoneVerification: Boolean(authConfig.existingUserPhoneVerification),
+      manualRegistrationOtpMode: authConfig.manualRegistrationOtpMode || 'whatsapp',
+      otpExpiryMinutes: authConfig.otpExpiryMinutes || 10,
+    };
+  }
+
+  /**
+   * Helper to send OTP via WhatsApp, Email (SMTP), or Both channels
+   */
+  async _sendVerificationOtp({ user, channel = 'whatsapp', otp, minutes = 10 }) {
+    const settings = await Setting.getGlobal();
+    const authConfig = settings.authSettings || {};
+    let whatsappSent = false;
+    let emailSent = false;
+    let whatsappError = null;
+    let emailError = null;
+
+    // 1. WhatsApp Delivery
+    if (channel === 'whatsapp' || channel === 'both') {
+      const cleanPhone = String(user.phone || '').trim().replace(/[^0-9]/g, '');
+      if (cleanPhone && cleanPhone.length >= 10) {
+        try {
+          await whatsappPool.sendOTP({
+            phone: cleanPhone,
+            otp,
+            minutes,
+            metadata: {
+              userId: String(user._id),
+              email: user.email,
+            },
+          });
+          whatsappSent = true;
+          console.log(`[AuthService] [WhatsApp OTP] Dispatched to +91 ${cleanPhone}: ${otp}`);
+        } catch (err) {
+          whatsappError = err.message;
+          console.warn(`[AuthService] [WhatsApp OTP Worker Warning] ${err.message}`);
+        }
+      }
+    }
+
+    // 2. Email (SMTP) Delivery
+    if (channel === 'email' || channel === 'both') {
+      const cleanEmail = String(user.email || '').toLowerCase().trim();
+      if (cleanEmail) {
+        try {
+          const subject = authConfig.emailOtpSubject || '🔐 Your Education Masters Verification Code';
+          const html = `
+            <div style="font-family: Arial, sans-serif; max-width: 540px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 12px; background: #ffffff;">
+              <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="color: #0f172a; margin: 0; font-size: 22px; font-weight: 800;">Education Masters</h2>
+                <p style="color: #64748b; font-size: 13px; margin-top: 4px;">Account Verification</p>
+              </div>
+              <p style="color: #334155; font-size: 14px; line-height: 1.6;">Hello <strong>${user.name || 'Student'}</strong>,</p>
+              <p style="color: #334155; font-size: 14px; line-height: 1.6;">Please use the following 6-digit verification code to complete your registration on Education Masters:</p>
+              <div style="text-align: center; margin: 26px 0;">
+                <div style="display: inline-block; background: #eff6ff; border: 2px dashed #2563eb; border-radius: 8px; padding: 12px 28px; font-size: 28px; font-weight: 800; letter-spacing: 6px; color: #1d4ed8;">
+                  ${otp}
+                </div>
+              </div>
+              <p style="color: #64748b; font-size: 12px; line-height: 1.6; text-align: center;">
+                This code is valid for <strong>${minutes} minutes</strong>. Please do not share this code with anyone.
+              </p>
+              <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+              <p style="color: #94a3b8; font-size: 11px; text-align: center; margin: 0;">
+                If you did not initiate this request, you can safely ignore this email.<br>© 2026 Education Masters. All rights reserved.
+              </p>
+            </div>
+          `;
+          await smtpService.sendEmail({
+            to: cleanEmail,
+            subject,
+            html,
+          });
+          emailSent = true;
+          console.log(`[AuthService] [Email OTP] Dispatched to ${cleanEmail}: ${otp}`);
+        } catch (err) {
+          emailError = err.message;
+          console.warn(`[AuthService] [Email OTP Warning] ${err.message}`);
+        }
+      }
+    }
+
+    let message = '';
+    if (channel === 'both') {
+      message = `Verification code sent to your WhatsApp (+91 ${String(user.phone || '').slice(-4).padStart(String(user.phone || '').length, 'X')}) and email (${user.email}).`;
+    } else if (channel === 'email') {
+      message = `Verification code sent to your email (${user.email}). Please check your inbox or spam folder.`;
+    } else {
+      message = `OTP sent via WhatsApp to +91 ${String(user.phone || '').slice(-4).padStart(String(user.phone || '').length, 'X')}.`;
+    }
+
+    return {
+      success: true,
+      whatsappSent,
+      emailSent,
+      whatsappError,
+      emailError,
+      message,
+    };
+  }
+
   async registerUser({ name, email, password }) {
+    const settings = await Setting.getGlobal();
+    const authConfig = settings.authSettings || {};
+
+    if (authConfig.allowNewRegistrations === false) {
+      throw new ApiError(
+        403,
+        authConfig.registrationClosedMessage ||
+          'New user registration is currently closed. If you already have an account, please sign in.'
+      );
+    }
+
     const cleanEmail = String(email || '').toLowerCase().trim();
     if (!name || !cleanEmail || !password) {
       throw new ApiError(400, 'Please provide name, email, and password');
@@ -22,7 +151,6 @@ class AuthService {
       throw new ApiError(409, 'An account with this email address already exists. Please log in.');
     }
 
-    // Newly registered users are set to inactive (active: 0) pending administrator approval
     const user = await User.create({
       name: String(name).trim(),
       email: cleanEmail,
@@ -45,37 +173,87 @@ class AuthService {
     };
   }
 
-  async registerWithOtp({ name, email, phone, password }) {
+  async registerWithOtp({ name, email, phone, password }, clientMeta = {}) {
+    const settings = await Setting.getGlobal();
+    const authConfig = settings.authSettings || {};
+
+    // 1. Dynamic Check: Allow or Stop New User Registrations
+    if (authConfig.allowNewRegistrations === false) {
+      throw new ApiError(
+        403,
+        authConfig.registrationClosedMessage ||
+          'New user registration is currently closed. If you already have an account, please sign in.'
+      );
+    }
+
     const cleanEmail = String(email || '').toLowerCase().trim();
     const cleanPhone = String(phone || '').trim().replace(/[^0-9]/g, '');
     const cleanName = String(name || '').trim();
+    const otpMode = authConfig.manualRegistrationOtpMode || 'whatsapp'; // 'whatsapp' | 'email' | 'both' | 'none'
 
-    if (!cleanName || !cleanEmail || !password || !cleanPhone) {
-      throw new ApiError(400, 'Please provide full name, email, phone number, and password');
+    if (!cleanName || !cleanEmail || !password) {
+      throw new ApiError(400, 'Please provide full name, email, and password');
     }
 
-    if (cleanPhone.length < 10) {
-      throw new ApiError(400, 'Please provide a valid 10-digit mobile number');
+    // Phone is required for WhatsApp or Both mode
+    if ((otpMode === 'whatsapp' || otpMode === 'both') && (!cleanPhone || cleanPhone.length < 10)) {
+      throw new ApiError(400, 'Please provide a valid 10-digit mobile number for WhatsApp verification');
     }
 
-    // Check if email or phone already registered
-    let user = await User.findOne({
-      $or: [{ email: cleanEmail }, { phone: cleanPhone }],
-    });
+    // Check if email or phone is already registered
+    const queryConditions = [{ email: cleanEmail }];
+    if (cleanPhone && cleanPhone.length >= 10) {
+      queryConditions.push({ phone: cleanPhone });
+    }
+
+    let user = await User.findOne({ $or: queryConditions });
 
     if (user && (user.active === 1 || user.is_phone_verified || user.auth_provider === 'google')) {
       throw new ApiError(409, 'An account with this email or phone number already exists. Please log in.');
     }
 
+    // MODE: NONE (Instant registration without OTP!)
+    if (otpMode === 'none') {
+      if (user) {
+        user.name = cleanName;
+        user.email = cleanEmail;
+        if (cleanPhone) user.phone = cleanPhone;
+        user.password = password;
+        user.active = 1;
+        user.is_phone_verified = Boolean(cleanPhone);
+        user.otp = null;
+        user.otp_expires_at = null;
+        await user.save();
+      } else {
+        user = await User.create({
+          name: cleanName,
+          email: cleanEmail,
+          phone: cleanPhone || '',
+          password,
+          role: 'user',
+          active: 1,
+          is_phone_verified: Boolean(cleanPhone),
+          auth_provider: 'local',
+        });
+      }
+
+      const sessionResult = await this._establishUserSession(user, clientMeta);
+      return {
+        ...sessionResult,
+        requiresOtp: false,
+        message: 'Account created successfully! Welcome to Education Masters.',
+      };
+    }
+
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    const otpExpires = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
+    const expiryMinutes = authConfig.otpExpiryMinutes || 10;
+    const otpExpires = new Date(Date.now() + expiryMinutes * 60 * 1000);
 
     if (user) {
-      // Existing pending user - update fields
       user.name = cleanName;
       user.email = cleanEmail;
-      user.phone = cleanPhone;
+      if (cleanPhone) user.phone = cleanPhone;
       user.password = password;
       user.otp = otp;
       user.otp_expires_at = otpExpires;
@@ -86,7 +264,7 @@ class AuthService {
       user = await User.create({
         name: cleanName,
         email: cleanEmail,
-        phone: cleanPhone,
+        phone: cleanPhone || '',
         password,
         role: 'user',
         active: 0,
@@ -97,20 +275,32 @@ class AuthService {
       });
     }
 
-    console.log(`[AuthService] [OTP] Sent OTP to +91 ${cleanPhone} for ${cleanEmail}: ${otp}`);
+    // Dispatch OTP via configured channel
+    const sendResult = await this._sendVerificationOtp({
+      user,
+      channel: otpMode,
+      otp,
+      minutes: expiryMinutes,
+    });
+
+    console.log(`[AuthService] [Manual Registration OTP] Sent via ${otpMode} for ${cleanEmail}: ${otp}`);
 
     return {
       userId: user._id,
       email: user.email,
-      phone: user.phone,
+      phone: user.phone || '',
       name: user.name,
       requiresOtp: true,
+      otpChannel: otpMode,
       otpPreview: process.env.NODE_ENV !== 'production' ? otp : undefined,
-      message: `OTP sent to +91 ${cleanPhone.slice(-4).padStart(cleanPhone.length, 'X')}. Please enter OTP to complete registration.`,
+      message: sendResult.message,
     };
   }
 
   async googleAuth({ email, name, google_id, image }, clientMeta = {}) {
+    const settings = await Setting.getGlobal();
+    const authConfig = settings.authSettings || {};
+
     const cleanEmail = String(email || '').toLowerCase().trim();
     if (!cleanEmail) {
       throw new ApiError(400, 'Google email is required');
@@ -123,47 +313,43 @@ class AuthService {
       ],
     });
 
-    // Check if user is old/migrated (from 4000+ migrated users) OR already has verified phone
-    const isOldMigratedUser = Boolean(
-      user && (
-        user.sql_id != null ||
-        user.social_id != null ||
-        user.backend != null ||
-        user.created_at ||
-        (user.role && user.role !== 'user')
-      )
-    );
-    const isPhoneAlreadyVerified = Boolean(
-      user && (user.is_phone_verified === true || (user.phone && user.is_phone_verified !== false && isOldMigratedUser))
-    );
+    // 1. BRAND NEW GOOGLE USER
+    if (!user) {
+      // Check if registration is permitted
+      if (authConfig.allowNewRegistrations === false) {
+        throw new ApiError(
+          403,
+          authConfig.registrationClosedMessage ||
+            'New user registration is currently closed. If you already have an account, please sign in.'
+        );
+      }
 
-    // If OLD / MIGRATED user OR already verified -> Directly log in!
-    if (user && (isOldMigratedUser || isPhoneAlreadyVerified)) {
-      if (google_id && !user.google_id) user.google_id = google_id;
-      if (image && !user.image) user.image = image;
-      if (user.auth_provider === 'local' && google_id) user.auth_provider = 'google';
-      if (user.active === 0) user.active = 1;
-      user.is_phone_verified = true;
-      await user.save();
+      // Check if Second-Step Mobile Verification is required for NEW Google users
+      const requireNewUserPhone = authConfig.googleNewUserPhoneVerification !== false; // default true
 
-      const sessionResult = await this._establishUserSession(user, clientMeta);
-      return {
-        ...sessionResult,
-        requiresOtp: false,
-        message: `Welcome back, ${user.name || 'User'}! Logged in with Google successfully.`,
-      };
-    }
+      if (!requireNewUserPhone) {
+        // Second-step mobile verification is STOPPED / DISABLED for new Google users!
+        // Immediately activate and log in!
+        user = await User.create({
+          name: String(name || 'Student').trim(),
+          email: cleanEmail,
+          google_id: google_id || '',
+          image: image || '',
+          role: 'user',
+          active: 1,
+          is_phone_verified: false,
+          auth_provider: 'google',
+        });
 
-    // Otherwise, this is a NEW user OR an unverified user!
-    // Do NOT directly log in. Require Step 2: Mobile Number & OTP Verification!
-    if (user) {
-      if (google_id && !user.google_id) user.google_id = google_id;
-      if (image && !user.image) user.image = image;
-      if (name && !user.name) user.name = name;
-      user.active = 0;
-      user.is_phone_verified = false;
-      await user.save();
-    } else {
+        const sessionResult = await this._establishUserSession(user, clientMeta);
+        return {
+          ...sessionResult,
+          requiresOtp: false,
+          message: `Welcome to Education Masters, ${user.name}! Logged in with Google successfully.`,
+        };
+      }
+
+      // Second-step mobile verification is REQUIRED for new Google users
       user = await User.create({
         name: String(name || 'Student').trim(),
         email: cleanEmail,
@@ -174,34 +360,91 @@ class AuthService {
         is_phone_verified: false,
         auth_provider: 'google',
       });
+
+      return {
+        requiresOtp: true,
+        requiresPhone: true,
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+        phone: '',
+        message: 'Please enter your 10-digit mobile number for second-step verification.',
+      };
     }
 
-    // If user already has a phone attached on their pending profile, send OTP right away
-    let otpPreview = undefined;
-    if (user.phone && user.phone.length >= 10) {
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      user.otp = otp;
-      user.otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
-      await user.save();
-      if (process.env.NODE_ENV !== 'production') otpPreview = otp;
-      console.log(`[AuthService] [Google New User OTP] Sent to +91 ${user.phone}: ${otp}`);
+    // 2. EXISTING / OLD USER IN DATABASE
+    if (google_id && !user.google_id) user.google_id = google_id;
+    if (image && !user.image) user.image = image;
+    if (name && !user.name) user.name = name;
+    if (user.auth_provider === 'local' && google_id) user.auth_provider = 'google';
+
+    const isOldMigratedUser = Boolean(
+      user.sql_id != null ||
+      user.social_id != null ||
+      user.backend != null ||
+      user.created_at ||
+      (user.role && user.role !== 'user')
+    );
+    const isPhoneAlreadyVerified = Boolean(
+      user.is_phone_verified === true ||
+      (user.phone && user.is_phone_verified !== false && isOldMigratedUser)
+    );
+
+    // Check if Superadmin enforces second-step mobile verification for existing users with unverified phone
+    const enforceExistingPhone = Boolean(authConfig.existingUserPhoneVerification === true);
+
+    if (enforceExistingPhone && !isPhoneAlreadyVerified) {
+      // Superadmin enabled 2nd step mobile verification for old users without verified phone!
+      user.active = 0;
+      user.is_phone_verified = false;
+
+      let otpPreview = undefined;
+      if (user.phone && user.phone.length >= 10) {
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        user.otp = otp;
+        user.otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
+        await user.save();
+
+        await this._sendVerificationOtp({
+          user,
+          channel: 'whatsapp',
+          otp,
+          minutes: 10,
+        });
+
+        if (process.env.NODE_ENV !== 'production') otpPreview = otp;
+        console.log(`[AuthService] [Existing User Phone Verification OTP] Sent to +91 ${user.phone}: ${otp}`);
+      } else {
+        await user.save();
+      }
+
+      return {
+        requiresOtp: true,
+        requiresPhone: !user.phone || user.phone.length < 10,
+        userId: user._id,
+        email: user.email,
+        name: user.name,
+        phone: user.phone || '',
+        otpPreview,
+        message: user.phone
+          ? `Your mobile number is not verified. An OTP has been sent to +91 ${user.phone.slice(-4).padStart(user.phone.length, 'X')} for second-step verification.`
+          : 'Please enter your 10-digit mobile number for second-step verification.',
+      };
     }
 
+    // Otherwise, existing user is verified OR existingUserPhoneVerification is stopped/disabled -> Directly log in!
+    if (user.active === 0) user.active = 1;
+    await user.save();
+
+    const sessionResult = await this._establishUserSession(user, clientMeta);
     return {
-      requiresOtp: true,
-      requiresPhone: !user.phone || user.phone.length < 10,
-      userId: user._id,
-      email: user.email,
-      name: user.name,
-      phone: user.phone || '',
-      otpPreview,
-      message: user.phone
-        ? `Verification OTP sent to +91 ${user.phone.slice(-4).padStart(user.phone.length, 'X')}. Please verify to activate your account.`
-        : 'Please enter your 10-digit mobile number to complete account verification.',
+      ...sessionResult,
+      requiresOtp: false,
+      message: `Welcome back, ${user.name || 'User'}! Logged in with Google successfully.`,
     };
   }
 
-  async sendPhoneOtp({ userId, phone, email }) {
+  async sendPhoneOtp({ userId, phone, email, channel = null }) {
     let user = null;
     if (userId) {
       user = await User.findById(userId);
@@ -222,7 +465,7 @@ class AuthService {
         throw new ApiError(400, 'Please provide a valid 10-digit mobile number');
       }
 
-      // Check if this mobile number belongs to another existing active/verified/migrated user
+      // Check if this mobile number belongs to another existing active/verified user
       const existingPhoneUser = await User.findOne({
         phone: cleanPhone,
         _id: { $ne: user._id },
@@ -239,23 +482,33 @@ class AuthService {
       user.phone = cleanPhone;
     }
 
-    if (!user.phone) {
-      throw new ApiError(400, 'Mobile phone number is required to send OTP');
-    }
+    const settings = await Setting.getGlobal();
+    const authConfig = settings.authSettings || {};
+    const otpMode = channel || authConfig.manualRegistrationOtpMode || 'whatsapp';
 
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const minutes = authConfig.otpExpiryMinutes || 10;
     user.otp = otp;
-    user.otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
+    user.otp_expires_at = new Date(Date.now() + minutes * 60 * 1000);
     await user.save();
 
-    console.log(`[AuthService] [OTP Sent] To +91 ${user.phone} (${user.email}): ${otp}`);
+    const sendResult = await this._sendVerificationOtp({
+      user,
+      channel: otpMode,
+      otp,
+      minutes,
+    });
+
+    console.log(`[AuthService] [OTP Sent] To +91 ${user.phone || 'N/A'} / ${user.email} via ${otpMode}: ${otp}`);
 
     return {
       success: true,
       userId: user._id,
-      phone: user.phone,
+      phone: user.phone || '',
+      email: user.email,
+      otpChannel: otpMode,
       otpPreview: process.env.NODE_ENV !== 'production' ? otp : undefined,
-      message: `OTP sent successfully to +91 ${user.phone.slice(-4).padStart(user.phone.length, 'X')}`,
+      message: sendResult.message,
     };
   }
 
@@ -330,11 +583,19 @@ class AuthService {
           });
 
           if (previousActiveLog) {
+            const istMidnightForPrev = getMidnightDateForDateString(user.last_session_date);
             const prevLogin = previousActiveLog.login_time || user.login_time || now;
-            const prevLogout = previousActiveLog.expires_at || new Date(`${user.last_session_date}T23:59:59.999Z`);
+            const prevExpiresIso = previousActiveLog.expires_at ? new Date(previousActiveLog.expires_at).toISOString() : '';
+            const prevLogout =
+              previousActiveLog.expires_at &&
+              !prevExpiresIso.endsWith('T00:00:00.000Z') &&
+              !prevExpiresIso.endsWith('T23:59:59.999Z')
+                ? previousActiveLog.expires_at
+                : istMidnightForPrev;
             const prevDurationSec = Math.max(0, Math.floor((new Date(prevLogout).getTime() - new Date(prevLogin).getTime()) / 1000));
 
             previousActiveLog.logout_time = prevLogout;
+            previousActiveLog.expires_at = istMidnightForPrev;
             previousActiveLog.action = 'system_logout';
             previousActiveLog.logout_by = 'system';
             previousActiveLog.duration_seconds = prevDurationSec;
@@ -463,47 +724,60 @@ class AuthService {
       throw new ApiError(401, 'Invalid email or password');
     }
 
-    // Check if account is inactive due to unverified OTP
-    if (user.active === 0 || user.deleted_at) {
-      const isOldMigrated = Boolean(
-        user.sql_id != null ||
-        user.social_id != null ||
-        user.backend != null ||
-        user.created_at ||
-        (user.role && user.role !== 'user')
-      );
+    // Check dynamic existingUserPhoneVerification setting
+    const settings = await Setting.getGlobal();
+    const authConfig = settings.authSettings || {};
+    const enforceExistingPhone = Boolean(authConfig.existingUserPhoneVerification === true);
 
-      if (isOldMigrated && !user.deleted_at) {
-        user.active = 1;
-        user.is_phone_verified = true;
-        await user.save();
-        return await this._establishUserSession(user, clientMeta);
-      }
+    const isOldMigrated = Boolean(
+      user.sql_id != null ||
+      user.social_id != null ||
+      user.backend != null ||
+      user.created_at ||
+      (user.role && user.role !== 'user')
+    );
 
-      if (!user.is_phone_verified) {
-        // Send a fresh OTP
-        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
-        user.otp = otpCode;
-        user.otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
-        await user.save();
-        console.log(`[AuthService] [Login Phone Verification OTP] Sent to +91 ${user.phone}: ${otpCode}`);
+    const isPhoneVerified = Boolean(
+      user.is_phone_verified === true ||
+      (user.phone && user.is_phone_verified !== false && isOldMigrated)
+    );
 
-        return {
-          requiresOtp: true,
-          userId: user._id,
-          email: user.email,
-          phone: user.phone || '',
-          name: user.name,
-          otpPreview: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
-          message: 'Your phone number is not verified. Please enter the OTP sent to activate your account.',
-        };
-      }
+    if (enforceExistingPhone && !isPhoneVerified) {
+      // Superadmin enforces 2nd step mobile verification for unverified existing accounts!
+      const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+      user.otp = otpCode;
+      user.otp_expires_at = new Date(Date.now() + 10 * 60 * 1000);
+      user.active = 0;
+      await user.save();
 
-      console.log(`[AuthService] Login blocked: User '${user.email}' is inactive or deleted.`);
-      throw new ApiError(
-        403,
-        'Your account is currently inactive or pending administrator approval. Please contact the administrator.'
-      );
+      const otpChannel = user.phone ? 'whatsapp' : 'email';
+      await this._sendVerificationOtp({
+        user,
+        channel: otpChannel,
+        otp: otpCode,
+        minutes: 10,
+      });
+
+      console.log(`[AuthService] [Login Phone Verification OTP Enforced] Sent via ${otpChannel} to +91 ${user.phone || 'N/A'}: ${otpCode}`);
+
+      return {
+        requiresOtp: true,
+        requiresPhone: !user.phone || user.phone.length < 10,
+        userId: user._id,
+        email: user.email,
+        phone: user.phone || '',
+        name: user.name,
+        otpPreview: process.env.NODE_ENV !== 'production' ? otpCode : undefined,
+        message: user.phone
+          ? `Your mobile number is not verified. An OTP has been sent to +91 ${user.phone.slice(-4).padStart(user.phone.length, 'X')}.`
+          : 'Your account requires second-step verification. Please verify your mobile number or email.',
+      };
+    }
+
+    // If existingUserPhoneVerification is stopped/disabled, auto-activate user if pending
+    if (user.active === 0 && !user.deleted_at) {
+      user.active = 1;
+      await user.save();
     }
 
     return await this._establishUserSession(user, clientMeta);
@@ -602,9 +876,12 @@ class AuthService {
 
     // Check if session belongs to today
     const isTodaySession = Boolean(sessionDate && sessionDate === today);
-    const sessionExpiresAt = user.session_expires_at
-      ? new Date(user.session_expires_at)
-      : (sessionDate ? getMidnightDate(new Date(sessionDate)) : getMidnightDate(now));
+    const istMidnightForSession = sessionDate ? getMidnightDateForDateString(sessionDate) : getMidnightDate(now);
+    const userExpiresIso = user.session_expires_at ? new Date(user.session_expires_at).toISOString() : '';
+    const sessionExpiresAt =
+      user.session_expires_at && !userExpiresIso.endsWith('T00:00:00.000Z')
+        ? new Date(user.session_expires_at)
+        : istMidnightForSession;
 
     const isExpired = !isTodaySession || now.getTime() >= sessionExpiresAt.getTime();
     const secondsRemaining = isExpired ? 0 : Math.max(0, Math.floor((sessionExpiresAt.getTime() - now.getTime()) / 1000));
@@ -619,9 +896,14 @@ class AuthService {
         });
         if (prevLog) {
           const prevLogin = prevLog.login_time || user.login_time || now;
-          const prevLogout = prevLog.expires_at || sessionExpiresAt;
+          const prevExpiresIso = prevLog.expires_at ? new Date(prevLog.expires_at).toISOString() : '';
+          const prevLogout =
+            prevLog.expires_at && !prevExpiresIso.endsWith('T00:00:00.000Z')
+              ? prevLog.expires_at
+              : istMidnightForSession;
           const prevDurationSec = Math.max(0, Math.floor((new Date(prevLogout).getTime() - new Date(prevLogin).getTime()) / 1000));
           prevLog.logout_time = prevLogout;
+          prevLog.expires_at = istMidnightForSession;
           prevLog.action = 'system_logout';
           prevLog.logout_by = 'system';
           prevLog.duration_seconds = prevDurationSec;
@@ -997,6 +1279,15 @@ class AuthService {
         const lastLogoutLog = logoutLogs[logoutLogs.length - 1] || dayLogs[dayLogs.length - 1];
         lastLogout = lastLogoutLog?.logout_time;
 
+        // If system logout was recorded with a UTC midnight timestamp (T00:00:00.000Z), normalize to 12:00 AM IST
+        if (
+          lastLogout &&
+          (lastLogoutLog?.action === 'system_logout' || lastLogoutLog?.logout_by === 'system') &&
+          new Date(lastLogout).toISOString().endsWith('T00:00:00.000Z')
+        ) {
+          lastLogout = getMidnightDateForDateString(dateStr);
+        }
+
         durationSeconds = dayLogs.reduce(
           (acc, l) => acc + (l.duration_seconds || 0),
           0
@@ -1014,9 +1305,12 @@ class AuthService {
         }
 
         if (status !== 'active') {
+          const logoutIso = lastLogout ? new Date(lastLogout).toISOString() : '';
           const isMidnightLogout = lastLogout && (
             (new Date(lastLogout).getHours() === 0 && new Date(lastLogout).getMinutes() === 0) ||
-            (new Date(lastLogout).getHours() === 23 && new Date(lastLogout).getMinutes() === 59)
+            (new Date(lastLogout).getHours() === 23 && new Date(lastLogout).getMinutes() === 59) ||
+            logoutIso.endsWith('T18:30:00.000Z') ||
+            logoutIso.endsWith('T00:00:00.000Z')
           );
 
           if (
@@ -1112,11 +1406,17 @@ class AuthService {
       });
 
       for (const log of pastActiveLogs) {
-        const logLogin = log.login_time || new Date(`${log.session_date}T09:00:00.000Z`);
-        const logLogout = log.expires_at || new Date(`${log.session_date}T23:59:59.999Z`);
+        const istMidnight = getMidnightDateForDateString(log.session_date);
+        const logLogin = log.login_time || new Date(`${log.session_date}T09:00:00.000+05:30`);
+        const expiresIso = log.expires_at ? new Date(log.expires_at).toISOString() : '';
+        const logLogout =
+          log.expires_at && !expiresIso.endsWith('T00:00:00.000Z') && !expiresIso.endsWith('T23:59:59.999Z')
+            ? log.expires_at
+            : istMidnight;
         const durSec = Math.max(0, Math.floor((new Date(logLogout).getTime() - new Date(logLogin).getTime()) / 1000));
 
         log.logout_time = logLogout;
+        log.expires_at = istMidnight;
         log.action = 'system_logout';
         log.logout_by = 'system';
         log.duration_seconds = durSec;

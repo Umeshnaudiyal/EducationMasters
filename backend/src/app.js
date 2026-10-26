@@ -2,9 +2,11 @@ import express from 'express';
 import cors from 'cors';
 import morgan from 'morgan';
 import path from 'path';
+import fs from 'fs';
 import apiRoutes from './routes/index.js';
 import errorHandler from './middlewares/error.middleware.js';
 import { requestLogger } from './middlewares/logger.middleware.js';
+import { getUploadsBaseDir } from './middlewares/upload.middleware.js';
 import ApiError from './utils/apiError.js';
 import connectDB from './config/db.config.js';
 
@@ -35,7 +37,16 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Static file serving for uploads (/uploads/YYYY/MM/filename.jpg)
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
+// 1. Primary storage on server disk (Webzu persistent storage or local dev)
+const baseUploadsDir = getUploadsBaseDir();
+app.use('/uploads', express.static(baseUploadsDir));
+
+// 2. Fallback static serving from /tmp/uploads if fallback was used
+if (process.platform !== 'win32') {
+  app.use('/uploads', express.static('/tmp/uploads'));
+}
+
+// 3. Fallback to legacy educationmasters.in repository (for the 12,243 historical migrated images)
 app.use('/uploads', (req, res) => {
   res.redirect(301, `https://educationmasters.in/uploads${req.url}`);
 });

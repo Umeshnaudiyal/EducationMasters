@@ -1,40 +1,47 @@
-/**
- * Session & Date Utility Helpers
- * Supports daily midnight (12:00 AM) expiration and session tracking
- */
+
+export const TIMEZONE_IST = 'Asia/Kolkata';
+
+
+export const getTodayDateString = (dateObj = new Date()) => {
+  try {
+    const d = new Date(dateObj);
+    if (isNaN(d.getTime())) return '';
+    return new Intl.DateTimeFormat('en-CA', { timeZone: TIMEZONE_IST }).format(d);
+  } catch (e) {
+    const d = new Date(dateObj);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+};
+
+
+export const getMidnightDateForDateString = (dateStr) => {
+  if (!dateStr) return getMidnightDate();
+  // Start of day in IST:
+  const startOfDayMs = new Date(`${dateStr}T00:00:00.000+05:30`).getTime();
+  // Midnight ending this date is 24 hours later (00:00:00 IST of next day):
+  return new Date(startOfDayMs + 24 * 60 * 60 * 1000);
+};
 
 /**
- * Returns number of seconds remaining until midnight (12:00:00 AM of the next day)
+ * Returns the exact Date object for upcoming 12:00:00 AM IST midnight
+ */
+export const getMidnightDate = (baseDate = new Date()) => {
+  const istDateStr = getTodayDateString(baseDate);
+  return getMidnightDateForDateString(istDateStr);
+};
+
+/**
+ * Returns number of seconds remaining until next 12:00:00 AM IST
  * Ensures at least 60 seconds is returned.
  */
-export const getSecondsUntilMidnight = () => {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0); // 00:00:00.000 of next day
+export const getSecondsUntilMidnight = (now = new Date()) => {
+  const midnight = getMidnightDate(now);
   const diffMs = midnight.getTime() - now.getTime();
   const diffSec = Math.floor(diffMs / 1000);
   return Math.max(diffSec, 60);
-};
-
-/**
- * Returns the exact Date object for the upcoming midnight (12:00 AM)
- */
-export const getMidnightDate = () => {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
-  return midnight;
-};
-
-/**
- * Returns today's date formatted as YYYY-MM-DD
- */
-export const getTodayDateString = (dateObj = new Date()) => {
-  const d = new Date(dateObj);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
 };
 
 /**

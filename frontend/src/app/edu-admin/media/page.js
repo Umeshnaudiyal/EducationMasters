@@ -438,14 +438,14 @@ export default function MediaLibraryPage() {
     }
   };
 
-  // Upload Logic with 300 KB & Image Format Frontend Validation
+  // Upload Logic with 200 KB & Image Format Frontend Validation
   const handleFileUpload = async (files) => {
     if (!files || files.length === 0) return;
 
     setUploadErrors([]);
     setUploadSuccessMsg(null);
 
-    // 1. Validate files client-side against 300 KB size limit and allowed image extensions
+    // 1. Validate files client-side against 200 KB size limit and allowed image extensions
     const validationResult = validateImageFiles(files, { maxSizeKB: MAX_IMAGE_SIZE_KB });
 
     if (!validationResult.allValid) {

@@ -1,11 +1,11 @@
 /**
  * Image Validation Utilities for Education Masters
- * Enforces a strict 300 KB maximum file size and verified image formats
+ * Enforces a strict 200 KB maximum file size and verified image formats
  * (WebP, JPG/JPEG, PNG, GIF, SVG, AVIF) across the frontend.
  */
 
-export const MAX_IMAGE_SIZE_KB = 300;
-export const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024; // 307,200 bytes
+export const MAX_IMAGE_SIZE_KB = 200;
+export const MAX_IMAGE_SIZE_BYTES = MAX_IMAGE_SIZE_KB * 1024; // 204,800 bytes
 
 export const ALLOWED_IMAGE_EXTENSIONS = [
   '.jpg',

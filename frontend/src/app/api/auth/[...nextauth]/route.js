@@ -208,14 +208,16 @@ export const authOptions = {
       return token;
     },
     async session({ session, token }) {
-      if (!token || token.isExpired) {
-        return null;
+      if (!token || token.isExpired || !token.id) {
+        return {};
       }
 
-      if (token) {
+      if (token && session) {
+        session.user = session.user || {};
         session.user.id = token.id;
         session.user.name = token.name;
         session.user.nicename = token.nicename;
+        session.user.email = token.email || session.user.email;
         session.user.role = token.role;
         session.user.permissions = token.permissions;
         session.user.institute_id = token.institute_id;
@@ -226,7 +228,7 @@ export const authOptions = {
         session.user.expires_at = token.expires_at;
         session.user.accessToken = token.accessToken;
       }
-      return session;
+      return session || {};
     },
   },
 

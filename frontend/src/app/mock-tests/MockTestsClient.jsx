@@ -222,12 +222,12 @@ export default function MockTestsClient({
     <div className="min-h-screen flex flex-col bg-white text-slate-800 font-sans">
       <Header />
 
-      <main className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-2 min-[360px]:px-2.5 sm:px-4 md:px-6 py-2.5 sm:py-4 md:py-6 overflow-x-hidden min-w-0">
         
         {/* ========================================================================= */}
         {/* 1. TOP BREADCRUMBS */}
         {/* ========================================================================= */}
-        <nav className="flex items-center space-x-1.5 text-xs text-slate-500 mb-2 overflow-x-auto whitespace-nowrap">
+        <nav className="flex items-center space-x-1.5 text-[11px] sm:text-xs text-slate-500 mb-1.5 sm:mb-2 overflow-x-auto whitespace-nowrap scrollbar-none w-full max-w-full min-w-0">
           <Link href="/" className="hover:text-sky-600 font-normal">
             Home
           </Link>
@@ -238,25 +238,25 @@ export default function MockTestsClient({
         {/* ========================================================================= */}
         {/* 2. PAGE HEADER BANNER */}
         {/* ========================================================================= */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200 pb-4 mb-5">
-          <div>
-            <div className="flex items-center gap-2">
-              <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 sm:gap-3 border-b border-slate-200 pb-2.5 sm:pb-4 mb-2.5 sm:mb-5 w-full max-w-full min-w-0">
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5 min-[360px]:gap-2 flex-wrap">
+              <h1 className="text-lg min-[360px]:text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
                 Mock Tests Directory
               </h1>
-              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200">
+              <span className="text-[10px] min-[360px]:text-xs font-bold px-2 py-0.5 rounded-full bg-sky-100 text-sky-800 border border-sky-200 shrink-0">
                 {examsList.length} Exam Directories
               </span>
             </div>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            <p className="text-[11px] sm:text-sm text-slate-500 mt-0.5 sm:mt-1">
               Select an examination directory to practice full-length test series, chapter-wise MCQs, and free papers
             </p>
           </div>
 
           {/* Real-time Directory Stats */}
-          <div className="flex flex-wrap items-center gap-3 sm:gap-4 text-xs font-semibold text-slate-600">
+          <div className="flex flex-wrap items-center gap-1.5 min-[360px]:gap-2 sm:gap-4 text-[10.5px] sm:text-xs font-semibold text-slate-600 shrink-0">
             {totalDirectoryAttempts > 0 && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800">
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800">
                 <span className="text-amber-500">⚡</span>
                 <span>{totalDirectoryAttempts.toLocaleString()} Attempts Taken</span>
               </div>
@@ -275,7 +275,7 @@ export default function MockTestsClient({
         {/* ========================================================================= */}
         {/* 3. 2-COLUMN RESPONSIVE LAYOUT (LEFT FILTER SIDEBAR + MAIN DIRECTORY GRID) */}
         {/* ========================================================================= */}
-        <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-2.5 lg:gap-6 items-stretch lg:items-start w-full max-w-full min-w-0">
           
           {/* ================= COMPACT LEFT FILTER SIDEBAR ================= */}
           <MockTestFilterSidebar
@@ -292,52 +292,54 @@ export default function MockTestsClient({
           />
 
           {/* ================= EXPANSIVE MAIN DIRECTORY SECTION ================= */}
-          <section className="flex-1 min-w-0 space-y-4">
+          <section className="flex-1 w-full max-w-full min-w-0 space-y-2.5 sm:space-y-4">
 
             {/* Quick Mobile Category Scroll Bar (Mobile view only) */}
-            <div className="lg:hidden flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs">
-              {categoriesWithCounts.map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setSelectedCategory(tab.id)}
-                  className={`px-3 py-1.5 rounded-full font-semibold whitespace-nowrap transition-all text-xs cursor-pointer ${
-                    selectedCategory === tab.id
-                      ? 'bg-sky-600 text-white shadow-2xs'
-                      : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
-                  }`}
-                >
-                  {tab.name} ({tab.count})
-                </button>
-              ))}
+            <div className="lg:hidden w-full max-w-full min-w-0 overflow-hidden">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs w-full">
+                {categoriesWithCounts.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSelectedCategory(tab.id)}
+                    className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-all text-[11px] sm:text-xs cursor-pointer shrink-0 ${
+                      selectedCategory === tab.id
+                        ? 'bg-sky-600 text-white shadow-2xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {tab.name} ({tab.count})
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Active Filter Indicator */}
             {(selectedCategory !== 'all' || selectedSubject !== 'all' || searchQuery) && (
-              <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl flex items-center justify-between text-xs text-sky-900">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold">Active Filter:</span>
+              <div className="p-1.5 min-[360px]:p-2 sm:p-3 bg-sky-50/70 border border-sky-200 rounded-lg sm:rounded-xl flex items-center justify-between text-[11px] sm:text-xs text-sky-900 w-full max-w-full min-w-0 gap-2">
+                <div className="flex items-center gap-1.5 min-[360px]:gap-2 flex-wrap min-w-0">
+                  <span className="font-bold shrink-0">Active Filter:</span>
                   {selectedCategory !== 'all' && (
-                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold truncate max-w-[180px]">
                       Stream: {categoriesWithCounts.find((c) => c.id === selectedCategory)?.name}
                     </span>
                   )}
                   {selectedSubject !== 'all' && (
-                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold truncate max-w-[180px]">
                       Subject: {subjectsWithCounts.find((s) => s.slug === selectedSubject || s._id === selectedSubject)?.name}
                     </span>
                   )}
                   {searchQuery && (
-                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold truncate max-w-[180px]">
                       Search: &quot;{searchQuery}&quot;
                     </span>
                   )}
-                  <span className="text-slate-500 font-medium ml-1">
-                    ({filteredExams.length} directories found)
+                  <span className="text-slate-500 font-medium shrink-0">
+                    ({filteredExams.length} directories)
                   </span>
                 </div>
                 <button
                   onClick={handleResetFilters}
-                  className="text-sky-700 font-bold hover:underline shrink-0 ml-2 cursor-pointer"
+                  className="text-sky-700 font-bold hover:underline shrink-0 cursor-pointer"
                 >
                   Clear All
                 </button>
@@ -346,7 +348,7 @@ export default function MockTestsClient({
 
             {/* ================= DIRECTORY CARDS GRID ================= */}
             {filteredExams.length === 0 ? (
-              <div className="py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3">
+              <div className="py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3 w-full max-w-full">
                 <BookOpen className="w-10 h-10 text-slate-400 mx-auto" />
                 <p className="text-slate-700 font-bold text-sm">
                   No exam directories found matching your filter criteria
@@ -359,7 +361,7 @@ export default function MockTestsClient({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5 sm:gap-4 pt-1">
+              <div className="w-full max-w-full min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 sm:gap-4 pt-1">
                 {filteredExams.map((exam) => (
                   <TestbookSeriesCard
                     key={exam._id || exam.slug}
@@ -371,7 +373,7 @@ export default function MockTestsClient({
             )}
 
             {/* ================= BOTTOM SEO EXPLANATORY SECTION ================= */}
-            <div className="mt-10 p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-xs text-slate-600 leading-relaxed">
+            <div className="mt-10 p-4 sm:p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-xs text-slate-600 leading-relaxed w-full max-w-full min-w-0 break-words">
               <h2 className="text-sm font-bold text-slate-900">
                 Online Mock Test Series Directory for All India Government & Competitive Exams
               </h2>

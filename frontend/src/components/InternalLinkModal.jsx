@@ -105,25 +105,13 @@ export default function InternalLinkModal({
     if (onClose) onClose();
   };
 
-  // Open destination link - ONLY called when user explicitly clicks "Proceed to Link"
+  // Called when user clicks "Proceed to Link" anchor tag
   const handleOpenLink = () => {
     if (timerRef.current) clearInterval(timerRef.current);
     if (onCompleteRef.current && targetUrlRef.current) {
       onCompleteRef.current(targetUrlRef.current);
     }
     if (onClose) onClose();
-
-    if (targetUrl) {
-      if (targetWindow === '_blank' || targetUrl.startsWith('http://') || targetUrl.startsWith('https://')) {
-        window.open(targetUrl, '_blank', 'noopener,noreferrer');
-      } else {
-        if (targetUrl.startsWith('/')) {
-          router.push(targetUrl);
-        } else {
-          window.location.href = targetUrl;
-        }
-      }
-    }
   };
 
   const handleChannelClick = (url) => {
@@ -233,13 +221,16 @@ export default function InternalLinkModal({
               </div>
             </div>
           ) : (
-            <button
+            <a
+              href={targetUrl || '#'}
+              target={targetWindow === '_blank' || targetUrl?.startsWith('http') ? '_blank' : '_self'}
+              rel="noopener noreferrer"
               onClick={handleOpenLink}
               className="inline-flex items-center justify-center gap-1.5 sm:gap-2 px-4 sm:px-6 py-2 sm:py-2.5 bg-[#0f172a] hover:bg-[#1e293b] active:scale-[0.98] text-white font-bold rounded-xl text-xs sm:text-sm shadow-md transition-all duration-200 cursor-pointer group animate-in fade-in zoom-in-90 duration-300"
             >
               <span>लिंक पर आगे बढ़ें (Proceed to Link)</span>
               <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 transition-transform group-hover:translate-x-1" />
-            </button>
+            </a>
           )}
         </div>
 

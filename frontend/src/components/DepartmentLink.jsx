@@ -52,7 +52,8 @@ export function getJobDepartment(job) {
 }
 
 /**
- * Reusable DepartmentLink component that displays the department if attached, or falls back to "In Jobs"
+ * Reusable DepartmentLink component that displays the department if attached, or falls back to "In Jobs".
+ * Automatically truncates long department names to prevent wrapping across multiple metadata lines.
  */
 export default function DepartmentLink({
   job,
@@ -62,51 +63,51 @@ export default function DepartmentLink({
   fallbackHref = '/jobs',
   showInPrefix = true,
   prefixText = 'In ',
+  truncate = true,
+  maxWidth = 'max-w-[170px] sm:max-w-[220px] md:max-w-[260px] lg:max-w-[280px]',
+  style = {},
 }) {
   const deptInfo = department
     ? getJobDepartment({ department })
     : getJobDepartment(job);
 
-  if (deptInfo && deptInfo.name && deptInfo.slug) {
-    if (!showInPrefix) {
-      return (
-        <Link
-          href={`/department/${deptInfo.slug}/jobs`}
-          className={className}
-          title={`View all ${deptInfo.name} Jobs`}
-        >
-          {deptInfo.name}
-        </Link>
-      );
+  const displayName = deptInfo?.name || fallbackText;
+  const href = deptInfo?.slug
+    ? `/department/${deptInfo.slug}/jobs`
+    : fallbackHref;
+  const linkTitle = deptInfo?.name
+    ? `View all ${deptInfo.name} Jobs`
+    : `View ${fallbackText}`;
+
+  const linkClass = `${className} ${truncate ? `truncate ${maxWidth} min-w-0 inline-block align-bottom` : ''
+    }`;
+
+  const truncateStyle = truncate
+    ? {
+      maxWidth: '260px',
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      whiteSpace: 'nowrap',
+      display: 'inline-block',
+      verticalAlign: 'bottom',
+      ...style,
     }
-    return (
-      <span>
-        {prefixText}
-        <Link
-          href={`/department/${deptInfo.slug}/jobs`}
-          className={className}
-          title={`View all ${deptInfo.name} Jobs`}
-        >
-          {deptInfo.name}
-        </Link>
-      </span>
-    );
-  }
+    : style;
+
+  const linkElement = (
+    <Link href={href} className={linkClass} style={truncateStyle} title={linkTitle}>
+      {displayName}
+    </Link>
+  );
 
   if (!showInPrefix) {
-    return (
-      <Link href={fallbackHref} className={className}>
-        {fallbackText}
-      </Link>
-    );
+    return linkElement;
   }
 
   return (
-    <span>
-      {prefixText}
-      <Link href={fallbackHref} className={className}>
-        {fallbackText}
-      </Link>
+    <span className="inline-flex items-baseline align-bottom max-w-full">
+      <span className="shrink-0 pr-1">{prefixText} </span>
+      {linkElement}
     </span>
   );
 }

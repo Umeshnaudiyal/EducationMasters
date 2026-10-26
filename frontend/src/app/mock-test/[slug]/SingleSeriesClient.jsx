@@ -31,6 +31,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import LeaderboardView from '@/components/mock-test/LeaderboardView';
 import UnlockPassModal from '@/components/mock-test/UnlockPassModal';
+import { useAuthModal } from '@/context/AuthModalContext';
 import { BACKEND_URL } from '@/utils/api';
 import { cleanHtmlContent } from '@/utils/cleanHtml';
 
@@ -63,6 +64,7 @@ function formatUserCount(num) {
 export default function SingleSeriesClient({ series, allSeries = [] }) {
   const router = useRouter();
   const { data: session } = useSession();
+  const { openAuthModal } = useAuthModal();
   const [activeMainTab, setActiveMainTab] = useState('mock-tests'); // 'mock-tests' | 'pyps' | 'leaderboard'
   const [selectedSubTab, setSelectedSubTab] = useState('all');
   const [selectedStage, setSelectedStage] = useState('All');
@@ -111,8 +113,29 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
   }, [session]);
 
   const handleOpenUnlockPass = (test = null) => {
+    if (!session?.user) {
+      openAuthModal({
+        mode: 'login',
+        title: '🔐 Login Required to Access Pass',
+        subtitle: 'Please sign in or create an account first so your Mock Test Pass is linked directly to your profile.',
+      });
+      return;
+    }
     setModalTargetTest(test);
     setIsPassModalOpen(true);
+  };
+
+  const handleStartTestClick = (e, targetTest) => {
+    if (!session?.user) {
+      e.preventDefault();
+      const isTestFree = !targetTest.is_paid || targetTest.is_free;
+      openAuthModal({
+        mode: 'login',
+        title: isTestFree ? '🔐 Login Required to Start Free Test' : '🔐 Login Required to Start Test',
+        subtitle: `Please sign in or create an account to start "${targetTest.title}". Your answers, score, and rank will be saved.`,
+      });
+      return;
+    }
   };
 
   // Fetch logged in user's test attempts for this series to display "Attempted" status
@@ -229,6 +252,14 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
   // Quick signup / start free test trigger
   const handleQuickSignup = (e) => {
     e.preventDefault();
+    if (!session?.user) {
+      openAuthModal({
+        mode: 'register',
+        title: '🔐 Student Signup Required',
+        subtitle: 'Create a free student account to enroll in test series and practice mock tests.',
+      });
+      return;
+    }
     if (freeTests.length > 0) {
       router.push(`/mock-test/${series.slug}/${freeTests[0].slug}`);
     } else if (tests.length > 0) {
@@ -623,6 +654,7 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
                                     </Link>
                                     <Link
                                       href={`/mock-test/${series.slug}/${test.slug}`}
+                                      onClick={(e) => handleStartTestClick(e, test)}
                                       className="inline-flex items-center gap-1.5 px-4 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm rounded-lg shadow-2xs transition cursor-pointer"
                                     >
                                       <RotateCcw size={13} />
@@ -641,6 +673,7 @@ export default function SingleSeriesClient({ series, allSeries = [] }) {
                                     </Link>
                                     <Link
                                       href={`/mock-test/${series.slug}/${test.slug}`}
+                                      onClick={(e) => handleStartTestClick(e, test)}
                                       className="inline-block px-5 py-2 bg-[#00c5d2] hover:bg-[#00b0bd] text-white font-bold text-xs sm:text-sm rounded-lg shadow-2xs transition cursor-pointer"
                                     >
                                       Start Now

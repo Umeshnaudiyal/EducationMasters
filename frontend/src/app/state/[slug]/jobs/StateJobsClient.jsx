@@ -10,20 +10,17 @@ import {
   ChevronRight,
   ChevronDown,
   ChevronUp,
-  Globe,
-  MapPin,
   Search,
-  RotateCcw,
-  SlidersHorizontal,
-  X,
   Sparkles,
   Briefcase,
-  Building2,
-  Calendar,
-  Landmark,
   ArrowRight,
   BookOpen,
   FileText,
+  CheckCircle2,
+  XCircle,
+  Eye,
+  EyeOff,
+  HelpCircle,
 } from 'lucide-react';
 import StateLink from '@/components/StateLink';
 import DepartmentLink from '@/components/DepartmentLink';
@@ -33,32 +30,6 @@ import { API_BASE } from '@/utils/api';
 
 const LIMIT = 12;
 
-// Built-in Country Presets
-const DEFAULT_COUNTRIES = [
-  { code: 'IN', slug: 'india', name: 'India', flag: '🇮🇳' },
-  { code: 'ALL', slug: 'all', name: 'All Countries', flag: '🌍' },
-  { code: 'US', slug: 'united-states', name: 'United States', flag: '🇺🇸' },
-  { code: 'GB', slug: 'united-kingdom', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'CA', slug: 'canada', name: 'Canada', flag: '🇨🇦' },
-  { code: 'AU', slug: 'australia', name: 'Australia', flag: '🇦🇺' },
-  { code: 'AE', slug: 'united-arab-emirates', name: 'UAE', flag: '🇦🇪' },
-];
-
-// Popular States Quick-Filter Chips
-const POPULAR_STATES = [
-  { name: 'All India', slug: 'all-india', shortName: '🇮🇳 All India' },
-  { name: 'Delhi', slug: 'delhi', shortName: 'Delhi' },
-  { name: 'Uttar Pradesh', slug: 'uttar-pradesh', shortName: 'UP' },
-  { name: 'Bihar', slug: 'bihar', shortName: 'Bihar' },
-  { name: 'Rajasthan', slug: 'rajasthan', shortName: 'Rajasthan' },
-  { name: 'Maharashtra', slug: 'maharashtra', shortName: 'Maharashtra' },
-  { name: 'Madhya Pradesh', slug: 'madhya-pradesh', shortName: 'MP' },
-  { name: 'Haryana', slug: 'haryana', shortName: 'Haryana' },
-  { name: 'Uttarakhand', slug: 'uttarakhand', shortName: 'Uttarakhand' },
-  { name: 'West Bengal', slug: 'west-bengal', shortName: 'West Bengal' },
-  { name: 'Punjab', slug: 'punjab', shortName: 'Punjab' },
-];
-
 export default function StateJobsClient({ stateSlug, initialState = null }) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -67,6 +38,10 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
 
   const [jobs, setJobs] = useState([]);
   const [expiringJobs, setExpiringJobs] = useState([]);
+  const [sidebarMcqs, setSidebarMcqs] = useState([]);
+  const [loadingMcqs, setLoadingMcqs] = useState(false);
+  const [sidebarMcqAnswers, setSidebarMcqAnswers] = useState({});
+  const [revealedSidebarAnswers, setRevealedSidebarAnswers] = useState({});
   const [stateProfile, setStateProfile] = useState(
     initialState ? { state: initialState } : null
   );
@@ -74,16 +49,12 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalJobs, setTotalJobs] = useState(0);
-  const [rightTab, setRightTab] = useState('expiring');
+  const [rightTab, setRightTab] = useState(searchParams.get('tab') || 'mcq');
   const [showFullJobDesc, setShowFullJobDesc] = useState(false);
 
-  // Filter States
-  const [selectedState, setSelectedState] = useState(stateSlug);
+  // Search State
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [searchInput, setSearchInput] = useState(initialSearch);
-
-  // Dynamic States & Countries data
-  const [statesList, setStatesList] = useState(INDIAN_STATES_DATA);
 
   // Compute Canonical State Info
   const stateCanonical = useMemo(() => {
@@ -103,26 +74,16 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
 
   const stateDisplayName = stateProfile?.state?.name || stateCanonical.name;
 
-  // Load state profile & taxonomies
+  // Load state profile
   useEffect(() => {
     const loadStateInfo = async () => {
       try {
-        const [profileRes, statesRes] = await Promise.all([
-          fetch(`${API_BASE}/states/public/${encodeURIComponent(stateSlug)}`).then((r) => r.json()).catch(() => null),
-          fetch(`${API_BASE}/states?all=true`).then((r) => r.json()).catch(() => null),
-        ]);
+        const profileRes = await fetch(`${API_BASE}/states/public/${encodeURIComponent(stateSlug)}`)
+          .then((r) => r.json())
+          .catch(() => null);
 
         if (profileRes?.success && profileRes.data) {
           setStateProfile(profileRes.data);
-        }
-
-        if (statesRes?.success && Array.isArray(statesRes.data) && statesRes.data.length > 0) {
-          const apiStates = statesRes.data.map((s) => ({
-            name: s.name,
-            slug: s.slug || s.name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
-            aliases: s.aliases || [],
-          }));
-          setStatesList(apiStates);
         }
       } catch (err) {
         console.error('Error loading state profile:', err);
@@ -191,29 +152,95 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
     fetchExpiringJobs();
   }, [fetchExpiringJobs]);
 
-  // Handler for state switch -> Navigate to that state's dedicated page!
-  const handleStateChange = (newSlug) => {
-    if (newSlug === 'all') {
-      router.push('/jobs');
-    } else if (newSlug === 'all-india') {
-      router.push('/jobs?state=all-india');
-    } else {
-      router.push(`/state/${newSlug}/jobs`);
+  const fetchSidebarMcqs = useCallback(async () => {
+    try {
+      setLoadingMcqs(true);
+      const targetStateName = stateProfile?.state?.name || stateCanonical.name || stateSlug;
+
+      // 1. Try fetching by state name or slug
+      let res = await fetch(`${API_BASE}/questions?limit=5&state=${encodeURIComponent(stateSlug)}`);
+      let data = await res.json();
+
+      // If empty, try by display name
+      if ((!data.success || !Array.isArray(data.data) || data.data.length === 0) && targetStateName) {
+        res = await fetch(`${API_BASE}/questions?limit=5&state=${encodeURIComponent(targetStateName)}`);
+        data = await res.json();
+      }
+
+      // If still empty, fall back to General Knowledge
+      if (!data.success || !Array.isArray(data.data) || data.data.length === 0) {
+        res = await fetch(`${API_BASE}/questions?limit=5&subject=general-knowledge`);
+        data = await res.json();
+      }
+
+      // If still empty, fetch standard pool
+      if (!data.success || !Array.isArray(data.data) || data.data.length === 0) {
+        res = await fetch(`${API_BASE}/questions?limit=5`);
+        data = await res.json();
+      }
+
+      if (data.success && Array.isArray(data.data)) {
+        setSidebarMcqs(data.data.slice(0, 5));
+      } else {
+        setSidebarMcqs([]);
+      }
+    } catch (err) {
+      console.error('Error fetching sidebar MCQs:', err);
+      setSidebarMcqs([]);
+    } finally {
+      setLoadingMcqs(false);
     }
+  }, [stateSlug, stateProfile, stateCanonical]);
+
+  useEffect(() => {
+    fetchSidebarMcqs();
+  }, [fetchSidebarMcqs]);
+
+  const cleanContent = (str) => {
+    if (!str) return '';
+    return String(str)
+      .replace(/<[^>]*>/g, ' ')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, ' ')
+      .trim();
   };
 
-  const handleCountryChange = (countrySlug) => {
-    if (countrySlug === 'india' || countrySlug === 'all') {
-      router.push('/jobs');
-    } else {
-      router.push(`/jobs?country=${countrySlug}`);
+  const getCorrectIndex = (q) => {
+    let correctIndex = -1;
+    if (Array.isArray(q.options)) {
+      correctIndex = q.options.findIndex((opt) => opt && opt.is_correct);
     }
+    if (correctIndex === -1 && q.correct_answer) {
+      const match = String(q.correct_answer).match(/Option\s*([0-9]+)/i);
+      if (match) {
+        correctIndex = parseInt(match[1], 10) - 1;
+      } else if (['A', 'B', 'C', 'D'].includes(String(q.correct_answer).trim().toUpperCase())) {
+        correctIndex = String(q.correct_answer).trim().toUpperCase().charCodeAt(0) - 65;
+      }
+    }
+    return correctIndex;
   };
 
-  const handleSearchSubmit = (e) => {
-    e.preventDefault();
-    setSearchQuery(searchInput);
-    setPage(1);
+  const handleSelectSidebarOption = (qId, optIdx) => {
+    setSidebarMcqAnswers((prev) => ({
+      ...prev,
+      [qId]: optIdx,
+    }));
+    setRevealedSidebarAnswers((prev) => ({
+      ...prev,
+      [qId]: true,
+    }));
+  };
+
+  const toggleRevealSidebarAnswer = (qId) => {
+    setRevealedSidebarAnswers((prev) => ({
+      ...prev,
+      [qId]: !prev[qId],
+    }));
   };
 
   const handleResetSearch = () => {
@@ -276,7 +303,7 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
             <div className="bg-[#e7f9ee] border border-[#a3e6be] rounded border-dashed p-4 min-h-[600px] flex flex-col items-center justify-between text-center relative overflow-hidden group">
               <div className="w-full flex items-center justify-between text-[10px] text-emerald-800 font-bold uppercase tracking-wider">
                 <span>Available at</span>
-                <span className="font-extrabold text-xs">GoDaddy</span>
+                <span className="font-bold text-xs">GoDaddy</span>
               </div>
 
               <div className="my-auto space-y-4">
@@ -316,239 +343,33 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
               <span className="text-slate-800 font-bold">Jobs</span>
             </div>
 
-            {/* State Context Banner & Navigation Tabs */}
-            <div className="bg-gradient-to-r from-blue-900 via-indigo-900 to-slate-900 rounded-xl p-4 sm:p-5 text-white shadow-sm space-y-3">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white/10 backdrop-blur-xs border border-white/20 flex items-center justify-center text-white text-lg font-bold shadow-2xs">
-                    🏛️
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <span className="bg-blue-500/30 text-blue-200 border border-blue-400/30 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">
-                        State Portal
-                      </span>
-                    </div>
-                    <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight leading-tight mt-0.5">
-                      {stateProfile?.state?.jobs_title?.trim() || `${stateDisplayName} Government Jobs 2026`}
-                    </h1>
-                    {stateProfile?.state?.jobs_subtitle?.trim() && (
-                      <p className="text-xs sm:text-sm text-blue-100/90 font-medium mt-1 leading-relaxed max-w-2xl">
-                        {stateProfile.state.jobs_subtitle.trim()}
-                      </p>
-                    )}
-                  </div>
-                </div>
-
-                <Link
-                  href={`/state/${stateSlug}/mcq-questions/`}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white/10 hover:bg-white/20 border border-white/20 text-white text-xs font-semibold rounded-lg transition"
-                >
-                  <BookOpen size={13} />
-                  <span>State GK MCQs</span>
-                  <ArrowRight size={12} />
-                </Link>
-              </div>
-
-              {/* State Portal Quick Sub-Tabs */}
-              <div className="flex items-center gap-2 pt-2 border-t border-white/10 text-xs overflow-x-auto no-scrollbar hide-scrollbar" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
-                <span className="px-3 py-1 rounded-lg bg-blue-600 text-white font-semibold flex items-center gap-1.5 shadow-2xs shrink-0">
-                  <Briefcase size={12} />
-                  <span>Jobs Stream</span>
-                </span>
-                <Link
-                  href={`/state/${stateSlug}`}
-                  className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-slate-200 font-medium transition shrink-0 flex items-center gap-1.5"
-                >
-                  <Landmark size={12} />
-                  <span>State Profile &amp; Info</span>
-                </Link>
-                <Link
-                  href={`/state/${stateSlug}/mcq-questions/`}
-                  className="px-3 py-1 rounded-lg bg-white/5 hover:bg-white/15 text-slate-200 font-medium transition shrink-0 flex items-center gap-1.5"
-                >
-                  <BookOpen size={12} />
-                  <span>Practice MCQs</span>
-                </Link>
-              </div>
+            {/* Plain White Title Header (Normal Black Heading) */}
+            <div className="border-b border-slate-200 pb-3">
+              <h1 className="text-2xl sm:text-2xl font-semibold text-slate-900 tracking-tight leading-tight">
+                {stateProfile?.state?.jobs_title?.trim() || `${stateDisplayName} Government Jobs 2026`}
+              </h1>
+              {stateProfile?.state?.jobs_subtitle?.trim() && (
+                <p className="text-xs sm:text-sm text-slate-600 mt-1 leading-relaxed">
+                  {stateProfile.state.jobs_subtitle.trim()}
+                </p>
+              )}
             </div>
 
-            {/* ========================================================= */}
-            {/* PREMIUM COMPACT COUNTRY & STATE FILTER BAR                */}
-            {/* ========================================================= */}
-            <div className="bg-gradient-to-r from-slate-50 via-blue-50/20 to-slate-50 border border-slate-200/90 rounded-xl p-2.5 sm:p-3.5 shadow-2xs space-y-2.5">
-
-              {/* Top Controls Row: 2-col dropdowns + full width search on mobile, single flex line on desktop */}
-              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2">
-
-                {/* Filter Icon Label (Desktop only) */}
-                <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-slate-800 pr-1 select-none shrink-0">
-                  <SlidersHorizontal size={13} className="text-blue-600 shrink-0" />
-                  <span>Filter:</span>
-                </div>
-
-                {/* Dropdowns Group: 2-column grid on mobile, flex on desktop */}
-                <div className="grid grid-cols-2 gap-1.5 sm:flex sm:items-center sm:gap-2">
-                  {/* 1. Country Dropdown */}
-                  <div className="relative w-full sm:w-auto">
-                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-blue-600 flex items-center">
-                      <Globe size={13} />
-                    </div>
-                    <select
-                      value="india"
-                      onChange={(e) => handleCountryChange(e.target.value)}
-                      className="w-full sm:w-auto pl-7 pr-6 py-1.5 sm:py-1 text-xs font-medium bg-white text-slate-800 border border-slate-300 rounded-lg hover:border-blue-400 focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition truncate"
-                      aria-label="Filter by Country"
-                    >
-                      {DEFAULT_COUNTRIES.map((c) => (
-                        <option key={c.slug} value={c.slug}>
-                          {c.flag ? `${c.flag} ` : ''}{c.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 text-[10px]">
-                      ▼
-                    </div>
-                  </div>
-
-                  {/* 2. State Dropdown */}
-                  <div className="relative w-full sm:w-auto">
-                    <div className="absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none text-rose-500 flex items-center">
-                      <MapPin size={13} />
-                    </div>
-                    <select
-                      value={stateSlug}
-                      onChange={(e) => handleStateChange(e.target.value)}
-                      className="w-full sm:w-auto pl-7 pr-6 py-1.5 sm:py-1 text-xs font-semibold bg-blue-50/40 text-blue-900 border border-blue-500 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 shadow-2xs cursor-pointer appearance-none transition truncate"
-                      aria-label="Filter by State"
-                    >
-                      <option value="all">📍 All States &amp; UTs</option>
-                      <option value="all-india">🌟 All India (Central)</option>
-                      <option disabled>──────────────</option>
-                      {statesList.map((st) => (
-                        <option key={st.slug} value={st.slug}>
-                          {st.name}
-                        </option>
-                      ))}
-                    </select>
-                    <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-blue-600 text-[10px]">
-                      ▼
-                    </div>
-                  </div>
-                </div>
-
-                {/* Search Form + Buttons: Full width on mobile, inline flex on desktop */}
-                <div className="flex items-center gap-1.5 w-full sm:w-auto sm:flex-1 sm:max-w-xs">
-                  <form onSubmit={handleSearchSubmit} className="flex items-center gap-1.5 flex-1 min-w-0">
-                    <div className="relative flex-1 min-w-0">
-                      <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                      <input
-                        type="text"
-                        value={searchInput}
-                        onChange={(e) => setSearchInput(e.target.value)}
-                        placeholder={`Search in ${stateDisplayName}...`}
-                        className="w-full pl-8 pr-6 py-1.5 sm:py-1 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1.5 focus:ring-blue-500/20 focus:border-blue-600 transition shadow-2xs placeholder:text-slate-400"
-                      />
-                      {searchInput && (
-                        <button
-                          type="button"
-                          onClick={handleResetSearch}
-                          className="absolute right-1.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
-                        >
-                          <X size={11} />
-                        </button>
-                      )}
-                    </div>
-                    <button
-                      type="submit"
-                      className="px-3.5 py-1.5 sm:py-1 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-lg shadow-2xs transition cursor-pointer shrink-0"
-                    >
-                      Go
-                    </button>
-                  </form>
-
-                  {/* All Jobs Button */}
-                  <Link
-                    href="/jobs"
-                    className="inline-flex items-center gap-1 px-2.5 py-1.5 sm:py-1 text-[11px] font-medium text-slate-700 bg-white hover:bg-slate-100 border border-slate-300 rounded-lg transition shadow-2xs cursor-pointer shrink-0"
-                    title="View All Indian Jobs"
-                  >
-                    <RotateCcw size={11} />
-                    <span className="hidden min-[360px]:inline">All Jobs</span>
-                  </Link>
-                </div>
-
-              </div>
-
-              {/* Bottom Quick State Chips - NO SCROLLBAR */}
-              <div
-                className="no-scrollbar hide-scrollbar pt-2 border-t border-slate-200/80 flex items-center gap-1.5 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
-                style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-              >
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1 mr-0.5 select-none">
-                  <Sparkles size={10} className="text-amber-500" />
-                  Quick:
+            {/* Active search filter banner if user filtered by search */}
+            {searchQuery && (
+              <div className="flex items-center justify-between bg-blue-50/60 border border-blue-200/60 rounded-lg px-3 py-2 text-xs text-blue-900">
+                <span>
+                  Showing results for &ldquo;<strong>{searchQuery}</strong>&rdquo; in {stateDisplayName}
                 </span>
-
-                {/* All Jobs Link */}
                 <button
                   type="button"
-                  onClick={() => handleStateChange('all')}
-                  className="px-2.5 py-0.5 text-[11px] rounded-md font-medium whitespace-nowrap transition shrink-0 cursor-pointer bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs"
+                  onClick={handleResetSearch}
+                  className="text-xs font-semibold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer"
                 >
-                  All India
+                  Clear search
                 </button>
-
-                {/* Popular State Chips */}
-                {POPULAR_STATES.map((item) => {
-                  const isActive = stateSlug === item.slug;
-                  return (
-                    <button
-                      key={item.slug}
-                      type="button"
-                      onClick={() => handleStateChange(item.slug)}
-                      className={`px-2.5 py-0.5 text-[11px] rounded-md font-medium whitespace-nowrap transition shrink-0 cursor-pointer ${
-                        isActive
-                          ? 'bg-blue-600 text-white shadow-2xs font-semibold'
-                          : 'bg-white hover:bg-blue-50/80 text-slate-700 hover:text-blue-700 border border-slate-200/90 shadow-2xs'
-                      }`}
-                    >
-                      {item.shortName}
-                    </button>
-                  );
-                })}
               </div>
-
-              {/* Active Filter Summary Bar */}
-              <div className="pt-1.5 flex flex-wrap items-center justify-between gap-1 text-[11px] text-slate-600">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <span className="text-slate-500">Active State:</span>
-                  <span className="inline-flex items-center gap-1 bg-blue-100/70 text-blue-800 font-semibold px-2 py-0.2 rounded text-[11px] border border-blue-200">
-                    <MapPin size={10} />
-                    <span>{stateDisplayName}</span>
-                  </span>
-
-                  {searchQuery && (
-                    <span className="inline-flex items-center gap-1 bg-slate-200 text-slate-800 font-medium px-2 py-0.2 rounded text-[11px]">
-                      <span>"{searchQuery}"</span>
-                      <button
-                        type="button"
-                        onClick={handleResetSearch}
-                        className="hover:text-slate-900 ml-0.5"
-                        title="Clear search"
-                      >
-                        ×
-                      </button>
-                    </span>
-                  )}
-                </div>
-
-                <span className="font-semibold text-slate-700">
-                  {totalJobs} {totalJobs === 1 ? 'Job' : 'Jobs'} found in {stateDisplayName}
-                </span>
-              </div>
-
-            </div>
+            )}
 
             {/* Dynamic State Job Description / Recruitment Guidelines Card */}
             {stateProfile?.state?.job_description && (
@@ -567,9 +388,8 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
                     {showFullJobDesc ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                   </button>
                 </div>
-                <div className={`p-4 text-xs sm:text-sm text-slate-700 leading-relaxed transition-all ${
-                  showFullJobDesc ? '' : 'max-h-36 overflow-hidden relative'
-                }`}>
+                <div className={`p-4 text-xs sm:text-sm text-slate-700 leading-relaxed transition-all ${showFullJobDesc ? '' : 'max-h-36 overflow-hidden relative'
+                  }`}>
                   <div
                     className="prose prose-sm max-w-none prose-headings:text-slate-900 prose-headings:font-bold prose-p:my-2 prose-ul:my-2 prose-li:my-0.5"
                     dangerouslySetInnerHTML={{ __html: stateProfile.state.job_description }}
@@ -863,19 +683,188 @@ export default function StateJobsClient({ stateSlug, initialState = null }) {
                     )}
                   </div>
                 ) : (
-                  <div className="text-sm text-slate-600 py-8 text-center">
-                    <p className="font-medium text-slate-800 text-base">
-                      {stateDisplayName} &amp; National MCQs
-                    </p>
-                    <p className="mt-1 text-xs sm:text-sm text-slate-500">
-                      Practice History, Polity, GK, and Current Affairs MCQs for {stateDisplayName} exams.
-                    </p>
-                    <Link
-                      href={`/state/${stateSlug}/mcq-questions/`}
-                      className="inline-block mt-3 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold px-4 py-2 rounded transition"
-                    >
-                      Practice {stateDisplayName} MCQs &rarr;
-                    </Link>
+                  <div>
+                    {/* Header bar matching Jobs Expiring style */}
+                    <div className="flex items-center justify-between text-[11px] sm:text-xs mb-3 pb-2.5 border-b border-slate-300 gap-1.5">
+                      <span className="text-slate-800 font-medium whitespace-nowrap flex items-center gap-1">
+                        <span>🎯</span>
+                        <span>{stateDisplayName} Practice MCQs</span>
+                      </span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <Link
+                          href={`/state/${stateSlug}/mcq-questions/`}
+                          className="text-blue-600 font-normal hover:underline whitespace-nowrap text-[11px] sm:text-xs"
+                        >
+                          View All
+                        </Link>
+                        <span className="bg-emerald-600 text-white text-[10px] sm:text-[11px] font-normal px-1.5 py-0.5 rounded inline-flex items-center gap-1 leading-none whitespace-nowrap shadow-2xs">
+                          <span>📚</span>
+                          <span>MCQs</span>
+                        </span>
+                      </div>
+                    </div>
+
+                    {loadingMcqs ? (
+                      /* Skeletons */
+                      <div className="space-y-3">
+                        {[1, 2, 3].map((n) => (
+                          <div key={n} className="bg-white rounded-lg p-3 border border-slate-200 animate-pulse space-y-2">
+                            <div className="h-3.5 bg-slate-200 rounded w-5/6"></div>
+                            <div className="grid grid-cols-2 gap-1.5 pt-1">
+                              <div className="h-6 bg-slate-100 rounded"></div>
+                              <div className="h-6 bg-slate-100 rounded"></div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : sidebarMcqs.length === 0 ? (
+                      /* Fallback Empty */
+                      <div className="py-6 text-center text-xs text-slate-500 font-medium space-y-2">
+                        <p>No questions currently loaded for {stateDisplayName}.</p>
+                        <Link
+                          href={`/state/${stateSlug}/mcq-questions/`}
+                          className="inline-flex items-center gap-1 text-blue-600 hover:underline font-semibold"
+                        >
+                          <span>Explore All GK Questions</span>
+                          <ArrowRight size={12} />
+                        </Link>
+                      </div>
+                    ) : (
+                      /* 5 Interactive MCQs */
+                      <div className="space-y-3">
+                        {sidebarMcqs.map((q, idx) => {
+                          const qId = q._id || q.sql_id || idx;
+                          const correctIdx = getCorrectIndex(q);
+                          const userPick = sidebarMcqAnswers[qId];
+                          const hasAnswered = typeof userPick === 'number';
+                          const isRevealed = !!revealedSidebarAnswers[qId];
+                          const isUserCorrect = hasAnswered && userPick === correctIdx;
+                          const letters = ['A', 'B', 'C', 'D'];
+
+                          return (
+                            <div
+                              key={qId}
+                              className="bg-white rounded-lg p-3 border border-slate-300 shadow-2xs space-y-2.5 transition hover:border-slate-400"
+                            >
+                              {/* Top Bar with Question Number & State Tag */}
+                              <div className="flex items-center justify-between gap-1.5 text-[10px]">
+                                <span className="bg-blue-50 text-blue-700 border border-blue-200 font-bold px-1.5 py-0.5 rounded shadow-2xs">
+                                  Q{idx + 1}
+                                </span>
+                                <span className="text-slate-400 font-medium truncate max-w-[150px]">
+                                  {q.topic_name || q.subject_name || `${stateDisplayName} GK`}
+                                </span>
+                              </div>
+
+                              {/* Question Content */}
+                              <h4 className="text-xs sm:text-[13px] font-semibold text-slate-900 leading-snug">
+                                {cleanContent(q.content || 'Practice Question')}
+                              </h4>
+
+                              {/* 4 Options Grid */}
+                              {Array.isArray(q.options) && q.options.length > 0 && (
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                                  {q.options.slice(0, 4).map((opt, optIdx) => {
+                                    const letter = letters[optIdx] || String.fromCharCode(65 + optIdx);
+                                    const isThisCorrect = optIdx === correctIdx;
+                                    const isThisUserPick = userPick === optIdx;
+
+                                    let optClass = 'bg-slate-50/70 hover:bg-blue-50/50 border-slate-200 text-slate-700 hover:border-blue-300';
+                                    let badgeClass = 'bg-slate-200 text-slate-700 font-bold';
+
+                                    if (hasAnswered || isRevealed) {
+                                      if (isThisCorrect) {
+                                        optClass = 'bg-emerald-50 border-emerald-400 text-emerald-900 font-medium ring-1 ring-emerald-300/60';
+                                        badgeClass = 'bg-emerald-600 text-white font-bold';
+                                      } else if (isThisUserPick && !isThisCorrect) {
+                                        optClass = 'bg-rose-50 border-rose-300 text-rose-900 font-medium';
+                                        badgeClass = 'bg-rose-600 text-white font-bold';
+                                      }
+                                    }
+
+                                    return (
+                                      <button
+                                        key={optIdx}
+                                        type="button"
+                                        onClick={() => handleSelectSidebarOption(qId, optIdx)}
+                                        className={`w-full p-1.5 rounded border text-left text-xs transition flex items-center gap-1.5 cursor-pointer leading-tight ${optClass}`}
+                                      >
+                                        <span className={`w-4 h-4 rounded text-[9px] flex items-center justify-center shrink-0 ${badgeClass}`}>
+                                          {letter}
+                                        </span>
+                                        <span className="truncate flex-1">{opt.text}</span>
+                                        {(hasAnswered || isRevealed) && isThisCorrect && (
+                                          <CheckCircle2 size={12} className="text-emerald-600 shrink-0 ml-auto" />
+                                        )}
+                                        {hasAnswered && isThisUserPick && !isThisCorrect && (
+                                          <XCircle size={12} className="text-rose-600 shrink-0 ml-auto" />
+                                        )}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
+                              {/* Bottom Action / Feedback Row */}
+                              <div className="flex items-center justify-between pt-1 border-t border-slate-100 text-[11px]">
+                                <div>
+                                  {hasAnswered ? (
+                                    isUserCorrect ? (
+                                      <span className="font-bold text-emerald-700 flex items-center gap-1">
+                                        <CheckCircle2 size={12} /> Correct!
+                                      </span>
+                                    ) : (
+                                      <span className="font-bold text-rose-600 flex items-center gap-1">
+                                        <XCircle size={12} />
+                                        <span>Ans: Option {correctIdx >= 0 ? letters[correctIdx] : 'Correct'}</span>
+                                      </span>
+                                    )
+                                  ) : isRevealed && correctIdx >= 0 ? (
+                                    <span className="font-bold text-emerald-700">
+                                      Ans: Option {letters[correctIdx]}
+                                    </span>
+                                  ) : (
+                                    <span className="text-[10px] text-slate-400">Click option to test</span>
+                                  )}
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => toggleRevealSidebarAnswer(qId)}
+                                  className="text-blue-600 hover:text-blue-800 font-medium flex items-center gap-1 cursor-pointer transition text-[11px]"
+                                >
+                                  {isRevealed ? <EyeOff size={11} /> : <Eye size={11} />}
+                                  <span>{isRevealed ? 'Hide' : 'Answer'}</span>
+                                </button>
+                              </div>
+
+                              {/* Explanation Callout if Revealed */}
+                              {isRevealed && (q.ans_info || q.explanation) && (
+                                <div className="mt-1.5 p-2 rounded bg-amber-50/80 border border-amber-200 text-[11px] text-amber-950 leading-relaxed">
+                                  <span className="font-bold text-amber-900">Explanation: </span>
+                                  <span>{cleanContent(q.ans_info || q.explanation)}</span>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Load More Button -> Direct navigation to state MCQ page */}
+                        <div className="pt-2">
+                          <Link
+                            href={`/state/${stateSlug}/mcq-questions/`}
+                            className="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs sm:text-sm font-semibold rounded-lg shadow-2xs hover:shadow transition flex items-center justify-center gap-2 group cursor-pointer"
+                          >
+                            <BookOpen size={14} className="shrink-0" />
+                            <span>Load More {stateDisplayName} MCQs</span>
+                            <ArrowRight size={14} className="group-hover:translate-x-1 transition-transform shrink-0" />
+                          </Link>
+                          <p className="text-[10px] text-slate-500 text-center mt-1.5">
+                            Practice full {stateDisplayName} General Knowledge MCQs with verified answers
+                          </p>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

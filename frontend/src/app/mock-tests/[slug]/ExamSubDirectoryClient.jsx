@@ -19,6 +19,8 @@ import {
   FileText,
   ShieldCheck,
   Check,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -57,6 +59,7 @@ export default function ExamSubDirectoryClient({
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedSubject, setSelectedSubject] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [showFullTopDesc, setShowFullTopDesc] = useState(false);
 
   const examTitle = exam.name || 'Examination';
   const examEmblem = exam.emblem || exam.image ? getImageUrl(exam.emblem || exam.image) : null;
@@ -181,12 +184,12 @@ export default function ExamSubDirectoryClient({
     <div className="min-h-screen flex flex-col bg-white text-slate-800 font-sans">
       <Header />
 
-      <main className="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
+      <main className="flex-1 w-full max-w-[1440px] mx-auto px-2 min-[360px]:px-2.5 sm:px-4 md:px-6 py-2.5 sm:py-4 md:py-6 overflow-x-hidden min-w-0">
         
         {/* ========================================================================= */}
         {/* 1. BREADCRUMBS */}
         {/* ========================================================================= */}
-        <nav className="flex items-center space-x-1.5 text-xs text-slate-500 mb-3 overflow-x-auto whitespace-nowrap">
+        <nav className="flex items-center space-x-1.5 text-[11px] sm:text-xs text-slate-500 mb-1.5 sm:mb-2 overflow-x-auto whitespace-nowrap scrollbar-none w-full max-w-full min-w-0">
           <Link href="/" className="hover:text-sky-600 font-normal">
             Home
           </Link>
@@ -201,12 +204,12 @@ export default function ExamSubDirectoryClient({
         {/* ========================================================================= */}
         {/* 2. SUB-DIRECTORY HEADER BANNER */}
         {/* ========================================================================= */}
-        <div className="bg-white rounded-2xl border border-slate-200/90 p-4 sm:p-6 mb-6 shadow-2xs">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="bg-white rounded-lg sm:rounded-2xl border border-slate-200/90 p-2.5 min-[360px]:p-3 sm:p-6 mb-2.5 sm:mb-6 shadow-2xs w-full max-w-full min-w-0">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 sm:gap-4">
             
             {/* Title & Emblem */}
-            <div className="flex items-start gap-4">
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl border border-slate-200 bg-white p-1.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
+            <div className="flex items-start gap-2.5 sm:gap-4 min-w-0 flex-1">
+              <div className="w-10 h-10 min-[360px]:w-12 min-[360px]:h-12 sm:w-16 sm:h-16 rounded-lg sm:rounded-2xl border border-slate-200 bg-white p-1 sm:p-1.5 shadow-2xs flex items-center justify-center shrink-0 overflow-hidden">
                 {examEmblem ? (
                   <img
                     src={examEmblem}
@@ -214,46 +217,46 @@ export default function ExamSubDirectoryClient({
                     className="w-full h-full object-contain"
                   />
                 ) : (
-                  <div className="w-full h-full rounded-xl bg-blue-50 text-blue-700 font-black text-lg flex items-center justify-center">
+                  <div className="w-full h-full rounded-md sm:rounded-xl bg-blue-50 text-blue-700 font-black text-xs min-[360px]:text-sm sm:text-lg flex items-center justify-center">
                     {examTitle.slice(0, 2).toUpperCase()}
                   </div>
                 )}
               </div>
 
-              <div className="space-y-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wide">
+              <div className="space-y-0.5 sm:space-y-1 min-w-0 flex-1">
+                <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+                  <span className="px-2 py-0.5 rounded-full text-[9.5px] min-[360px]:text-[10px] sm:text-[11px] font-bold bg-sky-50 text-sky-700 border border-sky-200 uppercase tracking-wide">
                     {exam.category_name || 'Exam Directory'}
                   </span>
                   {totalAttempts > 0 && (
-                    <div className="flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[11px] font-bold">
+                    <div className="flex items-center gap-1 px-1.5 sm:px-2 py-0.5 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[9.5px] min-[360px]:text-[10px] sm:text-[11px] font-bold">
                       <span className="text-amber-500">⚡</span>
                       <span>{formatCount(totalAttempts)} Attempts Taken</span>
                     </div>
                   )}
                 </div>
 
-                <h1 className="text-xl sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">
+                <h1 className="text-base min-[360px]:text-lg sm:text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight leading-snug break-words">
                   {examTitle} Mock Test Series 2026
                 </h1>
-                <p className="text-xs sm:text-sm text-slate-500 max-w-3xl">
+                <p className="text-[10.5px] min-[360px]:text-[11px] sm:text-sm text-slate-500 max-w-3xl line-clamp-2 sm:line-clamp-none">
                   Practice online mock tests for {examTitle} exams with latest pattern tests, free practice papers, sectional quizzes, and detailed bilingual solutions.
                 </p>
               </div>
             </div>
 
             {/* Dynamic Metric Badges */}
-            <div className="flex flex-wrap md:flex-col items-start md:items-end gap-2.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100">
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
-                <span>{totalSeries} Sub-Exam Test Series</span>
+            <div className="flex flex-wrap md:flex-col items-center md:items-end gap-x-3 gap-y-1 sm:gap-2.5 shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-slate-100 text-[10px] min-[360px]:text-[10.5px] sm:text-xs">
+              <div className="flex items-center gap-1 sm:gap-1.5 font-semibold text-slate-700">
+                <span className="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-emerald-500 shrink-0"></span>
+                <span>{totalSeries} Sub-Exam Series</span>
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                <span className="w-2.5 h-2.5 rounded-full bg-sky-500"></span>
-                <span>{totalTests} Total Tests ({freeTests} Free)</span>
+              <div className="flex items-center gap-1 sm:gap-1.5 font-semibold text-slate-700">
+                <span className="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-sky-500 shrink-0"></span>
+                <span>{totalTests} Tests ({freeTests} Free)</span>
               </div>
-              <div className="flex items-center gap-2 text-xs font-semibold text-slate-700">
-                <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+              <div className="flex items-center gap-1 sm:gap-1.5 font-semibold text-slate-700">
+                <span className="w-1.5 h-1.5 sm:w-2.5 sm:h-2.5 rounded-full bg-purple-500 shrink-0"></span>
                 <span>Bilingual Hindi &amp; English</span>
               </div>
             </div>
@@ -265,24 +268,39 @@ export default function ExamSubDirectoryClient({
         {/* 3. TOP JODIT DESCRIPTION (IF SET BY ADMIN) */}
         {/* ========================================================================= */}
         {topDescriptionHtml ? (
-          <div className="mb-6 p-5 sm:p-6 bg-white border border-slate-200/90 rounded-2xl shadow-2xs">
-            <div className="flex items-center gap-2 pb-3 mb-3 border-b border-slate-100">
-              <Sparkles size={16} className="text-sky-600" />
-              <h2 className="text-sm font-bold text-slate-900 uppercase tracking-wide">
+          <div className="mb-2.5 sm:mb-6 p-2.5 min-[360px]:p-3 sm:p-6 bg-white border border-slate-200/90 rounded-lg sm:rounded-2xl shadow-2xs w-full max-w-full min-w-0 break-words">
+            <div className="flex items-center gap-2 pb-2 mb-2 sm:pb-2.5 sm:mb-2.5 border-b border-slate-100">
+              <Sparkles size={14} className="text-sky-600 shrink-0" />
+              <h2 className="text-[11px] min-[360px]:text-xs sm:text-sm font-bold text-slate-900 uppercase tracking-wide">
                 About {examTitle} Examination &amp; Preparation
               </h2>
             </div>
-            <div
-              className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-700 leading-relaxed font-normal"
-              dangerouslySetInnerHTML={{ __html: topDescriptionHtml }}
-            />
+            <div className="relative">
+              <div
+                className={`prose prose-slate max-w-none text-[11px] sm:text-sm text-slate-700 leading-relaxed font-normal transition-all duration-300 ${
+                  showFullTopDesc ? '' : 'max-h-24 sm:max-h-none overflow-hidden'
+                }`}
+                dangerouslySetInnerHTML={{ __html: topDescriptionHtml }}
+              />
+              {!showFullTopDesc && (
+                <div className="sm:hidden absolute bottom-0 inset-x-0 h-10 bg-gradient-to-t from-white via-white/80 to-transparent pointer-events-none" />
+              )}
+            </div>
+            <button
+              type="button"
+              onClick={() => setShowFullTopDesc(!showFullTopDesc)}
+              className="sm:hidden mt-1.5 text-[11px] font-bold text-sky-600 hover:text-sky-700 flex items-center gap-1 cursor-pointer transition-colors"
+            >
+              <span>{showFullTopDesc ? 'Show Less' : 'Read Full Overview'}</span>
+              {showFullTopDesc ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+            </button>
           </div>
         ) : null}
 
         {/* ========================================================================= */}
         {/* 4. 2-COLUMN RESPONSIVE LAYOUT (LEFT FILTER + RIGHT TESTBOOK CARDS GRID) */}
         {/* ========================================================================= */}
-        <div className="flex flex-col lg:flex-row gap-5 lg:gap-6 items-start">
+        <div className="flex flex-col lg:flex-row gap-2.5 lg:gap-6 items-stretch lg:items-start w-full max-w-full min-w-0">
           
           {/* ================= COMPACT LEFT FILTER SIDEBAR ================= */}
           <MockTestFilterSidebar
@@ -299,35 +317,54 @@ export default function ExamSubDirectoryClient({
           />
 
           {/* ================= MAIN SUB-DIRECTORY CARDS SECTION ================= */}
-          <section className="flex-1 min-w-0 space-y-4">
+          <section className="flex-1 w-full max-w-full min-w-0 space-y-2.5 sm:space-y-4">
             
+            {/* Quick Mobile Category Scroll Bar (Mobile view only) */}
+            <div className="lg:hidden w-full max-w-full min-w-0 overflow-hidden">
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-none text-xs w-full">
+                {categoriesWithCounts.map((tab) => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setSelectedCategory(tab.id)}
+                    className={`px-2.5 py-1 rounded-full font-semibold whitespace-nowrap transition-all text-[11px] sm:text-xs cursor-pointer shrink-0 ${
+                      selectedCategory === tab.id
+                        ? 'bg-sky-600 text-white shadow-2xs'
+                        : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+                    }`}
+                  >
+                    {tab.name} ({tab.count})
+                  </button>
+                ))}
+              </div>
+            </div>
+
             {/* Active Filter Pills Bar */}
             {(selectedCategory !== 'all' || selectedSubject !== 'all' || searchQuery) && (
-              <div className="p-3 bg-sky-50/70 border border-sky-200 rounded-xl flex items-center justify-between text-xs text-sky-900">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-bold">Active Filters:</span>
+              <div className="p-1.5 min-[360px]:p-2 sm:p-3 bg-sky-50/70 border border-sky-200 rounded-lg sm:rounded-xl flex items-center justify-between text-[11px] sm:text-xs text-sky-900 w-full max-w-full min-w-0 gap-2">
+                <div className="flex items-center gap-1.5 min-[360px]:gap-2 flex-wrap min-w-0">
+                  <span className="font-bold shrink-0">Active Filters:</span>
                   {selectedCategory !== 'all' && (
-                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold truncate max-w-[180px]">
                       Stream: {categoriesWithCounts.find((c) => c.id === selectedCategory)?.name}
                     </span>
                   )}
                   {selectedSubject !== 'all' && (
-                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold truncate max-w-[180px]">
                       Subject: {subjectsWithCounts.find((s) => s.slug === selectedSubject || s._id === selectedSubject)?.name}
                     </span>
                   )}
                   {searchQuery && (
-                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold">
+                    <span className="bg-white border border-sky-300 px-2 py-0.5 rounded-full font-semibold truncate max-w-[180px]">
                       Search: &quot;{searchQuery}&quot;
                     </span>
                   )}
-                  <span className="text-slate-500 font-medium ml-1">
-                    ({filteredSeries.length} series found)
+                  <span className="text-slate-500 font-medium shrink-0">
+                    ({filteredSeries.length} series)
                   </span>
                 </div>
                 <button
                   onClick={handleResetFilters}
-                  className="text-sky-700 font-bold hover:underline shrink-0 ml-2 cursor-pointer"
+                  className="text-sky-700 font-bold hover:underline shrink-0 cursor-pointer"
                 >
                   Clear All
                 </button>
@@ -336,7 +373,7 @@ export default function ExamSubDirectoryClient({
 
             {/* Test Series Sub-Directory Grid (Testbook Card Design) */}
             {filteredSeries.length === 0 ? (
-              <div className="py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3">
+              <div className="py-16 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-3 w-full max-w-full">
                 <BookOpen className="w-10 h-10 text-slate-400 mx-auto" />
                 <h3 className="text-slate-700 font-bold text-sm">
                   No test series found matching your search criteria
@@ -352,7 +389,7 @@ export default function ExamSubDirectoryClient({
                 </button>
               </div>
             ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-3.5 sm:gap-4 pt-1">
+              <div className="w-full max-w-full min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-4 gap-2.5 sm:gap-4 pt-1">
                 {filteredSeries.map((series) => (
                   <TestbookSeriesCard
                     key={series._id || series.slug}
@@ -367,53 +404,53 @@ export default function ExamSubDirectoryClient({
             {/* 5. BOTTOM JODIT DESCRIPTION (OR DETAILED SEO SYLLABUS SECTION) */}
             {/* ========================================================================= */}
             {bottomDescriptionHtml ? (
-              <div className="mt-10 p-5 sm:p-6 bg-white border border-slate-200 rounded-2xl shadow-2xs space-y-4">
-                <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-                  <FileText size={18} className="text-[#00c5d2]" />
-                  <h2 className="text-base font-bold text-slate-900 tracking-tight">
+              <div className="mt-6 sm:mt-10 p-3 min-[360px]:p-4 sm:p-6 bg-white border border-slate-200 rounded-lg sm:rounded-2xl shadow-2xs space-y-3 sm:space-y-4">
+                <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100">
+                  <FileText size={16} className="text-[#00c5d2] shrink-0" />
+                  <h2 className="text-xs min-[360px]:text-sm sm:text-base font-bold text-slate-900 tracking-tight">
                     {examTitle} Syllabus Breakdown, Exam Pattern &amp; Guidelines
                   </h2>
                 </div>
                 <div
-                  className="prose prose-slate max-w-none text-xs sm:text-sm text-slate-700 leading-relaxed font-normal"
+                  className="prose prose-slate max-w-none text-[11px] sm:text-sm text-slate-700 leading-relaxed font-normal"
                   dangerouslySetInnerHTML={{ __html: bottomDescriptionHtml }}
                 />
               </div>
             ) : (
-              <div className="mt-10 p-5 sm:p-6 bg-slate-50 border border-slate-200 rounded-2xl space-y-4 text-xs text-slate-600 leading-relaxed">
-                <h2 className="text-sm sm:text-base font-bold text-slate-900">
+              <div className="mt-6 sm:mt-10 p-3 min-[360px]:p-4 sm:p-6 bg-slate-50 border border-slate-200 rounded-lg sm:rounded-2xl space-y-3 sm:space-y-4 text-xs text-slate-600 leading-relaxed">
+                <h2 className="text-xs min-[360px]:text-sm sm:text-base font-bold text-slate-900">
                   {examTitle} Online Test Series 2026 - Preparation Guide &amp; Key Features
                 </h2>
-                <p>
+                <p className="text-[11px] sm:text-xs text-slate-600">
                   Prepare for upcoming {examTitle} examinations with Education Masters&apos; full-length mock test series designed by expert educators. Each test series replicates the actual computer-based test (CBT) environment, including sectional timers, negative marking scheme, and immediate result analysis.
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-3 border-t border-slate-200 text-xs">
-                  <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                    <div className="flex items-center gap-2 font-bold text-slate-800">
-                      <span className="w-5 h-5 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-xs">1</span>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5 sm:gap-4 pt-2.5 sm:pt-3 border-t border-slate-200 text-xs">
+                  <div className="space-y-1 bg-white p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl border border-slate-200/80 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px] sm:text-xs">
+                      <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-sky-100 text-sky-700 flex items-center justify-center text-[10px] sm:text-xs">1</span>
                       <span>Real Exam Screen</span>
                     </div>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500">
                       Identical question palette, timer countdown, review flags, and section switching as actual {examTitle} exams.
                     </p>
                   </div>
 
-                  <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                    <div className="flex items-center gap-2 font-bold text-slate-800">
-                      <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs">2</span>
+                  <div className="space-y-1 bg-white p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl border border-slate-200/80 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px] sm:text-xs">
+                      <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-100 text-emerald-700 flex items-center justify-center text-[10px] sm:text-xs">2</span>
                       <span>All India Rank &amp; Percentile</span>
                     </div>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500">
                       Compare your score with thousands of test takers and identify your weak topics with AI analytics.
                     </p>
                   </div>
 
-                  <div className="space-y-1.5 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-2xs">
-                    <div className="flex items-center gap-2 font-bold text-slate-800">
-                      <span className="w-5 h-5 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-xs">3</span>
+                  <div className="space-y-1 bg-white p-2.5 sm:p-3.5 rounded-lg sm:rounded-xl border border-slate-200/80 shadow-2xs">
+                    <div className="flex items-center gap-1.5 font-bold text-slate-800 text-[11px] sm:text-xs">
+                      <span className="w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-purple-100 text-purple-700 flex items-center justify-center text-[10px] sm:text-xs">3</span>
                       <span>Detailed Bilingual Solutions</span>
                     </div>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-[10px] sm:text-[11px] text-slate-500">
                       Step-by-step explanations, shortcut methods, and tips provided in both English and Hindi.
                     </p>
                   </div>

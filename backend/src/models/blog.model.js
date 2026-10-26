@@ -13,17 +13,17 @@ const blogSchema = new mongoose.Schema(
     status: { type: String, default: 'draft', index: true },
     content: String,
     updates: String,
-    
+
     // Mongoose ObjectId References
     author: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
     user_id: Number,
-    
+
     categories: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Category' }],
     category_ids: [Number],
-    
+
     tags: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Tag' }],
     tag_ids: [Number],
-    
+
     state: { type: mongoose.Schema.Types.ObjectId, ref: 'State' },
     state_id: { type: Number, default: 0 },
 

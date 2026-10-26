@@ -81,6 +81,36 @@ const settingSchema = new mongoose.Schema(
       },
       lastActiveAt: { type: Date, default: null },
     },
+
+    // Global Login & Registration Dynamic Settings
+    authSettings: {
+      // 1. Allow or Stop New User Registrations
+      allowNewRegistrations: { type: Boolean, default: true },
+      registrationClosedMessage: {
+        type: String,
+        default: 'New user registration is currently closed. If you already have an account, please sign in.',
+      },
+
+      // 2. Google Login Second-Step Mobile Verification for NEW Users
+      googleNewUserPhoneVerification: { type: Boolean, default: true },
+
+      // 3. Second-Step Mobile Verification for EXISTING / OLD Users with Unverified Phone
+      existingUserPhoneVerification: { type: Boolean, default: false },
+
+      // 4. Manual Registration OTP Channel
+      // 'whatsapp' (WhatsApp Mobile OTP) | 'email' (Email OTP) | 'both' (WhatsApp & Email OTP) | 'none' (Direct Registration)
+      manualRegistrationOtpMode: {
+        type: String,
+        enum: ['whatsapp', 'email', 'both', 'none'],
+        default: 'whatsapp',
+      },
+
+      otpExpiryMinutes: { type: Number, default: 10 },
+      emailOtpSubject: {
+        type: String,
+        default: '🔐 Your Education Masters Verification Code',
+      },
+    },
   },
   {
     timestamps: true,

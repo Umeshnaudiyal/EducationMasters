@@ -8,6 +8,11 @@ export const register = asyncHandler(async (req, res) => {
   res.status(201).json(new ApiResponse(201, result, 'User registered successfully'));
 });
 
+export const getAuthSettings = asyncHandler(async (req, res) => {
+  const result = await authService.getPublicAuthSettings();
+  res.status(200).json(new ApiResponse(200, result, 'Auth settings fetched successfully'));
+});
+
 export const login = asyncHandler(async (req, res) => {
   const clientMeta = {
     ip: req.headers['x-forwarded-for'] || req.socket.remoteAddress || req.ip || 'Unknown',

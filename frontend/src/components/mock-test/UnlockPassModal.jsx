@@ -21,6 +21,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { toast } from '@/context/ToastContext';
+import { useAuthModal } from '@/context/AuthModalContext';
 import { BACKEND_URL } from '@/utils/api';
 import { loadRazorpayScript } from '@/utils/razorpay';
 
@@ -87,6 +88,8 @@ export default function UnlockPassModal({
   onSuccess,
 }) {
   const { data: session } = useSession();
+  const { openAuthModal } = useAuthModal();
+  const isAuthenticated = Boolean(session?.user);
 
   // Pick plans from series or default
   const availablePlans =
@@ -142,12 +145,22 @@ export default function UnlockPassModal({
   if (!isOpen) return null;
 
   const handleProceedPayment = async () => {
+    if (!session?.user) {
+      onClose();
+      openAuthModal({
+        mode: 'login',
+        title: '🔐 Login Required to Access Pass',
+        subtitle: 'Please sign in or create an account first so your Mock Test Pass is linked directly to your profile.',
+      });
+      return;
+    }
+
     try {
       setErrorMsg('');
       setLoading(true);
 
-      const emailToUse = (userEmail || session?.user?.email || '').trim();
-      const nameToUse = (userName || session?.user?.name || 'Aspirant').trim();
+      const emailToUse = (session?.user?.email || userEmail || '').trim();
+      const nameToUse = (session?.user?.name || userName || 'Aspirant').trim();
       const phoneToUse = userPhone.trim();
 
       if (!emailToUse) {
@@ -471,63 +484,108 @@ export default function UnlockPassModal({
                 </div>
               )}
 
-              {/* 3. CANDIDATE CONTACT DETAILS (IF NOT LOGGED IN OR TO CONFIRM) */}
-              <div className="space-y-2.5 pt-1">
-                <label className="text-xs font-bold text-slate-900 block">
-                  Candidate Account Details:
-                </label>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="relative">
-                    <input
-                      type="text"
-                      placeholder="Your Full Name"
-                      value={userName}
-                      onChange={(e) => setUserName(e.target.value)}
-                      className="w-full pl-9 pr-3 py-2 text-xs text-slate-800 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00c5d2]"
-                    />
-                    <User className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+              {/* 3. CANDIDATE ACCOUNT STATUS */}
+              {!isAuthenticated ? (
+                <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs shadow-2xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                      <Lock size={18} strokeWidth={2.5} />
+                    </div>
+                    <div>
+                      <h5 className="font-extrabold text-slate-900 text-sm">Login Required to Unlock Pass</h5>
+                      <p className="text-slate-600 text-xs mt-0.5">
+                        Please sign in or create an account first so your subscription pass is securely linked to your profile.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      openAuthModal({
+                        mode: 'login',
+                        title: '🔐 Login Required to Access Pass',
+                        subtitle: 'Sign in or register so your pass can be linked directly to your profile.',
+                      });
+                    }}
+                    className="shrink-0 px-5 py-2.5 bg-slate-900 hover:bg-[#00c5d2] text-white font-bold rounded-xl text-xs transition cursor-pointer flex items-center gap-1.5"
+                  >
+                    <span>Log In / Sign Up</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2.5 pt-1">
+                  <div className="p-3 bg-emerald-50/80 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0" />
+                      <span className="text-slate-700">
+                        Linking to account: <strong className="text-slate-900">{session.user.name || 'Candidate'}</strong> ({session.user.email})
+                      </span>
+                    </div>
+                    <span className="text-[10px] font-bold uppercase bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded shrink-0">
+                      Logged In
+                    </span>
                   </div>
 
                   <div className="relative">
                     <input
-                      type="email"
-                      placeholder="Email Address (for pass access)"
-                      value={userEmail}
-                      onChange={(e) => setUserEmail(e.target.value)}
+                      type="tel"
+                      placeholder="Your Mobile Number (Optional for SMS receipt)"
+                      value={userPhone}
+                      onChange={(e) => setUserPhone(e.target.value)}
                       className="w-full pl-9 pr-3 py-2 text-xs text-slate-800 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#00c5d2]"
                     />
-                    <Mail className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    <Phone className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* 4. TRUST BADGES & CHECKOUT BUTTON */}
               <div className="space-y-3 pt-2">
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleProceedPayment}
-                  className="w-full py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-[#00c5d2] hover:to-[#00a8cc] text-white font-extrabold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
-                >
-                  {loading ? (
-                    <>
-                      <Loader2 size={16} className="animate-spin" />
-                      <span>Initializing Secure Razorpay Checkout...</span>
-                    </>
-                  ) : Number(selectedPlan.price) === 0 ? (
-                    <>
-                      <span>Activate Free Pass Now</span>
-                      <ArrowRight size={16} />
-                    </>
-                  ) : (
-                    <>
-                      <Lock size={15} />
-                      <span>Pay ₹{selectedPlan.price} &amp; Unlock Pass</span>
-                      <ArrowRight size={16} />
-                    </>
-                  )}
-                </button>
+                {!isAuthenticated ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onClose();
+                      openAuthModal({
+                        mode: 'login',
+                        title: '🔐 Login Required to Access Pass',
+                        subtitle: 'Sign in or register so your pass can be linked directly to your profile.',
+                      });
+                    }}
+                    className="w-full py-3.5 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <Lock size={15} />
+                    <span>Login First to Unlock Pass</span>
+                    <ArrowRight size={16} />
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleProceedPayment}
+                    className="w-full py-3.5 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900 hover:from-[#00c5d2] hover:to-[#00a8cc] text-white font-extrabold text-sm rounded-xl shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        <span>Initializing Secure Razorpay Checkout...</span>
+                      </>
+                    ) : Number(selectedPlan.price) === 0 ? (
+                      <>
+                        <span>Activate Free Pass Now</span>
+                        <ArrowRight size={16} />
+                      </>
+                    ) : (
+                      <>
+                        <Lock size={15} />
+                        <span>Pay ₹{selectedPlan.price} &amp; Unlock Pass</span>
+                        <ArrowRight size={16} />
+                      </>
+                    )}
+                  </button>
+                )}
 
                 <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 pt-1">
                   <span className="flex items-center gap-1">

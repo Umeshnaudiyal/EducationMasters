@@ -491,7 +491,7 @@ generateSecureOtp(length = 6) {
   /**
    * Send WhatsApp OTP using the Connection Pool
    */
-  async sendOTP({ phone, sessionId = null, minutes = 10, metadata = {} }) {
+  async sendOTP({ phone, sessionId = null, minutes = 10, otp = null, metadata = {} }) {
   const worker = this.getAvailableWorker(sessionId);
   if (!worker) {
     const err = new Error(
@@ -502,7 +502,7 @@ generateSecureOtp(length = 6) {
   }
 
   const settings = await Setting.getGlobal();
-  const otpCode = this.generateSecureOtp(6);
+  const otpCode = otp || metadata?.otp || this.generateSecureOtp(6);
   const jid = this.formatRecipientJid(phone, settings.whatsapp?.defaultCountryCode || '91');
 
   // Format OTP message template

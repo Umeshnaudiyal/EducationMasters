@@ -134,6 +134,37 @@ export const updateSettings = async (req, res, next) => {
       }
     }
 
+    // Auth & Registration Dynamic Settings
+    if (body.authSettings) {
+      if (!settings.authSettings) {
+        settings.authSettings = {};
+      }
+      if (body.authSettings.allowNewRegistrations !== undefined) {
+        settings.authSettings.allowNewRegistrations = Boolean(body.authSettings.allowNewRegistrations);
+      }
+      if (body.authSettings.registrationClosedMessage !== undefined) {
+        settings.authSettings.registrationClosedMessage = String(body.authSettings.registrationClosedMessage).trim();
+      }
+      if (body.authSettings.googleNewUserPhoneVerification !== undefined) {
+        settings.authSettings.googleNewUserPhoneVerification = Boolean(body.authSettings.googleNewUserPhoneVerification);
+      }
+      if (body.authSettings.existingUserPhoneVerification !== undefined) {
+        settings.authSettings.existingUserPhoneVerification = Boolean(body.authSettings.existingUserPhoneVerification);
+      }
+      if (body.authSettings.manualRegistrationOtpMode !== undefined) {
+        const validModes = ['whatsapp', 'email', 'both', 'none'];
+        if (validModes.includes(body.authSettings.manualRegistrationOtpMode)) {
+          settings.authSettings.manualRegistrationOtpMode = body.authSettings.manualRegistrationOtpMode;
+        }
+      }
+      if (body.authSettings.otpExpiryMinutes !== undefined) {
+        settings.authSettings.otpExpiryMinutes = Number(body.authSettings.otpExpiryMinutes) || 10;
+      }
+      if (body.authSettings.emailOtpSubject !== undefined) {
+        settings.authSettings.emailOtpSubject = String(body.authSettings.emailOtpSubject).trim();
+      }
+    }
+
     await settings.save();
 
     // Invalidate cached transporter on SMTP updates

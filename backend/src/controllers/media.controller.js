@@ -10,6 +10,15 @@ export const uploadSingleMedia = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Please upload an image file');
   }
 
+  // Strict 200 KB Maximum Size Validation
+  const maxBytes = 200 * 1024;
+  if (file.size > maxBytes) {
+    throw new ApiError(
+      400,
+      `Image file size exceeds the maximum allowed limit of 200 KB (uploaded ${(file.size / 1024).toFixed(1)} KB). Please compress or resize the image.`
+    );
+  }
+
   const date = new Date();
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');

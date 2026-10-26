@@ -51,7 +51,7 @@ const errorHandler = (err, req, res, next) => {
   else if (err.name === 'MulterError') {
     let message = err.message;
     if (err.code === 'LIMIT_FILE_SIZE') {
-      message = 'Image file size exceeds the maximum allowed limit of 300 KB. Please compress or resize the image.';
+      message = 'Image file size exceeds the maximum allowed limit of 200 KB. Please compress or resize the image.';
     } else if (err.code === 'LIMIT_UNEXPECTED_FILE') {
       message = 'Unexpected file field encountered during upload.';
     }

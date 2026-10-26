@@ -690,11 +690,49 @@ export default function SingleArticlePage({ initialData = null }) {
     setIsBannerLoaded(false);
   }, [article?.image]);
 
+  // Protect raw HTML links from displaying target URL preview on hover before the countdown timer
+  useEffect(() => {
+    const rawContainers = document.querySelectorAll('.article-raw-html');
+    if (!rawContainers || rawContainers.length === 0) return;
+
+    rawContainers.forEach((container) => {
+      const links = container.querySelectorAll('a');
+      links.forEach((a) => {
+        const href = a.getAttribute('href') || a.getAttribute('data-href');
+        if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
+          return;
+        }
+
+        if (
+          href.includes('whatsapp.com/channel') ||
+          href.includes('t.me/educationmastersin') ||
+          href.includes('api.whatsapp.com/send') ||
+          href.includes('facebook.com/educationmastersindia')
+        ) {
+          return;
+        }
+
+        if (unlockedUrls[href]) {
+          a.setAttribute('href', href);
+          a.removeAttribute('data-href');
+          a.removeAttribute('role');
+          a.removeAttribute('tabindex');
+        } else {
+          a.setAttribute('data-href', href);
+          a.removeAttribute('href');
+          a.setAttribute('role', 'button');
+          a.setAttribute('tabindex', '0');
+          a.style.cursor = 'pointer';
+        }
+      });
+    });
+  }, [article?.content, article?.resultDetails, unlockedUrls]);
+
   const handleArticleContentClick = (e) => {
-    const link = e.target.closest('a');
+    const link = e.target.closest('a') || e.target.closest('[role="button"][data-href]');
     if (!link) return;
 
-    const href = link.getAttribute('href');
+    const href = link.getAttribute('data-href') || link.getAttribute('href');
     if (!href || href === '#' || href.startsWith('javascript:') || href.startsWith('mailto:') || href.startsWith('tel:')) {
       return;
     }
@@ -722,6 +760,10 @@ export default function SingleArticlePage({ initialData = null }) {
     );
 
     if (isInsideArticleContent) {
+      if (unlockedUrls[href]) {
+        // Link already unlocked after countdown timer; allow normal browser navigation
+        return;
+      }
       e.preventDefault();
       e.stopPropagation();
       setInternalLinkModal({
@@ -1207,28 +1249,33 @@ export default function SingleArticlePage({ initialData = null }) {
                     </Link>
                   </span>
                   <span className="text-slate-300 select-none">•</span>
-                  <span className="inline-flex items-center">
-                    In&nbsp;
-                    {isJobPage ? (
-                      <DepartmentLink
-                        job={article}
-                        showInPrefix={false}
-                        className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition"
-                      />
-                    ) : isAdmitCardPage ? (
-                      <Link href="/admit-cards" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
-                        Admit Card
-                      </Link>
-                    ) : isResultPage ? (
-                      <Link href="/results" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
-                        Result
-                      </Link>
-                    ) : (
-                      <Link href={article.categorySlug ? `/category/${article.categorySlug}` : '/category/articles'} className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
-                        {(typeof article.category === 'object' ? article.category.name : article.category) || 'Articles'}
-                      </Link>
-                    )}
-                  </span>
+                  {isJobPage ? (
+                    <DepartmentLink
+                      job={article}
+                      showInPrefix={true}
+                      prefixText="In "
+                      className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition"
+                      maxWidth="max-w-[180px] sm:max-w-[240px] md:max-w-[300px]"
+                      style={{ maxWidth: '280px' }}
+                    />
+                  ) : (
+                    <span className="inline-flex items-center">
+                      In&nbsp;
+                      {isAdmitCardPage ? (
+                        <Link href="/admit-cards" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
+                          Admit Card
+                        </Link>
+                      ) : isResultPage ? (
+                        <Link href="/results" className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
+                          Result
+                        </Link>
+                      ) : (
+                        <Link href={article.categorySlug ? `/category/${article.categorySlug}` : '/category/articles'} className="text-slate-900 font-bold underline decoration-slate-300 hover:text-blue-600 transition">
+                          {(typeof article.category === 'object' ? article.category.name : article.category) || 'Articles'}
+                        </Link>
+                      )}
+                    </span>
+                  )}
                   <span className="text-slate-300 select-none">•</span>
                   <span className="inline-flex items-center whitespace-nowrap">
                     Posted:&nbsp;<strong className="font-bold text-slate-900">{article.date}</strong>
@@ -1537,14 +1584,30 @@ export default function SingleArticlePage({ initialData = null }) {
                             Keep your registration number and DOB ready for quick access.
                           </p>
                         </div>
-                        <a
-                          href={article.resultDetails.downUrl || '#'}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded shadow-2xs transition"
-                        >
-                          Learn More →
-                        </a>
+                        {article.resultDetails.downUrl && unlockedUrls[article.resultDetails.downUrl] ? (
+                          <a
+                            href={article.resultDetails.downUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded shadow-2xs transition"
+                          >
+                            Learn More →
+                          </a>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setInternalLinkModal({
+                                isOpen: true,
+                                targetUrl: article.resultDetails.downUrl || '#',
+                                targetWindow: '_blank',
+                              })
+                            }
+                            className="shrink-0 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs px-4 py-2 rounded shadow-2xs transition cursor-pointer"
+                          >
+                            Learn More →
+                          </button>
+                        )}
                       </div>
 
                       {/* Steps List */}
@@ -1768,7 +1831,30 @@ export default function SingleArticlePage({ initialData = null }) {
                                     <tr className="hover:bg-slate-50">
                                       <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Notification Release Link</th>
                                       <td className="p-3 font-medium text-blue-600">
-                                        <a href={article.jobDetails.officialLink} target="_blank" rel="noreferrer" className="hover:underline">Click here</a>
+                                        {unlockedUrls[article.jobDetails.officialLink] ? (
+                                          <a
+                                            href={article.jobDetails.officialLink}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="hover:underline"
+                                          >
+                                            Click here
+                                          </a>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setInternalLinkModal({
+                                                isOpen: true,
+                                                targetUrl: article.jobDetails.officialLink,
+                                                targetWindow: '_blank',
+                                              })
+                                            }
+                                            className="text-blue-600 hover:underline font-medium cursor-pointer bg-transparent border-0 p-0 inline text-left"
+                                          >
+                                            Click here
+                                          </button>
+                                        )}
                                       </td>
                                     </tr>
                                   )}
@@ -1776,7 +1862,30 @@ export default function SingleArticlePage({ initialData = null }) {
                                     <tr className="hover:bg-slate-50">
                                       <th className="p-3 bg-slate-50 font-semibold text-slate-700 border-r border-slate-200">Direct Online Application Link</th>
                                       <td className="p-3 font-medium text-blue-600">
-                                        <a href={article.jobDetails.applyLink} target="_blank" rel="noreferrer" className="hover:underline">Apply now</a>
+                                        {unlockedUrls[article.jobDetails.applyLink] ? (
+                                          <a
+                                            href={article.jobDetails.applyLink}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="hover:underline"
+                                          >
+                                            Apply now
+                                          </a>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() =>
+                                              setInternalLinkModal({
+                                                isOpen: true,
+                                                targetUrl: article.jobDetails.applyLink,
+                                                targetWindow: '_blank',
+                                              })
+                                            }
+                                            className="text-blue-600 hover:underline font-medium cursor-pointer bg-transparent border-0 p-0 inline text-left"
+                                          >
+                                            Apply now
+                                          </button>
+                                        )}
                                       </td>
                                     </tr>
                                   )}

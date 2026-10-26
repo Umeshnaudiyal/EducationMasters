@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { getSecondsUntilMidnight } from '../utils/session.js';
 
 const userSchema = new mongoose.Schema(
   {
@@ -190,17 +191,13 @@ userSchema.methods.comparePassword = async function (enteredPassword) {
 };
 
 userSchema.methods.generateAuthToken = function (customExpiresIn = null) {
-  // If custom expiry is not provided, calculate seconds remaining until 12:00 AM midnight
+  // If custom expiry is not provided, calculate seconds remaining until 12:00 AM IST midnight
   let expiresIn = customExpiresIn;
   if (!expiresIn) {
     if (process.env.JWT_EXPIRES_AT_MIDNIGHT === 'false') {
       expiresIn = process.env.JWT_EXPIRES_IN || '7d';
     } else {
-      const now = new Date();
-      const midnight = new Date(now);
-      midnight.setHours(24, 0, 0, 0); // Next 00:00:00
-      const diffSec = Math.floor((midnight.getTime() - now.getTime()) / 1000);
-      expiresIn = Math.max(diffSec, 60); // In seconds
+      expiresIn = getSecondsUntilMidnight(); // In seconds until 12:00 AM IST
     }
   }
 

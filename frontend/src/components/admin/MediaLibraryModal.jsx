@@ -180,14 +180,14 @@ export default function MediaLibraryModal({
     triggerSaveMetadata({ description: val });
   };
 
-  // Upload Logic with 300 KB & Image Format Frontend Validation
+  // Upload Logic with 200 KB & Image Format Frontend Validation
   const processFiles = async (files) => {
     if (!files || files.length === 0) return;
 
     setUploadErrors([]);
     setUploadSuccessMsg(null);
 
-    // 1. Run client-side validation against 300 KB limit and allowed image formats
+    // 1. Run client-side validation against 200 KB limit and allowed image formats
     const validationResult = validateImageFiles(files, { maxSizeKB: MAX_IMAGE_SIZE_KB });
 
     if (!validationResult.allValid) {

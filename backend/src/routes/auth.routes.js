@@ -12,11 +12,13 @@ import {
   getSessionLogs,
   getDailyDashboardLogs,
   getUserCalendarHistory,
+  getAuthSettings,
 } from '../controllers/auth.controller.js';
 import { protect } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
 
+router.get('/settings', getAuthSettings);
 router.post('/register', register);
 router.post('/register-with-otp', registerWithOtp);
 router.post('/google', googleAuth);

@@ -63,6 +63,17 @@ export default function AuthModal() {
   const [resendTimer, setResendTimer] = useState(45);
   const [canResend, setCanResend] = useState(false);
 
+  // Dynamic Auth Settings from Superadmin
+  const [authSettings, setAuthSettings] = useState({
+    allowNewRegistrations: true,
+    registrationClosedMessage: 'New registrations are currently closed. Please sign in.',
+    googleNewUserPhoneVerification: true,
+    existingUserPhoneVerification: true,
+    manualRegistrationOtpMode: 'whatsapp', // 'whatsapp' | 'email' | 'both' | 'none'
+    otpExpiryMinutes: 10,
+  });
+  const [activeOtpChannel, setActiveOtpChannel] = useState('whatsapp'); // 'whatsapp' | 'email' | 'both'
+
   // UI States
   const [isLoading, setIsLoading] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
@@ -72,6 +83,35 @@ export default function AuthModal() {
 
   // Refs for OTP input boxes
   const otpInputRefs = useRef([]);
+
+  // Fetch Superadmin Login & Registration settings
+  useEffect(() => {
+    let isMounted = true;
+    const fetchAuthSettings = async () => {
+      try {
+        const res = await fetch(`${BACKEND_URL}/apis/v1/auth/settings`);
+        const json = await res.json();
+        if (isMounted && res.ok && json.success && json.data) {
+          setAuthSettings(json.data);
+          if (json.data.manualRegistrationOtpMode) {
+            setActiveOtpChannel(json.data.manualRegistrationOtpMode);
+          }
+          if (json.data.allowNewRegistrations === false) {
+            setTab('login');
+          }
+        }
+      } catch (err) {
+        // Fallback silently to defaults
+      }
+    };
+
+    if (isAuthModalOpen) {
+      fetchAuthSettings();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [isAuthModalOpen]);
 
   // Prevent Escape key from closing if mandatory
   useEffect(() => {
@@ -102,7 +142,7 @@ export default function AuthModal() {
   // Sync tab with context mode when opened
   useEffect(() => {
     if (isAuthModalOpen) {
-      setTab(authModalMode || 'register');
+      setTab(authSettings.allowNewRegistrations === false ? 'login' : (authModalMode || 'register'));
       setStep(1);
       setErrorMsg('');
       setSuccessMsg('');
@@ -111,7 +151,7 @@ export default function AuthModal() {
       setIsGoogleLoading(false);
       setOtpDigits(['', '', '', '', '', '']);
     }
-  }, [isAuthModalOpen, authModalMode]);
+  }, [isAuthModalOpen, authModalMode, authSettings.allowNewRegistrations]);
 
   // Resend Countdown Timer
   useEffect(() => {
@@ -209,31 +249,32 @@ export default function AuthModal() {
                       }
                     }
 
-                    // If OTP is requested (e.g. for new Google users or unverified accounts)
-                    if (data.data?.requiresOtp) {
-                      setGoogleUser({
-                        email: profile.email,
-                        name: profile.name,
-                        google_id: profile.sub,
-                      });
-                      setIsGoogleFlow(true);
-                      setOtpUserId(data.data?.userId || '');
-                      setOtpUserEmail(profile.email);
-                      const receivedPhone = data.data?.phone || phone || '';
-                      setOtpUserPhone(receivedPhone);
-                      if (receivedPhone) setPhone(receivedPhone);
-                      if (data.data?.otpPreview) setOtpPreview(data.data.otpPreview);
+                      // If OTP is requested (e.g. for new Google users or unverified accounts)
+                      if (data.data?.requiresOtp) {
+                        setGoogleUser({
+                          email: profile.email,
+                          name: profile.name,
+                          google_id: profile.sub,
+                        });
+                        setIsGoogleFlow(true);
+                        setOtpUserId(data.data?.userId || '');
+                        setOtpUserEmail(profile.email);
+                        const receivedPhone = data.data?.phone || phone || '';
+                        setOtpUserPhone(receivedPhone);
+                        if (receivedPhone) setPhone(receivedPhone);
+                        if (data.data?.otpChannel) setActiveOtpChannel(data.data.otpChannel);
+                        if (data.data?.otpPreview) setOtpPreview(data.data.otpPreview);
 
-                      setStep(2);
-                      setResendTimer(45);
-                      setCanResend(false);
-                      setInfoMsg(data.message || 'Please verify mobile number to activate account.');
-                      showToast({
-                        type: 'info',
-                        title: 'Mobile Verification Required',
-                        message: data.message || 'Please verify your mobile number to complete registration.',
-                      });
-                    }
+                        setStep(2);
+                        setResendTimer(45);
+                        setCanResend(false);
+                        setInfoMsg(data.message || 'Please verify mobile number to activate account.');
+                        showToast({
+                          type: 'info',
+                          title: 'Mobile Verification Required',
+                          message: data.message || 'Please verify your mobile number to complete registration.',
+                        });
+                      }
                   } else {
                     const err = data.message || 'Google authentication failed.';
                     setErrorMsg(err);
@@ -290,6 +331,19 @@ export default function AuthModal() {
     clearMessages();
 
     if (tab === 'register') {
+      // 1. Dynamic Check: Is registration allowed?
+      if (authSettings.allowNewRegistrations === false) {
+        const closedErr = authSettings.registrationClosedMessage || 'New user registrations are currently closed. If you have an account, please sign in.';
+        setErrorMsg(closedErr);
+        showToast({
+          type: 'warning',
+          title: 'Registrations Paused',
+          message: closedErr,
+          duration: 6000,
+        });
+        return;
+      }
+
       if (!fullName.trim()) {
         setErrorMsg('Please enter your full name.');
         return;
@@ -298,11 +352,21 @@ export default function AuthModal() {
         setErrorMsg('Please enter a valid email address.');
         return;
       }
+
       const cleanPhone = phone.replace(/[^0-9]/g, '');
-      if (!cleanPhone || cleanPhone.length < 10) {
-        setErrorMsg('Please enter a valid 10-digit mobile number for OTP verification.');
+      const otpMode = authSettings.manualRegistrationOtpMode || 'whatsapp';
+
+      // Mobile phone validation based on superadmin OTP mode
+      if (otpMode === 'whatsapp' || otpMode === 'both') {
+        if (!cleanPhone || cleanPhone.length < 10) {
+          setErrorMsg('Please enter a valid 10-digit mobile number for WhatsApp verification.');
+          return;
+        }
+      } else if (cleanPhone && cleanPhone.length < 10) {
+        setErrorMsg('If provided, mobile number must be at least 10 digits.');
         return;
       }
+
       if (!password || password.length < 6) {
         setErrorMsg('Password must be at least 6 characters long.');
         return;
@@ -316,7 +380,7 @@ export default function AuthModal() {
           body: JSON.stringify({
             name: fullName.trim(),
             email: email.trim().toLowerCase(),
-            phone: cleanPhone,
+            phone: cleanPhone || '',
             password,
           }),
         });
@@ -324,19 +388,49 @@ export default function AuthModal() {
         const data = await res.json();
 
         if (res.ok && data.success) {
+          // Direct sign-in without OTP (Mode: 'none')
+          if (!data.data?.requiresOtp && data.data?.token) {
+            const loginResult = await signIn('credentials', {
+              authType: 'session-token',
+              rawToken: data.data.token,
+              redirect: false,
+            });
+
+            if (loginResult?.ok) {
+              const userName = data.data.user?.name || fullName.trim() || 'Student';
+              setSuccessMsg(`Welcome, ${userName}! Your account has been created.`);
+              showToast({
+                type: 'success',
+                title: '🎉 Welcome to Education Masters!',
+                message: `Account created successfully! Full portal access unlocked.`,
+                duration: 6000,
+              });
+
+              setTimeout(() => {
+                closeAuthModal(true);
+                router.refresh();
+                if (modalOptions?.onSuccess) modalOptions.onSuccess();
+              }, 600);
+              return;
+            }
+          }
+
+          // OTP required (Modes: 'whatsapp' | 'email' | 'both')
+          const channel = data.data?.otpChannel || otpMode;
+          setActiveOtpChannel(channel);
           setOtpUserId(data.data?.userId || '');
           setOtpUserEmail(email.trim());
-          setOtpUserPhone(cleanPhone);
+          setOtpUserPhone(cleanPhone || '');
           if (data.data?.otpPreview) setOtpPreview(data.data.otpPreview);
 
           setStep(2);
           setResendTimer(45);
           setCanResend(false);
-          setInfoMsg(data.message || `OTP sent to +91 ${cleanPhone}. Please verify to activate your account.`);
+          setInfoMsg(data.message || 'Verification code sent. Please enter the 6-digit OTP to activate your account.');
           showToast({
             type: 'info',
-            title: 'OTP Verification Sent',
-            message: `A 6-digit code has been sent to +91 ${cleanPhone}.`,
+            title: channel === 'both' ? 'Dual Verification Sent' : channel === 'email' ? 'Email OTP Sent' : 'WhatsApp OTP Sent',
+            message: data.message || 'A 6-digit code has been sent to activate your account.',
           });
         } else {
           const is409 = res.status === 409 || data.message?.toLowerCase().includes('already exists') || data.message?.toLowerCase().includes('already registered');
@@ -410,11 +504,13 @@ export default function AuthModal() {
             errText.toLowerCase().includes('inactive') ||
             errText.toLowerCase().includes('pending') ||
             errText.toLowerCase().includes('phone number') ||
+            errText.toLowerCase().includes('second-step') ||
+            errText.toLowerCase().includes('verification') ||
             errText.toLowerCase().includes('otp');
 
           if (isInactive) {
             setErrorMsg(errText);
-            setInfoMsg('Account is pending verification. Requesting OTP verification...');
+            setInfoMsg('Account verification required. Requesting OTP code...');
 
             try {
               const otpReq = await fetch(`${BACKEND_URL}/apis/v1/auth/send-otp`, {
@@ -427,10 +523,12 @@ export default function AuthModal() {
                 setOtpUserId(otpData.data?.userId || '');
                 setOtpUserPhone(otpData.data?.phone || '');
                 setOtpUserEmail(email.trim());
+                if (otpData.data?.otpChannel) setActiveOtpChannel(otpData.data.otpChannel);
                 if (otpData.data?.otpPreview) setOtpPreview(otpData.data.otpPreview);
                 setStep(2);
                 setResendTimer(45);
                 setCanResend(false);
+                setInfoMsg(otpData.message || 'Please verify your code to activate your account.');
               }
             } catch (e) { }
           } else {
@@ -509,6 +607,7 @@ export default function AuthModal() {
           userId: otpUserId,
           phone: cleanPhone,
           email: otpUserEmail,
+          channel: activeOtpChannel || 'whatsapp',
         }),
       });
 
@@ -517,15 +616,16 @@ export default function AuthModal() {
         setOtpUserPhone(cleanPhone);
         setPhone(cleanPhone);
         if (data.data?.userId) setOtpUserId(data.data.userId);
+        if (data.data?.otpChannel) setActiveOtpChannel(data.data.otpChannel);
         if (data.data?.otpPreview) setOtpPreview(data.data.otpPreview);
         setResendTimer(45);
         setCanResend(false);
         setOtpDigits(['', '', '', '', '', '']);
-        setInfoMsg(`OTP code sent successfully to +91 ${cleanPhone.slice(-4).padStart(cleanPhone.length, 'X')}`);
+        setInfoMsg(data.message || `OTP code sent successfully to +91 ${cleanPhone.slice(-4).padStart(cleanPhone.length, 'X')}`);
         showToast({
           type: 'info',
           title: 'Verification Code Sent',
-          message: `OTP sent to +91 ${cleanPhone.slice(-4).padStart(cleanPhone.length, 'X')}`,
+          message: data.message || `OTP sent to +91 ${cleanPhone.slice(-4).padStart(cleanPhone.length, 'X')}`,
         });
         setTimeout(() => otpInputRefs.current[0]?.focus(), 100);
       } else {
@@ -573,13 +673,15 @@ export default function AuthModal() {
           userId: otpUserId,
           phone: otpUserPhone,
           email: otpUserEmail,
+          channel: activeOtpChannel,
         }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setInfoMsg(`A new OTP has been sent to +91 ${otpUserPhone.slice(-4).padStart(otpUserPhone.length, 'X')}`);
+        setInfoMsg(data.message || 'A new verification code has been dispatched.');
         if (data.data?.otpPreview) setOtpPreview(data.data.otpPreview);
+        if (data.data?.otpChannel) setActiveOtpChannel(data.data.otpChannel);
         setResendTimer(45);
         setCanResend(false);
         setOtpDigits(['', '', '', '', '', '']);
@@ -587,7 +689,7 @@ export default function AuthModal() {
         showToast({
           type: 'info',
           title: 'OTP Resent',
-          message: `New code sent to +91 ${otpUserPhone.slice(-4).padStart(otpUserPhone.length, 'X')}`,
+          message: data.message || 'New verification code sent.',
         });
       } else {
         const err = data.message || 'Failed to resend OTP. Please try again.';
@@ -774,6 +876,11 @@ export default function AuthModal() {
                 >
                   <AnimatedUser size={15} className={tab === 'register' ? 'text-blue-600' : 'text-slate-400'} />
                   <span>Create Account</span>
+                  {authSettings.allowNewRegistrations === false && (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded-full bg-amber-100 text-amber-800 font-extrabold uppercase tracking-tight">
+                      Paused
+                    </span>
+                  )}
                 </button>
                 <button
                   type="button"
@@ -791,212 +898,278 @@ export default function AuthModal() {
                 </button>
               </div>
 
-              {/* Official Google Sign-In Button */}
-              <div>
-                <button
-                  type="button"
-                  onClick={handleOfficialGoogleSignIn}
-                  disabled={isGoogleLoading || isLoading}
-                  className="group w-full py-2.5 sm:py-3 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-[0.99] text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xs hover:shadow-xs transition-all duration-150 disabled:opacity-60 cursor-pointer"
-                >
-                  {isGoogleLoading ? (
-                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                  ) : (
-                    <svg className="w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-105" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
-                  )}
-                  <span>
-                    {tab === 'register' ? 'Sign up with Google (Fast & Free)' : 'Sign in with Google'}
-                  </span>
-                </button>
-              </div>
+              {/* If Registration is paused and user is on 'register' tab */}
+              {tab === 'register' && authSettings.allowNewRegistrations === false ? (
+                <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 text-amber-950 flex flex-col gap-3 shadow-xs animate-in fade-in duration-200">
+                  <div className="flex items-start gap-3">
+                    <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0 mt-0.5 shadow-2xs">
+                      <ShieldAlert className="w-5 h-5 text-amber-600" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h4 className="text-sm font-black text-amber-950 leading-tight">
+                        Registration Temporarily Closed
+                      </h4>
+                      <p className="text-xs text-amber-900/85 mt-1 leading-relaxed">
+                        {authSettings.registrationClosedMessage || 'New user registrations are currently closed by administrator. Please check back later or log in to an existing account.'}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setTab('login')}
+                    className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs shadow-md shadow-blue-500/20 active:scale-[0.99] transition cursor-pointer flex items-center justify-center gap-2"
+                  >
+                    <AnimatedLogIn size={14} className="text-white" />
+                    <span>Already have an account? Sign In</span>
+                  </button>
+                </div>
+              ) : (
+                <>
+                  {/* Official Google Sign-In Button */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={handleOfficialGoogleSignIn}
+                      disabled={isGoogleLoading || isLoading}
+                      className="group w-full py-2.5 sm:py-3 px-3.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-300 active:scale-[0.99] text-slate-700 font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-2xs hover:shadow-xs transition-all duration-150 disabled:opacity-60 cursor-pointer"
+                    >
+                      {isGoogleLoading ? (
+                        <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                      ) : (
+                        <svg className="w-4.5 h-4.5 shrink-0 transition-transform duration-200 group-hover:scale-105" viewBox="0 0 24 24">
+                          <path
+                            fill="#4285F4"
+                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                          />
+                          <path
+                            fill="#34A853"
+                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                          />
+                          <path
+                            fill="#FBBC05"
+                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                          />
+                          <path
+                            fill="#EA4335"
+                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                          />
+                        </svg>
+                      )}
+                      <span>
+                        {tab === 'register' ? 'Sign up with Google (Fast & Free)' : 'Sign in with Google'}
+                      </span>
+                    </button>
+                  </div>
 
-              {/* Divider */}
-              <div className="relative flex items-center justify-center my-3.5 sm:my-4 py-0.5">
-                <div className="w-full border-t border-slate-200" />
-                <span className="absolute bg-white px-3 text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
-                  or with email
-                </span>
-              </div>
+                  {/* Divider */}
+                  <div className="relative flex items-center justify-center my-3.5 sm:my-4 py-0.5">
+                    <div className="w-full border-t border-slate-200" />
+                    <span className="absolute bg-white px-3 text-[10.5px] font-bold text-slate-400 uppercase tracking-wider">
+                      or with email
+                    </span>
+                  </div>
 
-              {/* Main Form */}
-              <form onSubmit={handleFormSubmit} className="space-y-2.5 sm:space-y-3">
+                  {/* Main Form */}
+                  <form onSubmit={handleFormSubmit} className="space-y-2.5 sm:space-y-3">
 
-                {tab === 'register' ? (
-                  <>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                      {/* Full Name */}
+                    {tab === 'register' ? (
+                      <>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
+                          {/* Full Name */}
+                          <div className="space-y-1">
+                            <label className="block text-[11.5px] sm:text-xs font-bold text-slate-700">
+                              Full Name <span className="text-rose-500">*</span>
+                            </label>
+                            <div className="group relative flex items-center">
+                              <div className="absolute left-3 flex items-center justify-center text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none">
+                                <AnimatedUser size={15} />
+                              </div>
+                              <input
+                                type="text"
+                                required
+                                value={fullName}
+                                onChange={(e) => setFullName(e.target.value)}
+                                placeholder="e.g. Rahul Sharma"
+                                className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Mobile Number (Dynamic Requirement & Badge) */}
+                          <div className="space-y-1">
+                            <div className="flex items-center justify-between">
+                              <label className="text-[11.5px] sm:text-xs font-bold text-slate-700">
+                                Mobile Number{' '}
+                                {(authSettings.manualRegistrationOtpMode === 'whatsapp' || authSettings.manualRegistrationOtpMode === 'both') ? (
+                                  <span className="text-rose-500">*</span>
+                                ) : (
+                                  <span className="text-slate-400 font-normal">(Optional)</span>
+                                )}
+                              </label>
+                              <span
+                                className={`text-[9.5px] font-bold px-1.5 py-0.2 rounded border ${
+                                  authSettings.manualRegistrationOtpMode === 'whatsapp'
+                                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                                    : authSettings.manualRegistrationOtpMode === 'both'
+                                    ? 'text-purple-700 bg-purple-50 border-purple-200'
+                                    : authSettings.manualRegistrationOtpMode === 'email'
+                                    ? 'text-blue-700 bg-blue-50 border-blue-200'
+                                    : 'text-slate-600 bg-slate-100 border-slate-200'
+                                }`}
+                              >
+                                {authSettings.manualRegistrationOtpMode === 'whatsapp'
+                                  ? 'WhatsApp OTP'
+                                  : authSettings.manualRegistrationOtpMode === 'both'
+                                  ? 'WhatsApp & Email OTP'
+                                  : authSettings.manualRegistrationOtpMode === 'email'
+                                  ? 'Email OTP Only'
+                                  : 'Direct Sign In'}
+                              </span>
+                            </div>
+                            <div className="group relative flex items-center">
+                              <div className="absolute left-3 flex items-center gap-1 text-xs font-bold text-slate-600 pr-1.5 border-r border-slate-200 group-focus-within:text-blue-600 transition-colors pointer-events-none">
+                                <AnimatedPhone size={13} />
+                                <span>+91</span>
+                              </div>
+                              <input
+                                type="tel"
+                                required={authSettings.manualRegistrationOtpMode === 'whatsapp' || authSettings.manualRegistrationOtpMode === 'both'}
+                                maxLength={10}
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
+                                placeholder="Enter mobile number"
+                                className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-18 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Email Address */}
+                        <div className="space-y-1">
+                          <label className="block text-[11.5px] sm:text-xs font-bold text-slate-700">
+                            Email Address <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="group relative flex items-center">
+                            <div className="absolute left-3 flex items-center justify-center text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none">
+                              <AnimatedMail size={15} />
+                            </div>
+                            <input
+                              type="email"
+                              required
+                              value={email}
+                              onChange={(e) => setEmail(e.target.value)}
+                              placeholder="name@example.com"
+                              className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
+                            />
+                          </div>
+                        </div>
+                      </>
+                    ) : (
+                      /* Login Tab: Email Address */
                       <div className="space-y-1">
                         <label className="block text-[11.5px] sm:text-xs font-bold text-slate-700">
-                          Full Name <span className="text-rose-500">*</span>
+                          Email Address <span className="text-rose-500">*</span>
                         </label>
                         <div className="group relative flex items-center">
                           <div className="absolute left-3 flex items-center justify-center text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none">
-                            <AnimatedUser size={15} />
+                            <AnimatedMail size={15} />
                           </div>
                           <input
-                            type="text"
+                            type="email"
                             required
-                            value={fullName}
-                            onChange={(e) => setFullName(e.target.value)}
-                            placeholder="e.g. Rahul Sharma"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            placeholder="name@example.com"
                             className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
                           />
                         </div>
                       </div>
+                    )}
 
-                      {/* Mobile Number */}
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between">
-                          <label className="text-[11.5px] sm:text-xs font-bold text-slate-700">
-                            Mobile Number <span className="text-rose-500">*</span>
-                          </label>
-                          <span className="text-[9.5px] text-blue-600 font-bold bg-blue-50 px-1.5 py-0.2 rounded border border-blue-100">
-                            Requires OTP
-                          </span>
-                        </div>
-                        <div className="group relative flex items-center">
-                          <div className="absolute left-3 flex items-center gap-1 text-xs font-bold text-slate-600 pr-1.5 border-r border-slate-200 group-focus-within:text-blue-600 transition-colors pointer-events-none">
-                            <AnimatedPhone size={13} />
-                            <span>+91</span>
-                          </div>
-                          <input
-                            type="tel"
-                            required
-                            maxLength={10}
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, ''))}
-                            placeholder="Enter mobile number"
-                            className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-18 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
-                          />
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Email Address */}
+                    {/* Password Field */}
                     <div className="space-y-1">
-                      <label className="block text-[11.5px] sm:text-xs font-bold text-slate-700">
-                        Email Address <span className="text-rose-500">*</span>
-                      </label>
+                      <div className="flex items-center justify-between">
+                        <label className="text-[11.5px] sm:text-xs font-bold text-slate-700">
+                          Password <span className="text-rose-500">*</span>
+                        </label>
+                        {tab === 'login' && (
+                          <button
+                            type="button"
+                            onClick={() => alert('Please contact administrator to reset password or sign in with Google.')}
+                            className="text-[10.5px] sm:text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer"
+                          >
+                            Forgot password?
+                          </button>
+                        )}
+                      </div>
                       <div className="group relative flex items-center">
                         <div className="absolute left-3 flex items-center justify-center text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none">
-                          <AnimatedMail size={15} />
+                          <AnimatedLock size={15} />
                         </div>
                         <input
-                          type="email"
+                          type={showPassword ? 'text' : 'password'}
                           required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="name@example.com"
-                          className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          placeholder={tab === 'register' ? 'Create password (min 6 chars)' : 'Enter your password'}
+                          className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-9 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
                         />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 text-slate-400 hover:text-slate-600 active:scale-90 transition p-1 cursor-pointer"
+                          aria-label={showPassword ? 'Hide password' : 'Show password'}
+                        >
+                          {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
                       </div>
                     </div>
-                  </>
-                ) : (
-                  /* Login Tab: Email Address */
-                  <div className="space-y-1">
-                    <label className="block text-[11.5px] sm:text-xs font-bold text-slate-700">
-                      Email Address <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="group relative flex items-center">
-                      <div className="absolute left-3 flex items-center justify-center text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none">
-                        <AnimatedMail size={15} />
-                      </div>
-                      <input
-                        type="email"
-                        required
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        placeholder="name@example.com"
-                        className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-3 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
-                      />
-                    </div>
-                  </div>
-                )}
 
-                {/* Password Field */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between">
-                    <label className="text-[11.5px] sm:text-xs font-bold text-slate-700">
-                      Password <span className="text-rose-500">*</span>
-                    </label>
-                    {tab === 'login' && (
-                      <button
-                        type="button"
-                        onClick={() => alert('Please contact administrator to reset password or sign in with Google.')}
-                        className="text-[10.5px] sm:text-[11px] font-semibold text-blue-600 hover:text-blue-800 transition cursor-pointer"
-                      >
-                        Forgot password?
-                      </button>
+                    {/* Disclaimer Note */}
+                    {tab === 'register' && (
+                      <p className="text-[10.5px] sm:text-[11px] text-slate-500 leading-snug pt-0.5">
+                        {authSettings.manualRegistrationOtpMode === 'none'
+                          ? 'By signing up, you agree to Education Masters Terms. Your account activates immediately with instant access.'
+                          : authSettings.manualRegistrationOtpMode === 'email'
+                          ? 'By signing up, you agree to Education Masters Terms. In Step 2, a 6-digit OTP sent to your email verifies your account.'
+                          : authSettings.manualRegistrationOtpMode === 'both'
+                          ? 'By signing up, you agree to Education Masters Terms. In Step 2, a 6-digit OTP sent to WhatsApp and Email activates your account.'
+                          : 'By signing up, you agree to Education Masters Terms. In Step 2, a 6-digit OTP sent to WhatsApp verifies your account.'}
+                      </p>
                     )}
-                  </div>
-                  <div className="group relative flex items-center">
-                    <div className="absolute left-3 flex items-center justify-center text-slate-400 group-focus-within:text-blue-600 transition-colors pointer-events-none">
-                      <AnimatedLock size={15} />
-                    </div>
-                    <input
-                      type={showPassword ? 'text' : 'password'}
-                      required
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      placeholder={tab === 'register' ? 'Create password (min 6 chars)' : 'Enter your password'}
-                      className="w-full bg-slate-50/80 hover:bg-slate-50 focus:bg-white text-slate-900 placeholder-slate-400 text-xs sm:text-sm pl-9 pr-9 py-2 sm:py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-600 focus:ring-3 focus:ring-blue-100 transition-all font-medium"
-                    />
+
+                    {/* Submit Action Button */}
                     <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 text-slate-400 hover:text-slate-600 active:scale-90 transition p-1 cursor-pointer"
-                      aria-label={showPassword ? 'Hide password' : 'Show password'}
+                      type="submit"
+                      disabled={isLoading || isGoogleLoading}
+                      className="group w-full py-2.5 sm:py-3 px-5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all duration-150 disabled:opacity-60 cursor-pointer mt-1"
                     >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      {isLoading ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin text-white" />
+                          <span>{tab === 'register' ? 'Creating Account...' : 'Signing In...'}</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>
+                            {tab === 'register'
+                              ? authSettings.manualRegistrationOtpMode === 'whatsapp'
+                                ? 'Continue & Send WhatsApp OTP'
+                                : authSettings.manualRegistrationOtpMode === 'email'
+                                ? 'Continue & Send Email OTP'
+                                : authSettings.manualRegistrationOtpMode === 'both'
+                                ? 'Continue & Send Dual OTP'
+                                : 'Create Account & Sign In'
+                              : 'Sign In to Portal'}
+                          </span>
+                          <AnimatedArrowRight size={15} className="text-white group-hover:translate-x-1 transition-transform" />
+                        </>
+                      )}
                     </button>
-                  </div>
-                </div>
 
-                {/* Disclaimer Note */}
-                {tab === 'register' && (
-                  <p className="text-[10.5px] sm:text-[11px] text-slate-500 leading-snug pt-0.5">
-                    By signing up, you agree to Education Masters Terms. In Step 2, a 6-digit OTP verifies and activates your account.
-                  </p>
-                )}
-
-                {/* Submit Action Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading || isGoogleLoading}
-                  className="group w-full py-2.5 sm:py-3 px-5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-500 hover:via-indigo-500 hover:to-blue-600 active:scale-[0.99] text-white font-extrabold text-xs sm:text-sm shadow-md shadow-blue-600/20 flex items-center justify-center gap-2 transition-all duration-150 disabled:opacity-60 cursor-pointer mt-1"
-                >
-                  {isLoading ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin text-white" />
-                      <span>{tab === 'register' ? 'Creating Account...' : 'Signing In...'}</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>{tab === 'register' ? 'Continue & Send OTP' : 'Sign In to Portal'}</span>
-                      <AnimatedArrowRight size={15} className="text-white group-hover:translate-x-1 transition-transform" />
-                    </>
-                  )}
-                </button>
-
-              </form>
+                  </form>
+                </>
+              )}
 
             </div>
           )}
@@ -1009,39 +1182,84 @@ export default function AuthModal() {
 
               <div className="text-center space-y-2">
                 <div className="w-12 h-12 sm:w-14 sm:h-14 mx-auto rounded-2xl bg-gradient-to-br from-blue-50 to-indigo-50 text-blue-600 border border-blue-100 flex items-center justify-center shadow-2xs">
-                  <AnimatedKeyRound size={24} className="text-blue-600" />
+                  {activeOtpChannel === 'email' ? (
+                    <AnimatedMail size={24} className="text-blue-600" />
+                  ) : activeOtpChannel === 'both' ? (
+                    <div className="flex items-center gap-1">
+                      <AnimatedPhone size={18} className="text-emerald-600" />
+                      <AnimatedMail size={18} className="text-blue-600" />
+                    </div>
+                  ) : (
+                    <AnimatedKeyRound size={24} className="text-blue-600" />
+                  )}
                 </div>
+
                 <h4 className="text-base sm:text-lg font-extrabold text-slate-900 tracking-tight">
-                  {otpUserPhone && otpUserPhone.length >= 10
-                    ? 'Verify OTP to Activate Account'
-                    : 'Mobile Number Verification'}
+                  {activeOtpChannel === 'email'
+                    ? 'Verify Email OTP'
+                    : activeOtpChannel === 'both'
+                    ? 'Dual Verification (WhatsApp & Email)'
+                    : (otpUserPhone && otpUserPhone.length >= 10
+                      ? 'Verify WhatsApp OTP'
+                      : 'Mobile Number Verification')}
                 </h4>
+
                 <p className="text-xs text-slate-600 max-w-xs mx-auto leading-relaxed">
-                  {otpUserPhone && otpUserPhone.length >= 10
-                    ? 'Please enter the 6-digit verification code sent to your mobile number:'
-                    : 'Please provide your 10-digit mobile number to receive your one-time activation code:'}
+                  {activeOtpChannel === 'email'
+                    ? 'Please enter the 6-digit verification code sent to your email address:'
+                    : activeOtpChannel === 'both'
+                    ? 'A 6-digit verification code has been dispatched to your WhatsApp and Email address:'
+                    : (otpUserPhone && otpUserPhone.length >= 10
+                      ? 'Please enter the 6-digit verification code sent to your WhatsApp number:'
+                      : 'Please provide your 10-digit mobile number to receive your one-time activation code:')}
                 </p>
-                {otpUserPhone && otpUserPhone.length >= 10 && (
-                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-800 border border-slate-200">
-                    <AnimatedPhone size={13} className="text-blue-600" />
-                    <span>+91 {otpUserPhone}</span>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setOtpUserPhone('');
-                        setOtpDigits(['', '', '', '', '', '']);
-                        setOtpPreview('');
-                      }}
-                      className="text-xs text-blue-600 hover:text-blue-800 underline font-bold cursor-pointer ml-1"
-                    >
-                      (Change)
-                    </button>
-                  </div>
-                )}
+
+                {/* Badges for targets */}
+                <div className="flex flex-wrap items-center justify-center gap-1.5 pt-1">
+                  {activeOtpChannel === 'email' ? (
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-blue-50 text-blue-900 rounded-full text-xs font-bold border border-blue-200">
+                      <AnimatedMail size={13} className="text-blue-600" />
+                      <span>{otpUserEmail}</span>
+                    </div>
+                  ) : activeOtpChannel === 'both' ? (
+                    <>
+                      {otpUserPhone && (
+                        <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 text-emerald-900 rounded-full text-xs font-bold border border-emerald-200">
+                          <AnimatedPhone size={12} className="text-emerald-600" />
+                          <span>+91 {otpUserPhone}</span>
+                        </div>
+                      )}
+                      {otpUserEmail && (
+                        <div className="inline-flex items-center gap-1 px-2.5 py-1 bg-blue-50 text-blue-900 rounded-full text-xs font-bold border border-blue-200">
+                          <AnimatedMail size={12} className="text-blue-600" />
+                          <span>{otpUserEmail}</span>
+                        </div>
+                      )}
+                    </>
+                  ) : (
+                    otpUserPhone && otpUserPhone.length >= 10 && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100 rounded-full text-xs font-bold text-slate-800 border border-slate-200">
+                        <AnimatedPhone size={13} className="text-blue-600" />
+                        <span>+91 {otpUserPhone}</span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setOtpUserPhone('');
+                            setOtpDigits(['', '', '', '', '', '']);
+                            setOtpPreview('');
+                          }}
+                          className="text-xs text-blue-600 hover:text-blue-800 underline font-bold cursor-pointer ml-1"
+                        >
+                          (Change)
+                        </button>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
 
-              {/* If Phone Number has not been entered / OTP not yet sent */}
-              {(!otpUserPhone || otpUserPhone.length < 10) ? (
+              {/* If Phone Number has not been entered / OTP not yet sent (Only needed if channel requires phone) */}
+              {activeOtpChannel !== 'email' && (!otpUserPhone || otpUserPhone.length < 10) ? (
                 <form onSubmit={handleSendStep2PhoneOtp} className="space-y-3.5 max-w-sm mx-auto w-full">
                   <div className="space-y-1.5 text-left">
                     <label className="block text-xs font-bold text-slate-800">

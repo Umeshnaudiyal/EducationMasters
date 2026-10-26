@@ -229,6 +229,10 @@ export default function UserSessionLogsPage() {
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '—';
+      if (d.toISOString().endsWith('T00:00:00.000Z')) {
+        const prevDay = new Date(d.getTime() - 1000);
+        return `${prevDay.toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}, 12:00:00 am`;
+      }
       return d.toLocaleString('en-IN', {
         day: 'numeric',
         month: 'short',
@@ -243,11 +247,22 @@ export default function UserSessionLogsPage() {
     }
   };
 
-  const formatTimeOnly = (dateStr) => {
+  const formatTimeOnly = (dateStr, isSystemLogout = false) => {
     if (!dateStr) return '';
     try {
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return '';
+      if (isSystemLogout || d.toISOString().endsWith('T00:00:00.000Z')) {
+        const timeFormatted = d.toLocaleTimeString('en-IN', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true,
+        });
+        if (timeFormatted === '05:30 am') {
+          return '12:00 am';
+        }
+        return timeFormatted;
+      }
       return d.toLocaleTimeString('en-IN', {
         hour: '2-digit',
         minute: '2-digit',
@@ -1037,7 +1052,9 @@ export default function UserSessionLogsPage() {
                       lastSession?.status === 'expired' ||
                       (d.lastLogout && (
                         (new Date(d.lastLogout).getHours() === 0 && new Date(d.lastLogout).getMinutes() === 0) ||
-                        (new Date(d.lastLogout).getHours() === 23 && new Date(d.lastLogout).getMinutes() === 59)
+                        (new Date(d.lastLogout).getHours() === 23 && new Date(d.lastLogout).getMinutes() === 59) ||
+                        new Date(d.lastLogout).toISOString().endsWith('T18:30:00.000Z') ||
+                        new Date(d.lastLogout).toISOString().endsWith('T00:00:00.000Z')
                       )) ||
                       (!isToday && d.firstLogin && !d.lastLogout)
                     );
@@ -1113,7 +1130,7 @@ export default function UserSessionLogsPage() {
                               <span className="text-slate-400 text-[8px]">⇥</span>
                               <span>
                                 {d.lastLogout
-                                  ? formatTimeOnly(d.lastLogout)
+                                  ? formatTimeOnly(d.lastLogout, isSystemLogout)
                                   : badgeType === 'active'
                                   ? 'active'
                                   : '—'}

@@ -149,6 +149,15 @@ export default function AdminSettingsPage() {
       otpTemplate: 'Your verification OTP for Education Masters is: *{{OTP}}*\n\nThis OTP is valid for {{MINUTES}} minutes. Please do not share this OTP with anyone.\n\nThank you,\nEducation Masters Team',
       autoReconnect: true,
     },
+    authSettings: {
+      allowNewRegistrations: true,
+      registrationClosedMessage: 'New user registration is currently closed. If you already have an account, please sign in.',
+      googleNewUserPhoneVerification: true,
+      existingUserPhoneVerification: false,
+      manualRegistrationOtpMode: 'whatsapp',
+      otpExpiryMinutes: 10,
+      emailOtpSubject: '🔐 Your Education Masters Verification Code',
+    },
   });
 
   const [showSmtpPassword, setShowSmtpPassword] = useState(false);
@@ -254,6 +263,10 @@ export default function AdminSettingsPage() {
             ...prev.whatsapp,
             ...(d.whatsapp || {}),
           },
+          authSettings: {
+            ...prev.authSettings,
+            ...(d.authSettings || {}),
+          },
         }));
       }
     } catch (err) {
@@ -297,6 +310,15 @@ export default function AdminSettingsPage() {
             otpExpiryMinutes: Number(formData.whatsapp?.otpExpiryMinutes) || 10,
             otpTemplate: formData.whatsapp?.otpTemplate,
             autoReconnect: Boolean(formData.whatsapp?.autoReconnect),
+          },
+          authSettings: {
+            allowNewRegistrations: Boolean(formData.authSettings?.allowNewRegistrations),
+            registrationClosedMessage: formData.authSettings?.registrationClosedMessage || '',
+            googleNewUserPhoneVerification: Boolean(formData.authSettings?.googleNewUserPhoneVerification),
+            existingUserPhoneVerification: Boolean(formData.authSettings?.existingUserPhoneVerification),
+            manualRegistrationOtpMode: formData.authSettings?.manualRegistrationOtpMode || 'whatsapp',
+            otpExpiryMinutes: Number(formData.authSettings?.otpExpiryMinutes) || 10,
+            emailOtpSubject: formData.authSettings?.emailOtpSubject || '🔐 Your Education Masters Verification Code',
           },
         }),
       });
@@ -777,6 +799,7 @@ export default function AdminSettingsPage() {
 
   const tabs = [
     { id: 'general', label: 'General Portal', icon: Globe },
+    { id: 'login', label: 'Login & Registration', icon: ShieldCheck },
     { id: 'whatsapp', label: 'WhatsApp Pool', icon: MessageSquare },
     { id: 'smtp', label: 'Global SMTP', icon: Mail },
     { id: 'seo', label: 'SEO Defaults', icon: Layers },
@@ -795,13 +818,12 @@ export default function AdminSettingsPage() {
       {/* Toast / Status Notification Alert */}
       {statusNotification && (
         <div
-          className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 shadow-md animate-in fade-in slide-in-from-top-2 duration-200 z-50 ${
-            statusNotification.type === 'success'
-              ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-              : statusNotification.type === 'error'
+          className={`p-3.5 rounded-xl border flex items-start justify-between gap-3 shadow-md animate-in fade-in slide-in-from-top-2 duration-200 z-50 ${statusNotification.type === 'success'
+            ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+            : statusNotification.type === 'error'
               ? 'bg-rose-50 border-rose-300 text-rose-950'
               : 'bg-blue-50 border-blue-300 text-blue-950'
-          }`}
+            }`}
         >
           <div className="flex items-start gap-2.5">
             {statusNotification.type === 'success' ? (
@@ -931,21 +953,19 @@ export default function AdminSettingsPage() {
             <button
               key={t.id}
               onClick={() => setActiveTab(t.id)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${
-                isActive
-                  ? 'bg-blue-600 text-white shadow-sm'
-                  : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
-              }`}
+              className={`flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-bold transition-all whitespace-nowrap cursor-pointer ${isActive
+                ? 'bg-blue-600 text-white shadow-sm'
+                : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                }`}
             >
               <Icon size={14} />
               <span>{t.label}</span>
               {t.badge && (
                 <span
-                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${
-                    isActive
-                      ? 'bg-white/20 text-white'
-                      : 'bg-blue-100 text-blue-700'
-                  }`}
+                  className={`text-[10px] px-1.5 py-0.2 rounded-full font-extrabold ${isActive
+                    ? 'bg-white/20 text-white'
+                    : 'bg-blue-100 text-blue-700'
+                    }`}
                 >
                   {t.badge}
                 </span>
@@ -1010,7 +1030,432 @@ export default function AdminSettingsPage() {
         )}
 
         {/* ============================================================ */}
-        {/* TAB 2: SEO DEFAULTS */}
+        {/* TAB: LOGIN & REGISTRATION DYNAMIC CONTROLS */}
+        {/* ============================================================ */}
+        {activeTab === 'login' && (
+          <div className="space-y-6 animate-in fade-in duration-200">
+            {/* Header Summary Card */}
+            <div className=" rounded-xl p-5 sm:p-6  shadow-lg border border-blue-800/40 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="inline-flex items-center gap-2 px-2.5 py-0.5 rounded-full bg-blue-500/20  text-xs font-bold border border-blue-400/30">
+                  <ShieldCheck className="w-3.5 h-3.5" />
+                  <span>Security & Authentication Governance</span>
+                </div>
+                <h2 className="text-lg sm:text-xl font-black tracking-tight">
+                  Dynamic Login, Registration & Verification Controls
+                </h2>
+
+              </div>
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={savingSettings}
+                className="shrink-0 px-4 py-2 bg-blue-500 hover:bg-blue-400 active:scale-95 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer flex items-center gap-1.5"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingSettings ? 'Saving...' : 'Save Login Settings'}</span>
+              </button>
+            </div>
+
+            {/* 1. New User Registration Switch */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-blue-600" />
+                    <h3 className="text-sm font-bold text-slate-900">New User Registration Gatekeeper</h3>
+                  </div>
+                  <p className="text-xs text-slate-500 font-normal">
+                    Master switch to allow new accounts to register or stop registrations completely.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <span
+                    className={`text-[11px] font-extrabold px-2.5 py-1 rounded-full ${formData.authSettings?.allowNewRegistrations
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-rose-100 text-rose-800 border border-rose-200'
+                      }`}
+                  >
+                    {formData.authSettings?.allowNewRegistrations ? 'REGISTRATIONS OPEN' : 'REGISTRATIONS STOPPED'}
+                  </span>
+                  <label className="relative inline-flex items-center cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(formData.authSettings?.allowNewRegistrations)}
+                      onChange={(e) =>
+                        setFormData({
+                          ...formData,
+                          authSettings: {
+                            ...formData.authSettings,
+                            allowNewRegistrations: e.target.checked,
+                          },
+                        })
+                      }
+                      className="sr-only peer"
+                    />
+                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-600"></div>
+                  </label>
+                </div>
+              </div>
+
+              {!formData.authSettings?.allowNewRegistrations && (
+                <div className="p-3.5 bg-rose-50/80 rounded-xl border border-rose-200 space-y-2">
+                  <div className="flex items-center gap-2 text-rose-900 font-bold text-xs">
+                    <ShieldAlert className="w-4 h-4 text-rose-600 shrink-0" />
+                    <span>Registration Closed Message Shown to New Visitors</span>
+                  </div>
+                  <input
+                    type="text"
+                    value={formData.authSettings?.registrationClosedMessage || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        authSettings: {
+                          ...formData.authSettings,
+                          registrationClosedMessage: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="New user registration is currently closed. If you already have an account, please sign in."
+                    className="w-full text-xs p-2.5 bg-white border border-rose-300 rounded-lg text-slate-800 focus:outline-none focus:ring-2 focus:ring-rose-400"
+                  />
+                  <p className="text-[11px] text-rose-700">
+                    Existing users can continue to log in without disruption. New users trying to sign up manually or with Google will see this message.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* 2. Google Login Second-Step Verification Section */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                    <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                    <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                    <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z" />
+                    <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z" />
+                  </svg>
+                  <h3 className="text-sm font-bold text-slate-900">Google Sign-In Second-Step Mobile Verification</h3>
+                </div>
+                <p className="text-xs text-slate-500 font-normal">
+                  Configure whether Google OAuth sign-ins require second-step mobile OTP verification.
+                </p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* 2A: For NEW Google Users */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition flex flex-col justify-between space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">For NEW Users (First-Time Google Sign-Up)</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(formData.authSettings?.googleNewUserPhoneVerification)}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              authSettings: {
+                                ...formData.authSettings,
+                                googleNewUserPhoneVerification: e.target.checked,
+                              },
+                            })
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                      </label>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                      When <strong className="text-slate-900">ENABLED</strong>, new users signing up via Google must provide and verify their mobile number in Step 2.
+                    </p>
+                    <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                      When <strong className="text-slate-900">DISABLED</strong>, new Google sign-ups log in immediately with their Google profile (Step 2 is bypassed).
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200/80">
+                    <span
+                      className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${formData.authSettings?.googleNewUserPhoneVerification
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-slate-200 text-slate-700'
+                        }`}
+                    >
+                      {formData.authSettings?.googleNewUserPhoneVerification ? '✔ Step 2 Mobile Required' : '⚡ 1-Click Instant Login'}
+                    </span>
+                  </div>
+                </div>
+
+                {/* 2B: For EXISTING / OLD Users with Unverified Phone */}
+                <div className="p-4 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-slate-50 transition flex flex-col justify-between space-y-3">
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-slate-800">For OLD / EXISTING Users (Unverified Phone)</span>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={Boolean(formData.authSettings?.existingUserPhoneVerification)}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              authSettings: {
+                                ...formData.authSettings,
+                                existingUserPhoneVerification: e.target.checked,
+                              },
+                            })
+                          }
+                          className="sr-only peer"
+                        />
+                        <div className="w-10 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+                      </label>
+                    </div>
+                    <p className="text-xs text-slate-600 leading-relaxed font-normal">
+                      When <strong className="text-slate-900">ENABLED</strong>, any existing account that does not have a verified phone number will be stopped on login to verify their mobile via OTP.
+                    </p>
+                    <p className="text-xs text-slate-500 leading-relaxed font-normal">
+                      When <strong className="text-slate-900">DISABLED</strong>, existing accounts can log in directly without being blocked for phone verification.
+                    </p>
+                  </div>
+                  <div className="pt-2 border-t border-slate-200/80">
+                    <span
+                      className={`inline-flex items-center gap-1 text-[11px] font-bold px-2 py-0.5 rounded-md ${formData.authSettings?.existingUserPhoneVerification
+                        ? 'bg-amber-100 text-amber-800'
+                        : 'bg-slate-200 text-slate-700'
+                        }`}
+                    >
+                      {formData.authSettings?.existingUserPhoneVerification ? '⚠ Verification Enforced on Login' : '✔ Phone Verification Optional'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3. Manual Registration OTP Delivery Mode */}
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Smartphone className="w-4 h-4 text-indigo-600" />
+                  <h3 className="text-sm font-bold text-slate-900">Manual Registration OTP Delivery Channel</h3>
+                </div>
+                <p className="text-xs text-slate-500 font-normal">
+                  Select which channel is used to deliver the one-time password (OTP) when users sign up by manually typing their email and details.
+                </p>
+              </div>
+
+              {/* 4 Dynamic Mode Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {/* Mode 1: WhatsApp OTP */}
+                <div
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      authSettings: {
+                        ...formData.authSettings,
+                        manualRegistrationOtpMode: 'whatsapp',
+                      },
+                    })
+                  }
+                  className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 ${formData.authSettings?.manualRegistrationOtpMode === 'whatsapp'
+                    ? 'border-emerald-500 bg-emerald-50/50 shadow-xs'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="w-8 h-8 rounded-lg bg-[#25D366]/15 text-[#25D366] flex items-center justify-center font-bold">
+                        <MessageSquare className="w-4 h-4 text-[#25D366]" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.2 rounded">
+                        WhatsApp
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-900">WhatsApp OTP</h4>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      Delivers OTP to the user&apos;s mobile number via connected WhatsApp pool. Fast and high open-rate.
+                    </p>
+                  </div>
+                  <div className="flex items-center text-xs font-bold text-emerald-700 pt-1">
+                    {formData.authSettings?.manualRegistrationOtpMode === 'whatsapp' ? '● Active Channel' : 'Select'}
+                  </div>
+                </div>
+
+                {/* Mode 2: Email OTP */}
+                <div
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      authSettings: {
+                        ...formData.authSettings,
+                        manualRegistrationOtpMode: 'email',
+                      },
+                    })
+                  }
+                  className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 ${formData.authSettings?.manualRegistrationOtpMode === 'email'
+                    ? 'border-blue-500 bg-blue-50/50 shadow-xs'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="w-8 h-8 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center font-bold">
+                        <Mail className="w-4 h-4 text-blue-600" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded">
+                        Email SMTP
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-900">Email OTP</h4>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      Delivers 6-digit OTP code directly to user&apos;s email address via Global SMTP. Mobile number is optional.
+                    </p>
+                  </div>
+                  <div className="flex items-center text-xs font-bold text-blue-700 pt-1">
+                    {formData.authSettings?.manualRegistrationOtpMode === 'email' ? '● Active Channel' : 'Select'}
+                  </div>
+                </div>
+
+                {/* Mode 3: Both WhatsApp & Email */}
+                <div
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      authSettings: {
+                        ...formData.authSettings,
+                        manualRegistrationOtpMode: 'both',
+                      },
+                    })
+                  }
+                  className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 ${formData.authSettings?.manualRegistrationOtpMode === 'both'
+                    ? 'border-indigo-500 bg-indigo-50/50 shadow-xs'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold">
+                        <CheckCheck className="w-4 h-4 text-indigo-600" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold text-indigo-700 bg-indigo-100 px-1.5 py-0.2 rounded">
+                        Dual OTP
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-900">Both WhatsApp & Email</h4>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      Dispatches verification code simultaneously to both WhatsApp and email address for dual verification.
+                    </p>
+                  </div>
+                  <div className="flex items-center text-xs font-bold text-indigo-700 pt-1">
+                    {formData.authSettings?.manualRegistrationOtpMode === 'both' ? '● Active Channel' : 'Select'}
+                  </div>
+                </div>
+
+                {/* Mode 4: None (Instant Registration) */}
+                <div
+                  onClick={() =>
+                    setFormData({
+                      ...formData,
+                      authSettings: {
+                        ...formData.authSettings,
+                        manualRegistrationOtpMode: 'none',
+                      },
+                    })
+                  }
+                  className={`p-3.5 rounded-xl border-2 transition-all cursor-pointer flex flex-col justify-between space-y-2 ${formData.authSettings?.manualRegistrationOtpMode === 'none'
+                    ? 'border-purple-500 bg-purple-50/50 shadow-xs'
+                    : 'border-slate-200 hover:border-slate-300 bg-white'
+                    }`}
+                >
+                  <div className="space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div className="w-8 h-8 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center font-bold">
+                        <Sparkles className="w-4 h-4 text-purple-600" />
+                      </div>
+                      <span className="text-[10px] uppercase font-bold text-purple-700 bg-purple-100 px-1.5 py-0.2 rounded">
+                        Direct Login
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-900">No OTP (Direct)</h4>
+                    <p className="text-[11px] text-slate-600 leading-snug">
+                      Disables OTP requirement. User creates account and is immediately signed in without any code verification.
+                    </p>
+                  </div>
+                  <div className="flex items-center text-xs font-bold text-purple-700 pt-1">
+                    {formData.authSettings?.manualRegistrationOtpMode === 'none' ? '● Active Channel' : 'Select'}
+                  </div>
+                </div>
+              </div>
+
+              {/* Extra OTP Config Fields */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-3 border-t border-slate-100">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    OTP Code Expiry Time (Minutes)
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="60"
+                    value={formData.authSettings?.otpExpiryMinutes || 10}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        authSettings: {
+                          ...formData.authSettings,
+                          otpExpiryMinutes: Number(e.target.value) || 10,
+                        },
+                      })
+                    }
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-[10.5px] text-slate-400 mt-1">
+                    Default is 10 minutes. Code becomes invalid after this window.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Email OTP Subject Line
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.authSettings?.emailOtpSubject || ''}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        authSettings: {
+                          ...formData.authSettings,
+                          emailOtpSubject: e.target.value,
+                        },
+                      })
+                    }
+                    placeholder="🔐 Your Education Masters Verification Code"
+                    className="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                  <p className="text-[10.5px] text-slate-400 mt-1">
+                    Subject header used for SMTP verification emails.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Bottom Save Bar */}
+            <div className="flex justify-end pt-2">
+              <button
+                type="button"
+                onClick={handleSave}
+                disabled={savingSettings}
+                className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 active:scale-98 text-white font-bold text-xs rounded-xl shadow-md transition cursor-pointer flex items-center gap-2"
+              >
+                <Save className="w-4 h-4" />
+                <span>{savingSettings ? 'Saving Settings...' : 'Save All Login Settings'}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB: SEO DEFAULTS */}
         {/* ============================================================ */}
         {activeTab === 'seo' && (
           <form onSubmit={handleSave} className="bg-white rounded-xl border border-slate-200 shadow-xs p-5 sm:p-6 space-y-4">
@@ -1319,22 +1764,20 @@ export default function AdminSettingsPage() {
 
                 <div className="flex items-center gap-2 shrink-0">
                   <span
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
-                      formData.smtp?.status === 'CONNECTED'
-                        ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        : formData.smtp?.status === 'ERROR'
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${formData.smtp?.status === 'CONNECTED'
+                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                      : formData.smtp?.status === 'ERROR'
                         ? 'bg-rose-50 text-rose-700 border-rose-200'
                         : 'bg-amber-50 text-amber-700 border-amber-200'
-                    }`}
+                      }`}
                   >
                     <span
-                      className={`w-2 h-2 rounded-full ${
-                        formData.smtp?.status === 'CONNECTED'
-                          ? 'bg-emerald-500 animate-pulse'
-                          : formData.smtp?.status === 'ERROR'
+                      className={`w-2 h-2 rounded-full ${formData.smtp?.status === 'CONNECTED'
+                        ? 'bg-emerald-500 animate-pulse'
+                        : formData.smtp?.status === 'ERROR'
                           ? 'bg-rose-500'
                           : 'bg-amber-500'
-                      }`}
+                        }`}
                     />
                     <span>{formData.smtp?.status || 'UNCONFIGURED'}</span>
                   </span>
@@ -1354,11 +1797,10 @@ export default function AdminSettingsPage() {
               {/* Live SMTP Diagnostic Feedback Banner */}
               {smtpTestResult && (
                 <div
-                  className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs animate-in fade-in duration-150 ${
-                    smtpTestResult.success
-                      ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
-                      : 'bg-rose-50 border-rose-300 text-rose-950'
-                  }`}
+                  className={`p-3.5 rounded-xl border flex items-start gap-2.5 text-xs animate-in fade-in duration-150 ${smtpTestResult.success
+                    ? 'bg-emerald-50 border-emerald-300 text-emerald-950'
+                    : 'bg-rose-50 border-rose-300 text-rose-950'
+                    }`}
                 >
                   {smtpTestResult.success ? (
                     <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
@@ -1567,11 +2009,10 @@ export default function AdminSettingsPage() {
 
               {testEmailResult && (
                 <div
-                  className={`p-3 rounded-lg border text-xs flex items-center justify-between ${
-                    testEmailResult.success
-                      ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                      : 'bg-rose-50 border-rose-200 text-rose-800'
-                  }`}
+                  className={`p-3 rounded-lg border text-xs flex items-center justify-between ${testEmailResult.success
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                    : 'bg-rose-50 border-rose-200 text-rose-800'
+                    }`}
                 >
                   <span>{testEmailResult.message}</span>
                   <button
@@ -1813,11 +2254,10 @@ export default function AdminSettingsPage() {
                       <button
                         type="button"
                         onClick={() => setCategoryFilter(cat)}
-                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${
-                          isSelected
-                            ? 'bg-slate-900 text-white shadow-xs'
-                            : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                        }`}
+                        className={`px-2.5 py-1 rounded-full text-[11px] font-bold transition cursor-pointer whitespace-nowrap ${isSelected
+                          ? 'bg-slate-900 text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                          }`}
                       >
                         {cat === 'ALL' ? 'All Models' : cat}
                       </button>
@@ -1866,11 +2306,10 @@ export default function AdminSettingsPage() {
                   return (
                     <div
                       key={item.key}
-                      className={`relative rounded-xl border p-4 transition-all duration-150 flex flex-col justify-between gap-3 bg-white ${
-                        isSelected
-                          ? 'border-blue-400 shadow-xs ring-2 ring-blue-100 bg-blue-50/10'
-                          : 'border-slate-200 hover:border-slate-300'
-                      }`}
+                      className={`relative rounded-xl border p-4 transition-all duration-150 flex flex-col justify-between gap-3 bg-white ${isSelected
+                        ? 'border-blue-400 shadow-xs ring-2 ring-blue-100 bg-blue-50/10'
+                        : 'border-slate-200 hover:border-slate-300'
+                        }`}
                     >
                       <div>
                         {/* Top row: Checkbox, Icon, Category Badge & Count */}
@@ -1905,11 +2344,10 @@ export default function AdminSettingsPage() {
 
                           {/* Records Count Pill */}
                           <span
-                            className={`text-[11px] font-black px-2 py-0.5 rounded-full shrink-0 ${
-                              item.count > 0
-                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                : 'bg-slate-100 text-slate-500'
-                            }`}
+                            className={`text-[11px] font-black px-2 py-0.5 rounded-full shrink-0 ${item.count > 0
+                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                              : 'bg-slate-100 text-slate-500'
+                              }`}
                           >
                             {item.count.toLocaleString()} docs
                           </span>
@@ -1993,11 +2431,10 @@ export default function AdminSettingsPage() {
                     handleValidateBackupFile(e.dataTransfer.files[0]);
                   }
                 }}
-                className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${
-                  isDraggingFile
-                    ? 'border-blue-500 bg-blue-50/50'
-                    : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
-                }`}
+                className={`border-2 border-dashed rounded-xl p-6 text-center transition-all ${isDraggingFile
+                  ? 'border-blue-500 bg-blue-50/50'
+                  : 'border-slate-200 bg-slate-50/50 hover:bg-slate-50'
+                  }`}
               >
                 <div className="flex items-center justify-center gap-2 mb-2">
                   <FileArchive className="w-7 h-7 text-indigo-600" />
@@ -2027,11 +2464,10 @@ export default function AdminSettingsPage() {
               {/* Validator Report Display */}
               {validatorResult && (
                 <div
-                  className={`p-4 rounded-xl border text-xs space-y-2 animate-in fade-in duration-150 ${
-                    validatorResult.valid
-                      ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
-                      : 'bg-rose-50 border-rose-200 text-rose-900'
-                  }`}
+                  className={`p-4 rounded-xl border text-xs space-y-2 animate-in fade-in duration-150 ${validatorResult.valid
+                    ? 'bg-emerald-50/80 border-emerald-200 text-emerald-950'
+                    : 'bg-rose-50 border-rose-200 text-rose-900'
+                    }`}
                 >
                   <div className="flex items-center justify-between">
                     <span className="font-extrabold flex items-center gap-1.5">

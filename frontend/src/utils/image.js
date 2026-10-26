@@ -11,17 +11,23 @@ export const getImageUrl = (mediaObj, fallback = '/logo.webp') => {
     filePath = mediaObj.trim();
   } else if (typeof mediaObj === 'object') {
     if (mediaObj.img_url) {
-      return encodeURI(mediaObj.img_url);
+      const cleanImgUrl = mediaObj.img_url.replace(/^http:\/\/localhost:\d+/, '');
+      if (cleanImgUrl.startsWith('http://') || cleanImgUrl.startsWith('https://')) {
+        return encodeURI(cleanImgUrl);
+      }
+      filePath = cleanImgUrl;
     }
-    if (mediaObj.file) {
-      filePath = mediaObj.file;
-    } else if (mediaObj.url) {
-      filePath = mediaObj.url;
-    } else if (mediaObj.path && mediaObj.name) {
-      const cleanPath = mediaObj.path.endsWith('/') ? mediaObj.path.slice(0, -1) : mediaObj.path;
-      filePath = `${cleanPath}/${mediaObj.name}`;
-    } else if (mediaObj.path && !mediaObj.path.endsWith('/')) {
-      filePath = mediaObj.path;
+    if (!filePath) {
+      if (mediaObj.file) {
+        filePath = mediaObj.file;
+      } else if (mediaObj.url) {
+        filePath = mediaObj.url;
+      } else if (mediaObj.path && mediaObj.name) {
+        const cleanPath = mediaObj.path.endsWith('/') ? mediaObj.path.slice(0, -1) : mediaObj.path;
+        filePath = `${cleanPath}/${mediaObj.name}`;
+      } else if (mediaObj.path && !mediaObj.path.endsWith('/')) {
+        filePath = mediaObj.path;
+      }
     }
   }
 
@@ -59,17 +65,7 @@ export const getImageUrl = (mediaObj, fallback = '/logo.webp') => {
     normalizedPath.startsWith('/uploads/') ||
     normalizedPath.startsWith('/temp/')
   ) {
-    if (typeof window !== 'undefined') {
-      return encodeURI(normalizedPath);
-    }
-    const backendUrl =
-      process.env.INTERNAL_BACKEND_URL ||
-      process.env.BACKEND_URL ||
-      process.env.NEXT_PUBLIC_BACKEND_URL ||
-      (process.env.NODE_ENV === 'production'
-        ? 'https://education-masters-cv8z.vercel.app'
-        : 'http://localhost:5001');
-    return encodeURI(`${backendUrl.replace(/\/apis?\/?$/, '')}${normalizedPath}`);
+    return encodeURI(normalizedPath);
   }
 
   // Production migrated image repository (https://educationmasters.in/assets/... or similar)

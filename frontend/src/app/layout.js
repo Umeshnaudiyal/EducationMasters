@@ -1,12 +1,12 @@
-import { Poppins } from "next/font/google";
+import { Outfit } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
 
-const poppins = Poppins({
+const outfit = Outfit({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
+  weight: ["300", "400", "500", "600", "700"],
   display: "swap",
-  variable: "--font-poppins",
+  variable: "--font-outfit",
   fallback: ["system-ui", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "sans-serif"],
   adjustFontFallback: false,
 });
@@ -81,14 +81,14 @@ const globalOrganizationAndWebsiteSchema = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en" className={`h-full antialiased ${poppins.className} ${poppins.variable}`}>
+    <html lang="en" className={`h-full antialiased ${outfit.className} ${outfit.variable}`}>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <link rel="apple-touch-icon" href="/icon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link
-          href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,600&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap"
           rel="stylesheet"
         />
         <script
